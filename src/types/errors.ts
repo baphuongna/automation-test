@@ -1,0 +1,75 @@
+export const ERROR_FAMILIES = [
+  "VALIDATION",
+  "DB",
+  "API",
+  "BROWSER",
+  "RUNNER",
+  "SECURITY",
+  "INTERNAL"
+] as const;
+export type ErrorFamily = (typeof ERROR_FAMILIES)[number];
+
+export const ERROR_CODES = [
+  "VALIDATION_REQUIRED_FIELD",
+  "VALIDATION_INVALID_FORMAT",
+  "VALIDATION_INVALID_STATE",
+  "DB_CONNECTION_FAILED",
+  "DB_QUERY_FAILED",
+  "DB_CONSTRAINT_VIOLATION",
+  "API_REQUEST_BUILD_FAILED",
+  "API_REQUEST_FAILED",
+  "API_ASSERTION_FAILED",
+  "BROWSER_NOT_AVAILABLE",
+  "BROWSER_RECORDING_FAILED",
+  "BROWSER_REPLAY_FAILED",
+  "RUNNER_SUITE_EMPTY",
+  "RUNNER_EXECUTION_FAILED",
+  "RUNNER_CANCEL_FAILED",
+  "SECURITY_SECRET_ACCESS_DENIED",
+  "SECURITY_KEY_MISSING",
+  "SECURITY_KEY_CORRUPTED",
+  "INTERNAL_UNEXPECTED_ERROR"
+] as const;
+export type ErrorCode = (typeof ERROR_CODES)[number];
+
+export type ErrorContext = Record<string, string | number | boolean | null>;
+
+export interface ErrorPayload {
+  code: ErrorCode;
+  displayMessage: string;
+  technicalMessage: string;
+  context: ErrorContext;
+  recoverable: boolean;
+}
+
+export const ERROR_CODE_TO_FAMILY: Readonly<Record<ErrorCode, ErrorFamily>> = {
+  VALIDATION_REQUIRED_FIELD: "VALIDATION",
+  VALIDATION_INVALID_FORMAT: "VALIDATION",
+  VALIDATION_INVALID_STATE: "VALIDATION",
+  DB_CONNECTION_FAILED: "DB",
+  DB_QUERY_FAILED: "DB",
+  DB_CONSTRAINT_VIOLATION: "DB",
+  API_REQUEST_BUILD_FAILED: "API",
+  API_REQUEST_FAILED: "API",
+  API_ASSERTION_FAILED: "API",
+  BROWSER_NOT_AVAILABLE: "BROWSER",
+  BROWSER_RECORDING_FAILED: "BROWSER",
+  BROWSER_REPLAY_FAILED: "BROWSER",
+  RUNNER_SUITE_EMPTY: "RUNNER",
+  RUNNER_EXECUTION_FAILED: "RUNNER",
+  RUNNER_CANCEL_FAILED: "RUNNER",
+  SECURITY_SECRET_ACCESS_DENIED: "SECURITY",
+  SECURITY_KEY_MISSING: "SECURITY",
+  SECURITY_KEY_CORRUPTED: "SECURITY",
+  INTERNAL_UNEXPECTED_ERROR: "INTERNAL"
+};
+
+export function errorFamilyFromCode(code: ErrorCode): ErrorFamily {
+  return ERROR_CODE_TO_FAMILY[code];
+}
+
+const ERROR_CODE_SET: ReadonlySet<string> = new Set<string>(ERROR_CODES);
+
+export function isErrorCode(value: string): value is ErrorCode {
+  return ERROR_CODE_SET.has(value);
+}

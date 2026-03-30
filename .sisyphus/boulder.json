@@ -1,0 +1,35 @@
+{
+  "active_plan": "D:\\my\\research\\.sisyphus\\plans\\testforge-phase-1-implementation.md",
+  "started_at": "2026-03-30T09:18:27.848Z",
+  "session_ids": [
+    "ses_2c300a36effen50w5oAYZ0xmCW",
+    "ses_2c1e4d413ffedPth2Pa3zQNwqg",
+    "ses_2c1e4d08effetOr822V1Y4p7Ka",
+    "ses_2c1da3e1bffeR8h1FhJL3GvfTs",
+    "ses_2c1e4d08fffejm0D7abfVsBrRU",
+    "ses_2c1e4d40fffeBa1Tfl9IpkyYzn",
+    "ses_2c1e4d090ffejOM40VyZRO0Hco",
+    "ses_2c1c4d8eeffe3ouw7yF3MLu4KC",
+    "ses_2c1c4dc68ffeSSzxgfDotfNQEC",
+    "ses_2c1c4ddbcffejnyzWEFjTwDXLE",
+    "ses_2c1c4da68ffe1EX30XlfcK8van",
+    "ses_2c1a469deffe6QuAQYxZuvAWxU",
+    "ses_2c1a469e0ffeC8F4qDfVGuAZNU",
+    "ses_2c19ad3bcffe9xav1e0wHoAUj1",
+    "ses_2c19ad43dffeEE7vcKmNyJae9o",
+    "ses_2c19ad3bbffeTdid7C3HI897X9"
+  ],
+  "plan_name": "testforge-phase-1-implementation",
+  "worktree_path": null,
+  "task_sessions": {
+    "final-wave:f1": {
+      "task_key": "final-wave:f1",
+      "task_label": "F1",
+      "task_title": "**Plan Compliance Audit** — `oracle`",
+      "session_id": "ses_2c1c4ddbeffeluh6QayrjIFLvA",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-03-30T10:24:10.965Z"
+    }
+  }
+}

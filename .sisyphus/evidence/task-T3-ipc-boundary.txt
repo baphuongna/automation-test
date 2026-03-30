@@ -1,0 +1,4 @@
+Search scope: src/**/*.{ts,tsx}
+Pattern: invoke\(
+Result: no matches found outside the typed IPC client boundary.
+Typed boundary file: src/services/tauri-client.ts

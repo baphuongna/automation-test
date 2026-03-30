@@ -1,0 +1,21 @@
+Task: T5 master-key degraded mode rerun
+Date: 2026-03-30
+
+Degraded-mode behavior verified in source:
+- `src-tauri/src/services/secret_service.rs` sets degraded mode when an existing `master.key` is unreadable/corrupt and blocks `encrypt()` / `decrypt()` with `TestForgeError::DegradedMode(...)`.
+- `src-tauri/src/db/mod.rs` was updated so `Database::new(...)` tolerates `TestForgeError::MasterKeyCorrupted` and keeps the database bootstrap alive for non-secret flows.
+- `src-tauri/src/db/mod.rs` includes a regression test `test_database_enters_degraded_mode_with_corrupt_master_key` covering the degraded bootstrap expectation.
+
+Schema alignment repaired:
+- Foreign keys enabled with `PRAGMA foreign_keys = ON`.
+- `environments.name`, variable keys, enum columns, boolean columns, and uniqueness constraints were tightened in migrations.
+- Added uniqueness for `(environment_id, key)` and `(data_table_id, row_index)`.
+
+Verification command limitations in this environment:
+- `where.exe cargo` returned no result.
+- `where.exe rust-analyzer` returned no result.
+- Therefore runtime execution of the new degraded-mode regression test is not possible in this environment.
+
+Result:
+- Missing/corrupt master key is now represented as degraded mode in the T5 storage layer rather than forcing unsafe plaintext fallback.
+- Full execution evidence must be completed in an environment with Rust toolchain support.

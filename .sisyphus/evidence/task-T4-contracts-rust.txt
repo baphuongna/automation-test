@@ -1,0 +1,1 @@
+﻿cargo unavailable in environment; rust contract tests skipped

@@ -1,0 +1,18 @@
+﻿
+> testforge@0.1.0 typecheck
+> tsc --noEmit
+
+
+> testforge@0.1.0 build
+> tsc && vite build
+
+[36mvite v8.0.3 [32mbuilding client environment for production...[36m[39m
+[2K
+transforming...Γ£ô 80 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.63 kB Γöé gzip:  0.42 kB
+dist/assets/index-QTHf4QQn.css    2.29 kB Γöé gzip:  0.88 kB
+dist/assets/index-ChkpbdFp.js   260.35 kB Γöé gzip: 82.08 kB Γöé map: 1,350.45 kB
+
+[32mΓ£ô built in 575ms[39m

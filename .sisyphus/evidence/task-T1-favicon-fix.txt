@@ -1,0 +1,6 @@
+2026-03-30 T1/T3 favicon repair
+
+- Applied minimal fix in `index.html` by adding an explicit inline SVG favicon via `<link rel="icon" ...>`.
+- Verification: `npm run build` passed after the change.
+- Verification: opened built preview at `http://127.0.0.1:4173/api-tester`.
+- Result: shell rendered successfully, browser console had no messages, and network inspection showed no `/favicon.ico` request or 404.

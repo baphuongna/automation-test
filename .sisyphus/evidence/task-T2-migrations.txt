@@ -1,0 +1,7 @@
+T2 verification notes
+=====================
+- cargo test could not run in this environment because cargo is not installed.
+- rust-analyzer diagnostics could not run because rust-analyzer is not installed.
+- grep policy checks were run separately in-session:
+  * No screenshot blob storage found in storage schema/code; only the spec comment remains in migrations/001_initial_schema.sql.
+  * No hardcoded machine-specific runtime paths were added; path resolution uses platform app-data APIs and env-derived directories.

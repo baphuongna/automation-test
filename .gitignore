@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+dist/
+target/
+
+# Editor
+.vscode/
+*.local
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+npm-debug.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+build/
+
+# Test coverage
+coverage/
+
+# IDE
+.idea/
+
+# Tauri
+src-tauri/target/
+src-tauri/Wix32
+src-tauri/Cargo.lock
+
+# Misc
+*.swp
+*.bak
+*.tmp
+.eslintcache
+
+# OS files
+.DS_Store
+Thumbs.db
