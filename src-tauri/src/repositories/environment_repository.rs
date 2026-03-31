@@ -385,4 +385,27 @@ mod tests {
         let error = repo.create_variable(&variable).unwrap_err();
         assert!(matches!(error, TestForgeError::Validation(_)));
     }
+
+    #[test]
+    fn test_find_variables_preserves_encrypted_secret_storage_shape() {
+        let (db, _temp_dir) = create_test_repository();
+        let repo = EnvironmentRepository::new(db.connection());
+
+        let environment = Environment::new("Staging".to_string());
+        repo.create(&environment).unwrap();
+
+        let secret = EnvironmentVariable::new_secret(
+            environment.id.clone(),
+            "API_KEY".to_string(),
+            "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo=".to_string(),
+            "ab***yz".to_string(),
+        );
+
+        repo.create_variable(&secret).unwrap();
+
+        let stored = repo.find_variables_by_environment(&environment.id).unwrap();
+        assert_eq!(stored.len(), 1);
+        assert!(stored[0].validate_for_storage().is_ok());
+        assert_eq!(stored[0].display_value(), "ab***yz");
+    }
 }

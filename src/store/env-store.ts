@@ -3,6 +3,7 @@ import { create } from "zustand";
 export interface EnvironmentSummary {
   id: string;
   name: string;
+  envType: "development" | "staging" | "production" | "custom";
   isDefault: boolean;
 }
 

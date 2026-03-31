@@ -17,8 +17,21 @@ export function useTauriEvent<TName extends EventName>(
   }, [handler]);
 
   useEffect(() => {
-    if (!isTauriRuntimeAvailable()) {
+    if (typeof window === "undefined") {
       return;
+    }
+
+    if (!isTauriRuntimeAvailable()) {
+      const handlePreviewEvent = (event: Event): void => {
+        const customEvent = event as CustomEvent<EventPayloadMap[TName]>;
+        handlerRef.current(customEvent.detail);
+      };
+
+      window.addEventListener(eventName, handlePreviewEvent as EventListener);
+
+      return () => {
+        window.removeEventListener(eventName, handlePreviewEvent as EventListener);
+      };
     }
 
     let unlisten: UnlistenFn | null = null;

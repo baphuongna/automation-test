@@ -2,6 +2,7 @@
 
 use std::fs;
 
+use sha2::{Digest, Sha256};
 use tempfile::TempDir;
 use testforge::db::{Database, MigrationResult, MigrationRunner};
 use testforge::utils::paths::AppPaths;
@@ -98,4 +99,32 @@ fn checksum_mismatch_fails_rerun_clearly() {
         .unwrap_err();
 
     assert!(error.to_string().contains("checksum mismatch"));
+}
+
+#[test]
+fn bootstrap_records_applied_migration_using_filename_and_file_checksum() {
+    let temp_dir = TempDir::new().unwrap();
+    let app_paths = AppPaths::new(temp_dir.path().join("app-data"));
+    app_paths.bootstrap().unwrap();
+
+    let migrations_dir = temp_dir.path().join("migrations");
+    fs::create_dir_all(&migrations_dir).unwrap();
+    let migration_file = migrations_dir.join("001_initial_schema.sql");
+    let migration_sql = "CREATE TABLE IF NOT EXISTS bootstrap_metadata_probe (id INTEGER PRIMARY KEY);";
+    fs::write(&migration_file, migration_sql).unwrap();
+
+    let database = Database::new_with_migrations_dir(app_paths.database_file(), migrations_dir).unwrap();
+
+    let (name, checksum): (String, String) = database
+        .connection()
+        .query_row(
+            "SELECT name, checksum FROM _migrations ORDER BY id ASC LIMIT 1",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+
+    let expected_checksum = format!("{:x}", Sha256::digest(migration_sql.as_bytes()));
+    assert_eq!(name, "001_initial_schema.sql");
+    assert_eq!(checksum, expected_checksum);
 }

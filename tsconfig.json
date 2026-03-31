@@ -26,7 +26,7 @@
     "src/types/**/*.ts",
     "src/components/**/*.tsx",
     "src/routes/**/*.tsx",
-    "tests/frontend/shell-smoke.test.ts",
+    "tests/frontend/**/*.ts",
     "vite.config.ts"
   ]
 }

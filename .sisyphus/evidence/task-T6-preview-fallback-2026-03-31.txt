@@ -1,0 +1,25 @@
+T6 browser-preview fallback evidence (2026-03-31)
+
+Goal:
+- Allow Environment Manager hands-on QA in browser preview without a real Tauri desktop runtime.
+
+Files changed for this fix:
+- src/services/environment-preview-client.ts
+- src/services/environment-client.ts
+- src/routes/environment-manager.tsx
+- tests/frontend/environment-manager.test.ts
+
+Fallback/runtime-detection strategy:
+- Detect real Tauri runtime using `"__TAURI_INTERNALS__" in window`.
+- If Tauri runtime exists: keep using the real typed invoke-based path.
+- If Tauri runtime is unavailable (browser preview): delegate only T6 environment commands to `environmentPreviewClient`.
+- Preview adapter stores deterministic T6-only state in localStorage, seeds a production environment + masked secret, and supports deterministic degraded-mode via `previewDegraded=1`.
+
+Verification:
+- node --import tsx tests/frontend/environment-manager.test.ts => PASS
+- node --import tsx tests/frontend/contracts.test.ts => PASS
+- npm run typecheck => PASS
+- npm run build => PASS
+
+Environment limitation:
+- lsp_diagnostics for modified TypeScript files could not run because `typescript-language-server` is not installed.

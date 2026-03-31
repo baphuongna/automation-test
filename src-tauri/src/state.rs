@@ -2,6 +2,7 @@
 
 use std::sync::{Arc, RwLock};
 
+use crate::contracts::dto::UiStepDto;
 use crate::db::Database;
 use crate::error::{AppError, AppResult};
 use crate::services::SecretService;
@@ -35,9 +36,28 @@ impl Default for AppConfig {
 pub enum RecordingState {
     Idle,
     Recording {
-        script_id: String,
+        test_case_id: String,
+        start_url: String,
         start_time: chrono::DateTime<chrono::Utc>,
+        captured_steps: Vec<UiStepDto>,
     },
+    Failed {
+        test_case_id: String,
+        start_url: String,
+        start_time: chrono::DateTime<chrono::Utc>,
+        captured_steps: Vec<UiStepDto>,
+        last_error: String,
+        recoverable: bool,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecordingSnapshot {
+    pub test_case_id: String,
+    pub start_url: String,
+    pub captured_steps: Vec<UiStepDto>,
+    pub last_error: Option<String>,
+    pub recoverable: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -50,6 +70,17 @@ pub enum RunState {
     },
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum ReplayState {
+    Idle,
+    Running {
+        run_id: String,
+        test_case_id: String,
+        start_time: chrono::DateTime<chrono::Utc>,
+        cancel_requested: bool,
+    },
+}
+
 /// Shared app state created during backend bootstrap.
 pub struct AppState {
     db: Arc<RwLock<Database>>,
@@ -58,6 +89,7 @@ pub struct AppState {
     config: RwLock<AppConfig>,
     active_environment_id: RwLock<Option<String>>,
     recording_state: RwLock<RecordingState>,
+    replay_state: RwLock<ReplayState>,
     run_state: RwLock<RunState>,
     degraded_mode: RwLock<bool>,
     master_key_initialized: RwLock<bool>,
@@ -72,6 +104,7 @@ impl AppState {
             config: RwLock::new(AppConfig::default()),
             active_environment_id: RwLock::new(None),
             recording_state: RwLock::new(RecordingState::Idle),
+            replay_state: RwLock::new(ReplayState::Idle),
             run_state: RwLock::new(RunState::Idle),
             degraded_mode: RwLock::new(false),
             master_key_initialized: RwLock::new(false),
@@ -118,26 +151,230 @@ impl AppState {
         self.recording_state.read().unwrap().clone()
     }
 
-    pub fn start_recording(&self, script_id: String) -> AppResult<()> {
+    pub fn start_recording_session(
+        &self,
+        test_case_id: String,
+        start_url: String,
+    ) -> AppResult<()> {
         let mut state = self.recording_state.write().unwrap();
         match &*state {
             RecordingState::Idle => {
                 *state = RecordingState::Recording {
-                    script_id,
+                    test_case_id,
+                    start_url,
                     start_time: chrono::Utc::now(),
+                    captured_steps: Vec::new(),
                 };
                 Ok(())
             }
-            RecordingState::Recording { .. } => Err(AppError::recording_in_progress()),
+            RecordingState::Recording { .. } | RecordingState::Failed { .. } => {
+                Err(AppError::recording_in_progress())
+            }
         }
     }
 
-    pub fn stop_recording(&self) {
-        *self.recording_state.write().unwrap() = RecordingState::Idle;
+    pub fn start_recording(&self, script_id: String) -> AppResult<()> {
+        self.start_recording_session(script_id, String::new())
+    }
+
+    pub fn record_captured_step(&self, step: UiStepDto) -> AppResult<()> {
+        let mut state = self.recording_state.write().unwrap();
+        match &mut *state {
+            RecordingState::Recording { captured_steps, .. }
+            | RecordingState::Failed { captured_steps, .. } => {
+                captured_steps.push(step);
+                Ok(())
+            }
+            RecordingState::Idle => Err(AppError::validation(
+                "Không thể nhận step khi chưa có phiên recording hoạt động.",
+            )),
+        }
+    }
+
+    pub fn mark_recording_failed(&self, error_message: String, recoverable: bool) -> AppResult<()> {
+        let mut state = self.recording_state.write().unwrap();
+        match &*state {
+            RecordingState::Recording {
+                test_case_id,
+                start_url,
+                start_time,
+                captured_steps,
+            } => {
+                *state = RecordingState::Failed {
+                    test_case_id: test_case_id.clone(),
+                    start_url: start_url.clone(),
+                    start_time: *start_time,
+                    captured_steps: captured_steps.clone(),
+                    last_error: error_message,
+                    recoverable,
+                };
+                Ok(())
+            }
+            RecordingState::Failed { .. } => Ok(()),
+            RecordingState::Idle => Err(AppError::validation(
+                "Không thể đánh dấu failed khi không có phiên recording.",
+            )),
+        }
+    }
+
+    pub fn stop_recording(&self, expected_test_case_id: &str) -> AppResult<RecordingSnapshot> {
+        let mut state = self.recording_state.write().unwrap();
+        let snapshot = match &*state {
+            RecordingState::Recording {
+                test_case_id,
+                start_url,
+                captured_steps,
+                ..
+            } => {
+                if test_case_id != expected_test_case_id {
+                    return Err(AppError::validation(
+                        "Yêu cầu stop recording không khớp testCaseId đang hoạt động.",
+                    ));
+                }
+                RecordingSnapshot {
+                    test_case_id: test_case_id.clone(),
+                    start_url: start_url.clone(),
+                    captured_steps: captured_steps.clone(),
+                    last_error: None,
+                    recoverable: true,
+                }
+            }
+            RecordingState::Failed {
+                test_case_id,
+                start_url,
+                captured_steps,
+                last_error,
+                recoverable,
+                ..
+            } => {
+                if test_case_id != expected_test_case_id {
+                    return Err(AppError::validation(
+                        "Yêu cầu stop recording không khớp testCaseId đang failed.",
+                    ));
+                }
+                RecordingSnapshot {
+                    test_case_id: test_case_id.clone(),
+                    start_url: start_url.clone(),
+                    captured_steps: captured_steps.clone(),
+                    last_error: Some(last_error.clone()),
+                    recoverable: *recoverable,
+                }
+            }
+            RecordingState::Idle => {
+                return Err(AppError::validation(
+                    "Không có phiên recording hoạt động để dừng.",
+                ));
+            }
+        };
+
+        *state = RecordingState::Idle;
+        Ok(snapshot)
+    }
+
+    pub fn cancel_recording(&self, expected_test_case_id: &str) -> AppResult<()> {
+        let mut state = self.recording_state.write().unwrap();
+        match &*state {
+            RecordingState::Recording { test_case_id, .. }
+            | RecordingState::Failed { test_case_id, .. } => {
+                if test_case_id != expected_test_case_id {
+                    return Err(AppError::validation(
+                        "Yêu cầu cancel recording không khớp testCaseId đang hoạt động.",
+                    ));
+                }
+                *state = RecordingState::Idle;
+                Ok(())
+            }
+            RecordingState::Idle => Err(AppError::validation(
+                "Không có phiên recording hoạt động để hủy.",
+            )),
+        }
     }
 
     pub fn run_state(&self) -> RunState {
         self.run_state.read().unwrap().clone()
+    }
+
+    pub fn replay_state(&self) -> ReplayState {
+        self.replay_state.read().unwrap().clone()
+    }
+
+    pub fn start_replay(&self, run_id: String, test_case_id: String) -> AppResult<()> {
+        let mut state = self.replay_state.write().unwrap();
+        match &*state {
+            ReplayState::Idle => {
+                *state = ReplayState::Running {
+                    run_id,
+                    test_case_id,
+                    start_time: chrono::Utc::now(),
+                    cancel_requested: false,
+                };
+                Ok(())
+            }
+            ReplayState::Running { .. } => Err(AppError::new(
+                crate::error::ErrorCode::StateConflict,
+                "Đang có một phiên replay UI khác hoạt động.",
+                "Another UI replay session is already in progress",
+            )),
+        }
+    }
+
+    pub fn request_replay_cancel(&self, expected_run_id: &str) -> AppResult<bool> {
+        let mut state = self.replay_state.write().unwrap();
+        match &mut *state {
+            ReplayState::Running {
+                run_id,
+                cancel_requested,
+                ..
+            } => {
+                if run_id != expected_run_id {
+                    return Err(AppError::validation(
+                        "Yêu cầu cancel replay không khớp runId đang hoạt động.",
+                    ));
+                }
+
+                if *cancel_requested {
+                    Ok(false)
+                } else {
+                    *cancel_requested = true;
+                    Ok(true)
+                }
+            }
+            ReplayState::Idle => Ok(false),
+        }
+    }
+
+    pub fn is_replay_cancel_requested(&self, expected_run_id: &str) -> AppResult<bool> {
+        let state = self.replay_state.read().unwrap();
+        match &*state {
+            ReplayState::Running {
+                run_id,
+                cancel_requested,
+                ..
+            } => {
+                if run_id != expected_run_id {
+                    return Err(AppError::validation(
+                        "Yêu cầu kiểm tra replay không khớp runId đang hoạt động.",
+                    ));
+                }
+                Ok(*cancel_requested)
+            }
+            ReplayState::Idle => Ok(false),
+        }
+    }
+
+    pub fn finish_replay(&self, expected_run_id: &str) {
+        let mut state = self.replay_state.write().unwrap();
+        if let ReplayState::Running { run_id, .. } = &*state {
+            if run_id == expected_run_id {
+                *state = ReplayState::Idle;
+            }
+        }
+    }
+
+    pub fn cancel_replay(&self, expected_run_id: &str) -> AppResult<()> {
+        let _ = self.request_replay_cancel(expected_run_id)?;
+        self.finish_replay(expected_run_id);
+        Ok(())
     }
 
     pub fn start_run(&self, run_id: String, suite_id: String) -> AppResult<()> {
@@ -192,7 +429,8 @@ mod tests {
         )
         .unwrap();
 
-        let database = Database::new_with_migrations_dir(paths.database_file(), migrations_dir).unwrap();
+        let database =
+            Database::new_with_migrations_dir(paths.database_file(), migrations_dir).unwrap();
         let secret_service = SecretService::new(paths.base.clone());
 
         AppState::new(database, secret_service, paths)
@@ -211,9 +449,15 @@ mod tests {
         let state = create_state();
 
         assert_eq!(state.recording_state(), RecordingState::Idle);
-        state.start_recording("script-1".to_string()).unwrap();
-        assert!(matches!(state.recording_state(), RecordingState::Recording { .. }));
-        state.stop_recording();
+        state
+            .start_recording_session("script-1".to_string(), "https://example.com".to_string())
+            .unwrap();
+        assert!(matches!(
+            state.recording_state(),
+            RecordingState::Recording { .. }
+        ));
+        let snapshot = state.stop_recording("script-1").unwrap();
+        assert_eq!(snapshot.test_case_id, "script-1");
         assert_eq!(state.recording_state(), RecordingState::Idle);
     }
 
@@ -221,23 +465,54 @@ mod tests {
     fn concurrent_recording_is_rejected() {
         let state = create_state();
 
-        state.start_recording("script-1".to_string()).unwrap();
-        let result = state.start_recording("script-2".to_string());
+        state
+            .start_recording_session("script-1".to_string(), "https://example.com".to_string())
+            .unwrap();
+        let result = state
+            .start_recording_session("script-2".to_string(), "https://example.com".to_string());
         assert!(result.is_err());
 
         let error = result.err().unwrap();
-        assert!(matches!(error.code, crate::error::ErrorCode::RecordingInProgress));
+        assert!(matches!(
+            error.code,
+            crate::error::ErrorCode::RecordingInProgress
+        ));
     }
 
     #[test]
     fn concurrent_run_is_rejected() {
         let state = create_state();
 
-        state.start_run("run-1".to_string(), "suite-1".to_string()).unwrap();
+        state
+            .start_run("run-1".to_string(), "suite-1".to_string())
+            .unwrap();
         let result = state.start_run("run-2".to_string(), "suite-2".to_string());
         assert!(result.is_err());
 
         let error = result.err().unwrap();
         assert!(matches!(error.code, crate::error::ErrorCode::RunInProgress));
+    }
+
+    #[test]
+    fn replay_state_transitions_are_idempotent() {
+        let state = create_state();
+
+        state
+            .start_replay("run-1".to_string(), "script-1".to_string())
+            .unwrap();
+        assert!(matches!(state.replay_state(), ReplayState::Running { .. }));
+
+        let first_cancel = state.request_replay_cancel("run-1").unwrap();
+        let second_cancel = state.request_replay_cancel("run-1").unwrap();
+        assert!(first_cancel);
+        assert!(!second_cancel);
+
+        assert!(state.is_replay_cancel_requested("run-1").unwrap());
+
+        state.finish_replay("run-1");
+        state.finish_replay("run-1");
+        assert_eq!(state.replay_state(), ReplayState::Idle);
+
+        assert!(!state.request_replay_cancel("run-1").unwrap());
     }
 }

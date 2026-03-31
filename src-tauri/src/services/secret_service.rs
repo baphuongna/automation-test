@@ -84,6 +84,14 @@ impl SecretService {
         Ok(())
     }
 
+    /// Force the service into degraded mode without generating/loading a key.
+    pub fn force_degraded(&self) {
+        self.state.store(false, Ordering::SeqCst);
+        if let Ok(mut master_key) = self.master_key.write() {
+            *master_key = None;
+        }
+    }
+
     /// Get the current state of the service
     pub fn state(&self) -> SecretServiceState {
         if self.state.load(Ordering::SeqCst) {

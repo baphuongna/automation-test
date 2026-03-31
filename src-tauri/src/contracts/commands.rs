@@ -1,7 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use super::domain::EntityId;
-use super::dto::{ApiRequestDto, ApiTestCaseDto, EnvironmentVariableDto, SuiteDto, UiTestCaseDto};
+use super::domain::{EntityId, EnvironmentType};
+use super::dto::{
+    ApiAssertionDto, ApiExecutionResultDto, ApiRequestDto, ApiTestCaseDto, DataTableColumnDto,
+    DataTableExportDto, DataTableImportResultDto, DataTableRowDto, EnvironmentVariableDto,
+    SuiteDto, UiTestCaseDto,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -11,6 +15,8 @@ pub struct EmptyCommandPayload {}
 #[serde(rename_all = "camelCase")]
 pub struct EnvironmentCreateCommand {
     pub name: String,
+    pub env_type: EnvironmentType,
+    pub is_default: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -18,6 +24,7 @@ pub struct EnvironmentCreateCommand {
 pub struct EnvironmentUpdateCommand {
     pub id: EntityId,
     pub name: String,
+    pub env_type: EnvironmentType,
     pub is_default: bool,
 }
 
@@ -45,9 +52,58 @@ pub struct EnvironmentVariableUpsertCommand {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct EnvironmentVariableDeleteCommand {
+    pub id: EntityId,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DataTableCreateCommand {
+    pub name: String,
+    pub description: Option<String>,
+    pub columns: Vec<DataTableColumnDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DataTableUpdateCommand {
+    pub id: EntityId,
+    pub name: String,
+    pub description: Option<String>,
+    pub columns: Vec<DataTableColumnDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DataTableRowUpsertCommand {
+    pub table_id: EntityId,
+    pub row: DataTableRowDto,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DataTableImportCommand {
+    pub table_id: Option<EntityId>,
+    pub name: String,
+    pub description: Option<String>,
+    pub format: String,
+    pub content: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DataTableExportCommand {
+    pub id: EntityId,
+    pub format: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct ApiExecuteCommand {
+    pub test_case_id: Option<EntityId>,
     pub environment_id: EntityId,
     pub request: ApiRequestDto,
+    pub assertions: Vec<ApiAssertionDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -59,8 +115,24 @@ pub struct BrowserRecordingStartCommand {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct BrowserHealthCheckCommand {}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct BrowserRecordingStopCommand {
     pub test_case_id: EntityId,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct BrowserRecordingCancelCommand {
+    pub test_case_id: EntityId,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct BrowserRecordingCancelResponse {
+    pub cancelled: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -68,6 +140,12 @@ pub struct BrowserRecordingStopCommand {
 pub struct BrowserReplayStartCommand {
     pub test_case_id: EntityId,
     pub environment_id: Option<EntityId>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct BrowserReplayCancelCommand {
+    pub run_id: EntityId,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -97,6 +175,24 @@ pub enum CommandEnvelope {
     EnvironmentDelete(DeleteByIdCommand),
     #[serde(rename = "environment.variable.upsert")]
     EnvironmentVariableUpsert(EnvironmentVariableUpsertCommand),
+    #[serde(rename = "environment.variable.delete")]
+    EnvironmentVariableDelete(DeleteByIdCommand),
+    #[serde(rename = "dataTable.list")]
+    DataTableList(EmptyCommandPayload),
+    #[serde(rename = "dataTable.create")]
+    DataTableCreate(DataTableCreateCommand),
+    #[serde(rename = "dataTable.update")]
+    DataTableUpdate(DataTableUpdateCommand),
+    #[serde(rename = "dataTable.delete")]
+    DataTableDelete(DeleteByIdCommand),
+    #[serde(rename = "dataTable.row.upsert")]
+    DataTableRowUpsert(DataTableRowUpsertCommand),
+    #[serde(rename = "dataTable.row.delete")]
+    DataTableRowDelete(DeleteByIdCommand),
+    #[serde(rename = "dataTable.import")]
+    DataTableImport(DataTableImportCommand),
+    #[serde(rename = "dataTable.export")]
+    DataTableExport(DataTableExportCommand),
     #[serde(rename = "api.testcase.upsert")]
     ApiTestcaseUpsert(ApiTestCaseDto),
     #[serde(rename = "api.testcase.delete")]
@@ -109,22 +205,20 @@ pub enum CommandEnvelope {
     UiTestcaseDelete(DeleteByIdCommand),
     #[serde(rename = "browser.recording.start")]
     BrowserRecordingStart(BrowserRecordingStartCommand),
+    #[serde(rename = "browser.health.check")]
+    BrowserHealthCheck(BrowserHealthCheckCommand),
     #[serde(rename = "browser.recording.stop")]
     BrowserRecordingStop(BrowserRecordingStopCommand),
+    #[serde(rename = "browser.recording.cancel")]
+    BrowserRecordingCancel(BrowserRecordingCancelCommand),
     #[serde(rename = "browser.replay.start")]
     BrowserReplayStart(BrowserReplayStartCommand),
+    #[serde(rename = "browser.replay.cancel")]
+    BrowserReplayCancel(BrowserReplayCancelCommand),
     #[serde(rename = "runner.suite.execute")]
     RunnerSuiteExecute(RunnerSuiteExecuteCommand),
     #[serde(rename = "runner.suite.cancel")]
     RunnerSuiteCancel(RunnerSuiteCancelCommand),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct ApiExecuteResponse {
-    pub status_code: u16,
-    pub duration_ms: u64,
-    pub body_preview: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -151,6 +245,12 @@ pub struct AckResponse {
 #[allow(dead_code)]
 fn _keep_type_import(_variable: EnvironmentVariableDto) {}
 
+#[allow(dead_code)]
+fn _keep_t7_type_imports(_result: DataTableImportResultDto, _export: DataTableExportDto) {}
+
+#[allow(dead_code)]
+fn _keep_t8_type_imports(_result: ApiExecutionResultDto) {}
+
 #[cfg(test)]
 mod tests {
     use super::{CommandEnvelope, EmptyCommandPayload};
@@ -171,17 +271,19 @@ mod tests {
 
     #[test]
     fn serialize_environment_variable_upsert_command_with_nested_payload() {
-        let envelope = CommandEnvelope::EnvironmentVariableUpsert(super::EnvironmentVariableUpsertCommand {
-            environment_id: "env-1".to_string(),
-            variable: super::EnvironmentVariableUpsertVariable {
-                id: "var-1".to_string(),
-                key: "API_KEY".to_string(),
-                kind: super::super::domain::VariableKind::Secret,
-                value: "s3cr3t".to_string(),
-            },
-        });
+        let envelope =
+            CommandEnvelope::EnvironmentVariableUpsert(super::EnvironmentVariableUpsertCommand {
+                environment_id: "env-1".to_string(),
+                variable: super::EnvironmentVariableUpsertVariable {
+                    id: "var-1".to_string(),
+                    key: "API_KEY".to_string(),
+                    kind: super::super::domain::VariableKind::Secret,
+                    value: "s3cr3t".to_string(),
+                },
+            });
 
-        let json = serde_json::to_string(&envelope).expect("failed to serialize upsert command envelope");
+        let json =
+            serde_json::to_string(&envelope).expect("failed to serialize upsert command envelope");
 
         assert!(json.contains("environment.variable.upsert"));
         assert!(json.contains("environmentId"));
@@ -194,9 +296,28 @@ mod tests {
     fn serialize_environment_list_command_with_explicit_empty_payload() {
         let envelope = CommandEnvelope::EnvironmentList(EmptyCommandPayload {});
 
-        let json = serde_json::to_string(&envelope).expect("failed to serialize environment.list envelope");
+        let json = serde_json::to_string(&envelope)
+            .expect("failed to serialize environment.list envelope");
 
         assert!(json.contains("environment.list"));
         assert!(json.contains("payload"));
+    }
+
+    #[test]
+    fn serialize_data_table_import_command_with_canonical_t7_name() {
+        let envelope = CommandEnvelope::DataTableImport(super::DataTableImportCommand {
+            table_id: Some("table-1".to_string()),
+            name: "Users".to_string(),
+            description: Some("Imported".to_string()),
+            format: "csv".to_string(),
+            content: "username,password\nalice,secret".to_string(),
+        });
+
+        let json = serde_json::to_string(&envelope)
+            .expect("failed to serialize dataTable.import envelope");
+
+        assert!(json.contains("dataTable.import"));
+        assert!(json.contains("tableId"));
+        assert!(json.contains("format"));
     }
 }

@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS environments (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL UNIQUE,
     description TEXT,
-    env_type TEXT NOT NULL DEFAULT 'development',
+    env_type TEXT NOT NULL DEFAULT 'development'
+        CHECK (env_type IN ('development', 'staging', 'production', 'custom')),
     is_default INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -34,11 +35,14 @@ CREATE TABLE IF NOT EXISTS environment_variables (
     key TEXT NOT NULL,
     value TEXT NOT NULL,
     masked_preview TEXT,
-    var_type TEXT NOT NULL DEFAULT 'regular',
+    var_type TEXT NOT NULL DEFAULT 'regular'
+        CHECK (var_type IN ('regular', 'secret')),
     enabled INTEGER NOT NULL DEFAULT 1,
     description TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (trim(key) <> ''),
+    CHECK (var_type = 'regular' OR masked_preview IS NOT NULL),
     
     FOREIGN KEY (environment_id) REFERENCES environments(id) ON DELETE CASCADE
 );
@@ -154,6 +158,7 @@ CREATE TABLE IF NOT EXISTS data_tables (
     name TEXT NOT NULL UNIQUE,
     description TEXT,
     columns_json TEXT NOT NULL DEFAULT '[]',
+    CHECK (trim(name) <> ''),
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -168,6 +173,7 @@ CREATE TABLE IF NOT EXISTS data_table_rows (
     enabled INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    CHECK (row_index >= 0),
     
     FOREIGN KEY (data_table_id) REFERENCES data_tables(id) ON DELETE CASCADE
 );
@@ -281,7 +287,5 @@ CREATE TABLE IF NOT EXISTS test_run_results (
 CREATE INDEX IF NOT EXISTS idx_run_results_run ON test_run_results(run_id);
 CREATE INDEX IF NOT EXISTS idx_run_results_case ON test_run_results(case_id);
 
--- Migration complete marker
--- This helps track that the initial migration was completed successfully
-INSERT OR IGNORE INTO _migrations (name, checksum, applied_at)
-VALUES ('001_initial_schema', 'bootstrap-checksum', datetime('now'));
+-- Migration tracking is recorded exclusively by MigrationRunner using the
+-- exact filename and the SQL file checksum after this script executes.

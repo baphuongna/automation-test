@@ -1,5 +1,5 @@
 //! Error types for TestForge
-//! 
+//!
 //! This module defines the error hierarchy used throughout the application.
 //! Provides structured error payloads with display/technical messages for IPC.
 
@@ -15,53 +15,53 @@ pub enum ErrorCode {
     DbMigration,
     DbQuery,
     DbConstraint,
-    
+
     // Storage errors
     StorageInit,
     StoragePath,
     StorageWrite,
     StorageRead,
-    
+
     // Validation errors
     Validation,
     InvalidInput,
     MissingField,
     DuplicateEntry,
-    
+
     // Not found errors
     NotFound,
     EnvironmentNotFound,
     EndpointNotFound,
     ScriptNotFound,
     SuiteNotFound,
-    
+
     // Variable resolution errors
     VariableMissing,
     VariableCircular,
-    
+
     // Secret/encryption errors
     SecretEncryption,
     SecretDecryption,
     SecretKeyMissing,
     SecretCorrupt,
-    
+
     // Browser automation errors
     BrowserLaunch,
     BrowserRuntime,
     ElementNotFound,
     SelectorInvalid,
     StepExecution,
-    
+
     // API execution errors
     ApiTransport,
     ApiTimeout,
     ApiSsl,
-    
+
     // State/Concurrency errors
     StateConflict,
     RecordingInProgress,
     RunInProgress,
-    
+
     // Internal errors
     Internal,
     Unknown,
@@ -132,7 +132,11 @@ pub struct AppError {
 
 impl AppError {
     /// Tạo error mới với code và messages
-    pub fn new(code: ErrorCode, display_message: impl Into<String>, technical_message: impl Into<String>) -> Self {
+    pub fn new(
+        code: ErrorCode,
+        display_message: impl Into<String>,
+        technical_message: impl Into<String>,
+    ) -> Self {
         Self {
             code,
             display_message: display_message.into(),
@@ -141,95 +145,128 @@ impl AppError {
             recoverable: true,
         }
     }
-    
+
     /// Thêm context vào error
     pub fn with_context(mut self, key: impl Into<String>, value: impl Serialize) -> Self {
-        self.context.insert(key.into(), serde_json::to_value(value).unwrap_or(serde_json::Value::Null));
+        self.context.insert(
+            key.into(),
+            serde_json::to_value(value).unwrap_or(serde_json::Value::Null),
+        );
         self
     }
-    
+
     /// Set recoverable flag
     pub fn with_recoverable(mut self, recoverable: bool) -> Self {
         self.recoverable = recoverable;
         self
     }
-    
+
     // === Factory methods for common errors ===
-    
+
     /// DB connection error
     pub fn db_connection(msg: impl Into<String>) -> Self {
-        Self::new(ErrorCode::DbConnection,
+        Self::new(
+            ErrorCode::DbConnection,
             "Không thể kết nối đến cơ sở dữ liệu. Vui lòng khởi động lại ứng dụng.",
-            msg).with_recoverable(false)
+            msg,
+        )
+        .with_recoverable(false)
     }
-    
+
     /// DB migration error
     pub fn db_migration(msg: impl Into<String>) -> Self {
-        Self::new(ErrorCode::DbMigration,
+        Self::new(
+            ErrorCode::DbMigration,
             "Lỗi khi cập nhật cơ sở dữ liệu. Vui lòng liên hệ hỗ trợ.",
-            msg).with_recoverable(false)
+            msg,
+        )
+        .with_recoverable(false)
     }
-    
+
     /// DB query error
     pub fn db_query(msg: impl Into<String>) -> Self {
         Self::new(ErrorCode::DbQuery, "Lỗi truy vấn cơ sở dữ liệu.", msg)
     }
-    
+
     /// DB constraint error
     pub fn db_constraint(msg: impl Into<String>) -> Self {
-        Self::new(ErrorCode::DbConstraint,
-            "Dữ liệu bị trùng hoặc vi phạm ràng buộc.", msg)
+        Self::new(
+            ErrorCode::DbConstraint,
+            "Dữ liệu bị trùng hoặc vi phạm ràng buộc.",
+            msg,
+        )
     }
-    
+
     /// Storage init error
     pub fn storage_init(msg: impl Into<String>) -> Self {
-        Self::new(ErrorCode::StorageInit,
+        Self::new(
+            ErrorCode::StorageInit,
             "Không thể khởi tạo thư mục dữ liệu. Vui lòng kiểm tra quyền truy cập.",
-            msg).with_recoverable(false)
+            msg,
+        )
+        .with_recoverable(false)
     }
-    
+
     /// Storage path error
     pub fn storage_path(msg: impl Into<String>) -> Self {
-        Self::new(ErrorCode::StoragePath,
+        Self::new(
+            ErrorCode::StoragePath,
             "Đường dẫn không hợp lệ. Vui lòng kiểm tra cấu hình.",
-            msg).with_recoverable(false)
+            msg,
+        )
+        .with_recoverable(false)
     }
 
     /// Storage read error
     pub fn storage_read(msg: impl Into<String>) -> Self {
-        Self::new(ErrorCode::StorageRead, "Không thể đọc dữ liệu từ bộ nhớ lưu trữ.", msg)
+        Self::new(
+            ErrorCode::StorageRead,
+            "Không thể đọc dữ liệu từ bộ nhớ lưu trữ.",
+            msg,
+        )
     }
 
     /// Storage write error
     pub fn storage_write(msg: impl Into<String>) -> Self {
-        Self::new(ErrorCode::StorageWrite, "Không thể ghi dữ liệu vào bộ nhớ lưu trữ.", msg)
+        Self::new(
+            ErrorCode::StorageWrite,
+            "Không thể ghi dữ liệu vào bộ nhớ lưu trữ.",
+            msg,
+        )
     }
-    
+
     /// Validation error
     pub fn validation(msg: impl Into<String>) -> Self {
         Self::new(ErrorCode::Validation, "Dữ liệu không hợp lệ.", msg)
     }
-    
+
     /// Not found error
     pub fn not_found(entity_type: impl Into<String>, id: impl Into<String>) -> Self {
-        Self::new(ErrorCode::NotFound,
+        Self::new(
+            ErrorCode::NotFound,
             format!("Không tìm thấy {}.", entity_type.into()),
-            format!("{} not found with id: {}", entity_type.into(), id.into()))
+            format!("{} not found with id: {}", entity_type.into(), id.into()),
+        )
     }
-    
+
     /// Variable missing error
     pub fn variable_missing(name: impl Into<String>) -> Self {
-        Self::new(ErrorCode::VariableMissing,
+        Self::new(
+            ErrorCode::VariableMissing,
             format!("Biến '{}' chưa được định nghĩa.", name.into()),
-            format!("Variable '{}' is not defined", name.into()))
-            .with_context("variable_name", name)
+            format!("Variable '{}' is not defined", name.into()),
+        )
+        .with_context("variable_name", name)
     }
-    
+
     /// Secret key missing error
     pub fn secret_key_missing() -> Self {
-        Self::new(ErrorCode::SecretKeyMissing,
+        Self::new(
+            ErrorCode::SecretKeyMissing,
             "Khóa mã hóa không khả dụng. Vui lòng cấu hình lại master key.",
-            "Master key is not available").with_recoverable(false)
+            "Master key is not available",
+        )
+        .with_recoverable(false)
     }
 
     /// Recording already in progress error
@@ -249,7 +286,7 @@ impl AppError {
             "Another test run is already in progress",
         )
     }
-    
+
     /// Internal error
     pub fn internal(msg: impl Into<String>) -> Self {
         Self::new(ErrorCode::Internal, "Đã xảy ra lỗi nội bộ.", msg)
@@ -266,7 +303,8 @@ impl std::error::Error for AppError {}
 
 impl Serialize for AppError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where S: serde::Serializer,
+    where
+        S: serde::Serializer,
     {
         use serde::ser::SerializeStruct;
         let mut state = serializer.serialize_struct("AppError", 5)?;
@@ -303,12 +341,16 @@ impl From<std::io::Error> for AppError {
 
 impl From<serde_json::Error> for AppError {
     fn from(err: serde_json::Error) -> Self {
-        Self::new(ErrorCode::InvalidInput, "Dữ liệu JSON không hợp lệ.", err.to_string())
+        Self::new(
+            ErrorCode::InvalidInput,
+            "Dữ liệu JSON không hợp lệ.",
+            err.to_string(),
+        )
     }
 }
 
 /// Result type alias cho AppError
-pub type AppResult<T> = Result<T, AppError>;
+pub type AppResult<T> = std::result::Result<T, AppError>;
 
 // === Legacy TestForgeError for backward compatibility ===
 
@@ -345,6 +387,9 @@ pub enum TestForgeError {
     #[error("Environment not found: {id}")]
     EnvironmentNotFound { id: String },
 
+    #[error("Endpoint not found: {id}")]
+    EndpointNotFound { id: String },
+
     #[error("Environment variable not found: {id}")]
     EnvironmentVariableNotFound { id: String },
 
@@ -373,7 +418,10 @@ pub enum TestForgeError {
 impl TestForgeError {
     /// Check if this error indicates degraded mode
     pub fn is_degraded_mode(&self) -> bool {
-        matches!(self, Self::MasterKeyCorrupted | Self::SecretStoreUnavailable(_))
+        matches!(
+            self,
+            Self::MasterKeyCorrupted | Self::SecretStoreUnavailable(_)
+        )
     }
 
     /// Check if this error is recoverable
@@ -381,6 +429,7 @@ impl TestForgeError {
         matches!(
             self,
             Self::EnvironmentNotFound { .. }
+                | Self::EndpointNotFound { .. }
                 | Self::EnvironmentVariableNotFound { .. }
                 | Self::DataTableNotFound { .. }
                 | Self::DataTableRowNotFound { .. }
@@ -400,6 +449,7 @@ impl TestForgeError {
             Self::MasterKeyCorrupted => "MASTER_KEY_CORRUPTED",
             Self::SecretStoreUnavailable(_) => "SECRET_STORE_UNAVAILABLE",
             Self::EnvironmentNotFound { .. } => "ENVIRONMENT_NOT_FOUND",
+            Self::EndpointNotFound { .. } => "ENDPOINT_NOT_FOUND",
             Self::EnvironmentVariableNotFound { .. } => "ENVIRONMENT_VARIABLE_NOT_FOUND",
             Self::DataTableNotFound { .. } => "DATA_TABLE_NOT_FOUND",
             Self::DataTableRowNotFound { .. } => "DATA_TABLE_ROW_NOT_FOUND",
@@ -418,13 +468,17 @@ mod tests {
 
     #[test]
     fn test_error_code() {
-        let err = TestForgeError::EnvironmentNotFound { id: "test".to_string() };
+        let err = TestForgeError::EnvironmentNotFound {
+            id: "test".to_string(),
+        };
         assert_eq!(err.error_code(), "ENVIRONMENT_NOT_FOUND");
     }
 
     #[test]
     fn test_is_recoverable() {
-        let err = TestForgeError::EnvironmentNotFound { id: "test".to_string() };
+        let err = TestForgeError::EnvironmentNotFound {
+            id: "test".to_string(),
+        };
         assert!(err.is_recoverable());
 
         let err = TestForgeError::Database(rusqlite::Error::InvalidQuery);

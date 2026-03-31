@@ -332,7 +332,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `chore(app): bootstrap tauri shell and workspace`
 
-- [ ] T2. SQLite, migrations, app-data paths, and settings bootstrap
+- [x] T2. SQLite, migrations, app-data paths, and settings bootstrap
 
   **What to do**:
   - Thiết lập SQLite connection, migration runner, app-data directory rules, và filesystem path policy cho DB/logs/screenshots/exports/config.
@@ -508,7 +508,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `feat(core): add domain contracts and error model baseline`
 
-- [ ] T5. Secret storage baseline + environment/data models
+- [x] T5. Secret storage baseline + environment/data models
 
   **What to do**:
   - Implement environment/data domain models and repositories, including encrypted secret persistence, masked previews, and key-file failure semantics.
@@ -568,7 +568,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `feat(security): add encrypted secret storage baseline`
 
-- [ ] T6. Environment Manager UI + commands
+- [x] T6. Environment Manager UI + commands
 
   **What to do**:
   - Xây Environment Manager screen với CRUD environments, variable list, masking UI, default environment selection, và production warning badge behavior.
@@ -629,7 +629,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `feat(env): add environment manager ui and commands`
 
-- [ ] T7. Data Table Manager UI + commands
+- [x] T7. Data Table Manager UI + commands
 
   **What to do**:
   - Implement data table CRUD, row editing, enabled/disabled row semantics, and import/export baseline for CSV/JSON.
@@ -689,7 +689,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `feat(data): add data table manager and validation flow`
 
-- [ ] T8. API engine + endpoint/assertion persistence
+- [x] T8. API engine + endpoint/assertion persistence
 
   **What to do**:
   - Implement API collection/endpoint/assertion persistence, variable resolution, auth handling, response normalization, and assertion evaluation engine.
@@ -750,7 +750,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `feat(api): implement endpoint execution and assertions`
 
-- [ ] T9. API Tester UI + result viewer
+- [x] T9. API Tester UI + result viewer
 
   **What to do**:
   - Build API Tester screen: collection tree, request builder, auth/body/headers tabs, assertion builder UI, response viewer, and result state panels.
@@ -810,7 +810,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `feat(api-ui): add api tester and result viewer`
 
-- [ ] T10. Export + artifact path service baseline
+- [x] T10. Export + artifact path service baseline
 
   **What to do**:
   - Implement artifact path resolution, sanitized report export (HTML/JSON), screenshot/export directory policy, and preview-safe persistence helpers.
@@ -868,7 +868,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `feat(reporting): add export and artifact path services`
 
-- [ ] T11. BrowserAutomationService + runtime health/fallback scaffolding
+- [x] T11. BrowserAutomationService + runtime health/fallback scaffolding
 
   **What to do**:
   - Build the browser abstraction boundary, runtime health check, Chromium-only launcher, and fallback-ready scaffolding without leaking library internals.
@@ -926,7 +926,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `feat(browser): add browser automation abstraction and health checks`
 
-- [ ] T12. Recorder pipeline + step normalization + persistence
+- [x] T12. Recorder pipeline + step normalization + persistence
 
   **What to do**:
   - Implement start/stop/cancel recording flow, session state machine, step capture buffering, normalization, confidence scoring, persistence, and failure recovery.
@@ -987,7 +987,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `feat(recorder): add recording pipeline and step persistence`
 
-- [ ] T13. Web Recorder / Step Editor UI
+- [x] T13. Web Recorder / Step Editor UI
 
   **What to do**:
   - Build Web Recorder UI with preflight state, session status, realtime step stream, step editor controls, and low-confidence highlighting.
@@ -1046,7 +1046,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `feat(recorder-ui): add web recorder and step editor ui`
 
-- [ ] T14. UI script replay executor + screenshot-on-fail
+- [x] T14. UI script replay executor + screenshot-on-fail
 
   **What to do**:
   - Execute saved UI steps through browser abstraction, emit step results, capture screenshots on fail, and persist artifact manifests.
@@ -1100,6 +1100,13 @@ Wave FINAL (parallel verification)
     Failure Indicators: No screenshot, no artifact path, or ambiguous failure state
     Evidence: .sisyphus/evidence/task-T14-replay-fail.png
   ```
+
+  **Current QA Status**:
+  - `npm run test:t14:smoke` => `SMOKE_BLOCKED`
+  - Blocker: Chromium executable not present in current environment
+  - Candidate paths checked:
+    - `D:\my\research\ms-playwright\chromium\chrome-win\chrome.exe`
+    - `D:\my\research\src-tauri\ms-playwright\chromium\chrome-win\chrome.exe`
 
   **Commit**: YES
   - Message: `feat(ui-runner): add ui replay execution and screenshots`

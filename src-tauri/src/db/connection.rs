@@ -9,6 +9,13 @@ use rusqlite::{params, Connection, OpenFlags};
 use std::path::Path;
 use crate::error::{AppError, AppResult};
 
+pub const MIGRATIONS_TABLE_SQL: &str = "CREATE TABLE IF NOT EXISTS _migrations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    checksum TEXT NOT NULL,
+    applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+)";
+
 /// Database connection wrapper
 pub struct DbConnection {
     conn: Connection,
@@ -144,15 +151,8 @@ impl DbConnection {
 
 /// Create migration metadata table
 pub fn create_migration_table(conn: &Connection) -> AppResult<()> {
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS _migrations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE,
-            checksum TEXT NOT NULL,
-            applied_at TEXT NOT NULL
-        )",
-        [],
-    ).map_err(|e| AppError::db_migration(format!("Failed to create migration table: {}", e)))?;
+    conn.execute(MIGRATIONS_TABLE_SQL, [])
+        .map_err(|e| AppError::db_migration(format!("Failed to create migration table: {}", e)))?;
     
     Ok(())
 }

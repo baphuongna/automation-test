@@ -40,12 +40,19 @@ function toCommandError(error: unknown, command: CommandName): CommandError {
   };
 }
 
+function toTauriCommandName(command: CommandName): string {
+  return command.replaceAll(".", "_");
+}
+
 export async function invokeCommand<TName extends CommandName>(
   command: TName,
   payload: CommandPayloadMap[TName]
 ): Promise<CommandResult<CommandResponseMap[TName]>> {
   try {
-    const data = await invoke<CommandResponseMap[TName]>(command, payload as Record<string, unknown>);
+    const data = await invoke<CommandResponseMap[TName]>(
+      toTauriCommandName(command),
+      { payload } as { payload: CommandPayloadMap[TName] }
+    );
 
     return {
       data,

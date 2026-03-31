@@ -29,7 +29,7 @@ impl<'a> DataTableRepository<'a> {
         let columns_json = serde_json::to_string(&table.columns)?;
         
         let sql = r#"
-            INSERT INTO data_tables (id, name, description, columns, created_at, updated_at)
+            INSERT INTO data_tables (id, name, description, columns_json, created_at, updated_at)
             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
         "#;
 
@@ -51,7 +51,7 @@ impl<'a> DataTableRepository<'a> {
     /// Find a data table by ID
     pub fn find_by_id(&self, id: &str) -> Result<DataTable> {
         let sql = r#"
-            SELECT id, name, description, columns, created_at, updated_at
+            SELECT id, name, description, columns_json, created_at, updated_at
             FROM data_tables
             WHERE id = ?1
         "#;
@@ -81,7 +81,7 @@ impl<'a> DataTableRepository<'a> {
     /// Find all data tables
     pub fn find_all(&self) -> Result<Vec<DataTable>> {
         let sql = r#"
-            SELECT id, name, description, columns, created_at, updated_at
+            SELECT id, name, description, columns_json, created_at, updated_at
             FROM data_tables
             ORDER BY name ASC
         "#;
@@ -121,7 +121,7 @@ impl<'a> DataTableRepository<'a> {
         
         let sql = r#"
             UPDATE data_tables
-            SET name = ?1, description = ?2, columns = ?3, updated_at = ?4
+            SET name = ?1, description = ?2, columns_json = ?3, updated_at = ?4
             WHERE id = ?5
         "#;
 
@@ -174,7 +174,7 @@ impl<'a> DataTableRepository<'a> {
 
         let sql = r#"
             INSERT INTO data_table_rows 
-            (id, data_table_id, values, enabled, row_index, created_at, updated_at)
+            (id, data_table_id, row_json, enabled, row_index, created_at, updated_at)
             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
         "#;
 
@@ -197,7 +197,7 @@ impl<'a> DataTableRepository<'a> {
     /// Find all rows for a data table
     pub fn find_rows_by_table(&self, data_table_id: &str) -> Result<Vec<DataTableRow>> {
         let sql = r#"
-            SELECT id, data_table_id, values, enabled, row_index, created_at, updated_at
+            SELECT id, data_table_id, row_json, enabled, row_index, created_at, updated_at
             FROM data_table_rows
             WHERE data_table_id = ?1
             ORDER BY row_index ASC
@@ -228,7 +228,7 @@ impl<'a> DataTableRepository<'a> {
     /// Find enabled rows for a data table (for test execution)
     pub fn find_enabled_rows(&self, data_table_id: &str) -> Result<Vec<DataTableRow>> {
         let sql = r#"
-            SELECT id, data_table_id, values, enabled, row_index, created_at, updated_at
+            SELECT id, data_table_id, row_json, enabled, row_index, created_at, updated_at
             FROM data_table_rows
             WHERE data_table_id = ?1 AND enabled = 1
             ORDER BY row_index ASC
@@ -259,7 +259,7 @@ impl<'a> DataTableRepository<'a> {
     /// Find a row by ID
     pub fn find_row_by_id(&self, id: &str) -> Result<DataTableRow> {
         let sql = r#"
-            SELECT id, data_table_id, values, enabled, row_index, created_at, updated_at
+            SELECT id, data_table_id, row_json, enabled, row_index, created_at, updated_at
             FROM data_table_rows
             WHERE id = ?1
         "#;
@@ -291,7 +291,7 @@ impl<'a> DataTableRepository<'a> {
 
         let sql = r#"
             UPDATE data_table_rows
-            SET values = ?1, enabled = ?2, row_index = ?3, updated_at = ?4
+            SET row_json = ?1, enabled = ?2, row_index = ?3, updated_at = ?4
             WHERE id = ?5
         "#;
 
@@ -372,5 +372,44 @@ mod tests {
 
         let error = repo.create(&table).unwrap_err();
         assert!(matches!(error, TestForgeError::Validation(_)));
+    }
+
+    #[test]
+    fn test_data_table_columns_round_trip_through_columns_json_schema() {
+        let (db, _temp_dir) = create_test_repository();
+        let repo = DataTableRepository::new(db.connection());
+
+        let table = DataTable::from_column_names(
+            "Users".to_string(),
+            vec!["username".to_string(), "password".to_string()],
+        );
+
+        repo.create(&table).unwrap();
+        let stored = repo.find_by_id(&table.id).unwrap();
+
+        assert_eq!(stored.column_names(), vec!["username", "password"]);
+    }
+
+    #[test]
+    fn test_data_table_rows_round_trip_through_row_json_schema() {
+        let (db, _temp_dir) = create_test_repository();
+        let repo = DataTableRepository::new(db.connection());
+
+        let table = DataTable::from_column_names(
+            "Users".to_string(),
+            vec!["username".to_string()],
+        );
+        repo.create(&table).unwrap();
+
+        let row = DataTableRow::with_index(
+            table.id.clone(),
+            vec!["alice".to_string()],
+            0,
+        );
+        repo.create_row(&row).unwrap();
+
+        let stored_rows = repo.find_rows_by_table(&table.id).unwrap();
+        assert_eq!(stored_rows.len(), 1);
+        assert_eq!(stored_rows[0].get_values().unwrap(), vec!["alice"]);
     }
 }

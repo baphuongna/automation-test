@@ -1,9 +1,11 @@
 import type {
   AssertionOperator,
   EntityId,
+  EnvironmentType,
   IsoDateTime,
   ReplayStatus,
   RunStatus,
+  StepConfidence,
   StepAction,
   TestCaseType,
   VariableKind
@@ -19,10 +21,73 @@ export interface EnvironmentVariableDto {
 export interface EnvironmentDto {
   id: EntityId;
   name: string;
+  envType: EnvironmentType;
   isDefault: boolean;
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
   variables: EnvironmentVariableDto[];
+}
+
+export interface DataTableColumnDto {
+  name: string;
+  colType: string;
+}
+
+export interface DataTableRowDto {
+  id: EntityId;
+  values: string[];
+  enabled: boolean;
+  rowIndex: number;
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+}
+
+export interface DataTableAssociationMetadataDto {
+  canAssociateToTestCases: boolean;
+  linkedTestCaseIds: EntityId[];
+  totalRowCount: number;
+  enabledRowCount: number;
+}
+
+export interface DataTableDto {
+  id: EntityId;
+  name: string;
+  description?: string;
+  columns: DataTableColumnDto[];
+  rows: DataTableRowDto[];
+  associationMeta: DataTableAssociationMetadataDto;
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+}
+
+export interface DataTableImportResultDto {
+  table: DataTableDto;
+  importedRowCount: number;
+  format: "csv" | "json";
+}
+
+export interface DataTableExportDto {
+  fileName: string;
+  format: "csv" | "json";
+  content: string;
+  table: DataTableDto;
+}
+
+export interface ArtifactManifestDto {
+  id: EntityId;
+  artifactType: string;
+  logicalName: string;
+  filePath: string;
+  relativePath: string;
+  previewJson: string;
+  createdAt: IsoDateTime;
+}
+
+export interface ReportExportDto {
+  fileName: string;
+  format: "html" | "json";
+  filePath: string;
+  manifest: ArtifactManifestDto;
 }
 
 export interface ApiAssertionDto {
@@ -32,12 +97,57 @@ export interface ApiAssertionDto {
   sourcePath?: string;
 }
 
+export interface ApiAuthDto {
+  type: "none" | "bearer" | "basic" | "api_key";
+  location?: "header" | "query";
+  key?: string;
+  value?: string;
+  token?: string;
+  username?: string;
+  password?: string;
+}
+
 export interface ApiRequestDto {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   url: string;
   headers: Record<string, string>;
   queryParams: Record<string, string>;
   body?: string;
+  auth?: ApiAuthDto;
+}
+
+export interface ApiAssertionResultDto {
+  assertionId: EntityId;
+  operator: AssertionOperator;
+  passed: boolean;
+  expectedValue: string;
+  actualValue?: string;
+  sourcePath?: string;
+  errorCode?: string;
+  message?: string;
+}
+
+export interface ApiRequestPreviewDto {
+  method: string;
+  url: string;
+  headers: Record<string, string>;
+  queryParams: Record<string, string>;
+  bodyPreview?: string;
+  authPreview: string;
+}
+
+export interface ApiExecutionResultDto {
+  status: "passed" | "failed";
+  transportSuccess: boolean;
+  failureKind?: "preflight" | "transport" | "assertion";
+  errorCode?: string;
+  errorMessage?: string;
+  statusCode?: number;
+  durationMs: number;
+  bodyPreview: string;
+  responseHeaders: Record<string, string>;
+  assertions: ApiAssertionResultDto[];
+  requestPreview: ApiRequestPreviewDto;
 }
 
 export interface ApiTestCaseDto {
@@ -54,6 +164,7 @@ export interface UiStepDto {
   selector?: string;
   value?: string;
   timeoutMs?: number;
+  confidence?: StepConfidence;
 }
 
 export interface UiTestCaseDto {

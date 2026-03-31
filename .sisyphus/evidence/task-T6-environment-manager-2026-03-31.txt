@@ -1,0 +1,48 @@
+T6 Environment Manager verification evidence (2026-03-31)
+
+Modified scope:
+- src/routes/environment-manager.tsx
+- src/index.css
+- src/services/environment-client.ts
+- src/services/tauri-client.ts
+- src/store/env-store.ts
+- src/types/domain.ts
+- src/types/dto.ts
+- src/types/commands.ts
+- src-tauri/src/contracts/domain.rs
+- src-tauri/src/contracts/dto.rs
+- src-tauri/src/contracts/commands.rs
+- src-tauri/src/services/environment_service.rs
+- src-tauri/src/lib.rs
+- src-tauri/src/main.rs
+- tests/frontend/environment-manager.test.ts
+
+Verification run results:
+
+1) node --import tsx tests/frontend/shell-smoke.test.ts
+   => PASS ("Shell smoke test passed.")
+
+2) node --import tsx tests/frontend/contracts.test.ts
+   => PASS (no thrown errors)
+
+3) node --import tsx tests/frontend/environment-manager.test.ts
+   => PASS ("Environment Manager source contract test passed.")
+
+4) npm run typecheck
+   => PASS
+
+5) npm run build
+   => PASS
+   dist/assets/index-C7ETBgVE.css 6.17 kB
+   dist/assets/index-BLOsvHyl.js 272.40 kB
+
+Environment limitations captured during verification:
+- lsp_diagnostics for TypeScript files failed because `typescript-language-server` is not installed.
+- lsp_diagnostics for Rust files failed because `rust-analyzer` is not installed.
+- cargo test --manifest-path D:\my\research\src-tauri\Cargo.toml failed because `cargo` is not installed.
+
+Behavior evidence covered by source + compile verification:
+- Dedicated typed environment client wrapper exists and routes all T6 commands through invokeCommand.
+- Runtime Tauri invoke handler now registers environment_list/create/update/delete and environment_variable_upsert/delete.
+- Environment DTO now carries envType so the UI can display production-like warnings deterministically.
+- Route UI contains masked-by-default secret messaging, degraded-mode cue text, default-environment toggle, and destructive delete confirmation path.

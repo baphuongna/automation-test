@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use rusqlite::{params, Connection, OptionalExtension};
 use sha2::{Digest, Sha256};
 
+use super::connection::create_migration_table;
 use crate::error::{AppError, AppResult};
 
 /// Result of a migration step.
@@ -27,7 +28,7 @@ impl MigrationRunner {
 
     /// Run all migrations from disk in filename order.
     pub fn run(&self, conn: &Connection) -> AppResult<Vec<MigrationResult>> {
-        self.ensure_migrations_table(conn)?;
+        create_migration_table(conn)?;
         let mut migrations = self.load_migrations()?;
         migrations.sort_by(|left, right| left.name.cmp(&right.name));
 
@@ -37,21 +38,6 @@ impl MigrationRunner {
         }
 
         Ok(results)
-    }
-
-    fn ensure_migrations_table(&self, conn: &Connection) -> AppResult<()> {
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS _migrations (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
-                checksum TEXT NOT NULL,
-                applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-            )",
-            [],
-        )
-        .map_err(|error| AppError::db_migration(format!("Không thể tạo bảng _migrations: {error}")))?;
-
-        Ok(())
     }
 
     fn load_migrations(&self) -> AppResult<Vec<Migration>> {
@@ -217,6 +203,26 @@ mod tests {
 
         let error = result.err().unwrap();
         assert!(error.to_string().contains("checksum mismatch"));
+    }
+
+    #[test]
+    fn migration_runner_records_full_filename_and_computed_checksum() {
+        let (_temp_dir, conn, migrations_dir) = setup_test_env();
+        let runner = MigrationRunner::new(migrations_dir.clone());
+
+        runner.run(&conn).unwrap();
+
+        let content = fs::read_to_string(migrations_dir.join("001_test.sql")).unwrap();
+        let stored: (String, String) = conn
+            .query_row(
+                "SELECT name, checksum FROM _migrations ORDER BY id ASC LIMIT 1",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+
+        assert_eq!(stored.0, "001_test.sql");
+        assert_eq!(stored.1, MigrationRunner::calculate_checksum(&content));
     }
 
     #[test]

@@ -61,6 +61,17 @@ impl Database {
     pub fn path(&self) -> &Path {
         self.connection.path()
     }
+
+    /// Check whether the database already contains persisted secret variables.
+    pub fn has_persisted_secrets(&self) -> AppResult<bool> {
+        let has_secrets = self.connection().query_row(
+            "SELECT EXISTS(SELECT 1 FROM environment_variables WHERE var_type = 'secret' LIMIT 1)",
+            [],
+            |row| row.get(0),
+        )?;
+
+        Ok(has_secrets)
+    }
 }
 
 #[cfg(test)]
@@ -127,5 +138,27 @@ mod tests {
 
         let error = result.err().unwrap();
         assert!(matches!(error.code, crate::error::ErrorCode::DbMigration));
+    }
+
+    #[test]
+    fn database_detects_persisted_secret_variables() {
+        let temp_dir = TempDir::new().unwrap();
+        let db_path = temp_dir.path().join("db").join("testforge.db");
+        let migrations_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("migrations");
+
+        let database = Database::new_with_migrations_dir(db_path, migrations_dir).unwrap();
+        assert!(!database.has_persisted_secrets().unwrap());
+
+        database.connection().execute(
+            "INSERT INTO environments (id, name, env_type, is_default, created_at, updated_at) VALUES (?1, ?2, 'development', 0, datetime('now'), datetime('now'))",
+            rusqlite::params!["env-1", "Development"],
+        ).unwrap();
+
+        database.connection().execute(
+            "INSERT INTO environment_variables (id, environment_id, key, value, masked_preview, var_type, enabled, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, 'secret', 1, datetime('now'), datetime('now'))",
+            rusqlite::params!["var-1", "env-1", "API_KEY", "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo=", "ab***yz"],
+        ).unwrap();
+
+        assert!(database.has_persisted_secrets().unwrap());
     }
 }

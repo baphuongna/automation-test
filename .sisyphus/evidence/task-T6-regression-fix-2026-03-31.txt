@@ -1,0 +1,22 @@
+T6 regression fix evidence (2026-03-31)
+
+Concrete regressions fixed:
+1) Tauri invoke argument shape now wraps args as `{ payload: ... }` in `src/services/tauri-client.ts`.
+2) Degraded-mode secret-store detection now recognizes backend error code `SECRET_KEY_MISSING` in `src/services/environment-client.ts`.
+
+Files changed for regression fix:
+- src/services/tauri-client.ts
+- src/services/environment-client.ts
+- tests/frontend/environment-manager.test.ts
+
+Verification:
+- node --import tsx tests/frontend/environment-manager.test.ts => PASS
+- node --import tsx tests/frontend/contracts.test.ts => PASS
+- npm run typecheck => PASS
+- npm run build => PASS
+
+Environment limitation:
+- lsp_diagnostics for modified TypeScript files still cannot run because `typescript-language-server` is not installed in this environment.
+
+External confirmation:
+- Tauri v2 docs confirm invoke args map by Rust command parameter name; `State` is injected separately. This validates the `{ payload }` bridge fix while keeping Rust handler signatures unchanged.

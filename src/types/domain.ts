@@ -1,6 +1,9 @@
 export type EntityId = string;
 export type IsoDateTime = string;
 
+export const ENVIRONMENT_TYPES = ["development", "staging", "production", "custom"] as const;
+export type EnvironmentType = (typeof ENVIRONMENT_TYPES)[number];
+
 export const TEST_CASE_TYPES = ["api", "ui"] as const;
 export type TestCaseType = (typeof TEST_CASE_TYPES)[number];
 
@@ -46,3 +49,6 @@ export const STEP_ACTIONS = [
   "assert_text"
 ] as const;
 export type StepAction = (typeof STEP_ACTIONS)[number];
+
+export const STEP_CONFIDENCE_LEVELS = ["high", "medium", "low"] as const;
+export type StepConfidence = (typeof STEP_CONFIDENCE_LEVELS)[number];

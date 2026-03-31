@@ -2,8 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 use super::domain::{
-    AssertionOperator, BrowserRuntimeStatus, EntityId, IsoDateTime, ReplayStatus, RunStatus, StepAction,
-    TestCaseType, VariableKind,
+    AssertionOperator, BrowserRuntimeStatus, EntityId, EnvironmentType, IsoDateTime, ReplayStatus,
+    RunStatus, StepAction, StepConfidence, TestCaseType, VariableKind,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -20,10 +20,89 @@ pub struct EnvironmentVariableDto {
 pub struct EnvironmentDto {
     pub id: EntityId,
     pub name: String,
+    pub env_type: EnvironmentType,
     pub is_default: bool,
     pub created_at: IsoDateTime,
     pub updated_at: IsoDateTime,
     pub variables: Vec<EnvironmentVariableDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DataTableColumnDto {
+    pub name: String,
+    pub col_type: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DataTableRowDto {
+    pub id: EntityId,
+    pub values: Vec<String>,
+    pub enabled: bool,
+    pub row_index: i32,
+    pub created_at: IsoDateTime,
+    pub updated_at: IsoDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DataTableAssociationMetadataDto {
+    pub can_associate_to_test_cases: bool,
+    pub linked_test_case_ids: Vec<EntityId>,
+    pub total_row_count: usize,
+    pub enabled_row_count: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DataTableDto {
+    pub id: EntityId,
+    pub name: String,
+    pub description: Option<String>,
+    pub columns: Vec<DataTableColumnDto>,
+    pub rows: Vec<DataTableRowDto>,
+    pub association_meta: DataTableAssociationMetadataDto,
+    pub created_at: IsoDateTime,
+    pub updated_at: IsoDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DataTableImportResultDto {
+    pub table: DataTableDto,
+    pub imported_row_count: usize,
+    pub format: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DataTableExportDto {
+    pub file_name: String,
+    pub format: String,
+    pub content: String,
+    pub table: DataTableDto,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ArtifactManifestDto {
+    pub id: EntityId,
+    pub artifact_type: String,
+    pub logical_name: String,
+    pub file_path: String,
+    pub relative_path: String,
+    pub preview_json: String,
+    pub created_at: IsoDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ReportExportDto {
+    pub file_name: String,
+    pub format: String,
+    pub file_path: String,
+    pub manifest: ArtifactManifestDto,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -37,12 +116,65 @@ pub struct ApiAssertionDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct ApiAuthDto {
+    pub r#type: String,
+    pub location: Option<String>,
+    pub key: Option<String>,
+    pub value: Option<String>,
+    pub token: Option<String>,
+    pub username: Option<String>,
+    pub password: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct ApiRequestDto {
     pub method: String,
     pub url: String,
     pub headers: BTreeMap<String, String>,
     pub query_params: BTreeMap<String, String>,
     pub body: Option<String>,
+    pub auth: Option<ApiAuthDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiAssertionResultDto {
+    pub assertion_id: EntityId,
+    pub operator: AssertionOperator,
+    pub passed: bool,
+    pub expected_value: String,
+    pub actual_value: Option<String>,
+    pub source_path: Option<String>,
+    pub error_code: Option<String>,
+    pub message: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiRequestPreviewDto {
+    pub method: String,
+    pub url: String,
+    pub headers: BTreeMap<String, String>,
+    pub query_params: BTreeMap<String, String>,
+    pub body_preview: Option<String>,
+    pub auth_preview: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiExecutionResultDto {
+    pub status: String,
+    pub transport_success: bool,
+    pub failure_kind: Option<String>,
+    pub error_code: Option<String>,
+    pub error_message: Option<String>,
+    pub status_code: Option<u16>,
+    pub duration_ms: u64,
+    pub body_preview: String,
+    pub response_headers: BTreeMap<String, String>,
+    pub assertions: Vec<ApiAssertionResultDto>,
+    pub request_preview: ApiRequestPreviewDto,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -69,6 +201,7 @@ pub struct UiStepDto {
     pub selector: Option<String>,
     pub value: Option<String>,
     pub timeout_ms: Option<u64>,
+    pub confidence: Option<StepConfidence>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

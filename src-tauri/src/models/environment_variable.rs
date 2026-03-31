@@ -287,4 +287,24 @@ mod tests {
 
         assert!(var.validate_for_storage().is_ok());
     }
+
+    #[test]
+    fn test_secret_variable_preview_must_not_match_encrypted_value() {
+        let encrypted_value = "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo=".to_string();
+        let var = EnvironmentVariable {
+            id: Uuid::new_v4().to_string(),
+            environment_id: "env-1".to_string(),
+            key: "API_KEY".to_string(),
+            value: encrypted_value.clone(),
+            masked_preview: Some(encrypted_value),
+            var_type: VariableType::Secret,
+            enabled: true,
+            description: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+
+        let error = var.validate_for_storage().unwrap_err();
+        assert_eq!(error, "Secret variable preview must not expose stored value");
+    }
 }

@@ -5,3 +5,13 @@ T2 verification notes
 - grep policy checks were run separately in-session:
   * No screenshot blob storage found in storage schema/code; only the spec comment remains in migrations/001_initial_schema.sql.
   * No hardcoded machine-specific runtime paths were added; path resolution uses platform app-data APIs and env-derived directories.
+
+2026-03-31 follow-up verification
+--------------------------------
+- `cargo test --manifest-path "src-tauri/Cargo.toml"` could not run because `cargo` is not installed in this environment (`CommandNotFoundException`).
+- `lsp_diagnostics` for `src-tauri/src/db/connection.rs`, `src-tauri/src/db/migrations.rs`, and `src-tauri/tests/migrations.rs` could not run because `rust-analyzer` is not installed.
+- T2 defect regression coverage was added in code:
+  * `src-tauri/src/db/migrations.rs`: test `migration_runner_records_full_filename_and_computed_checksum`
+  * `src-tauri/tests/migrations.rs`: test `bootstrap_records_applied_migration_using_filename_and_file_checksum`
+- Grep verification after the patch found no remaining `bootstrap-checksum` or manual `INSERT ... _migrations` statements under `src-tauri`.
+- Path-policy grep still shows only platform app-data resolution (`LOCALAPPDATA`, `Application Support`, `.local/share`) plus `settings.json` bootstrap and no machine-specific hardcoded runtime path.

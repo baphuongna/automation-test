@@ -1,0 +1,44 @@
+T7 Data Table Manager UI + commands verification
+Date: 2026-03-31
+
+Scope implemented:
+- data table CRUD
+- row editing
+- enabled/disabled row semantics
+- CSV/JSON import/export baseline
+- association-ready metadata exposure
+- empty table / zero enabled rows / malformed import handling
+
+Commands run:
+
+1) node --import tsx tests/frontend/data-manager.test.ts
+Result: PASS
+Output: Data Manager T7 contract and UI regression test passed.
+
+2) node --import tsx tests/frontend/environment-manager.test.ts
+Result: PASS
+Output: Environment Manager preview fallback regression test passed.
+
+3) node --import tsx tests/frontend/contracts.test.ts
+Result: PASS
+Output: completed with exit code 0 and no stderr output.
+
+4) npm run typecheck
+Result: PASS
+Output: tsc --noEmit completed successfully after exactOptionalPropertyTypes fixes.
+
+5) npm run build
+Result: PASS
+Output summary:
+- vite v8.0.3 built production bundle successfully
+- dist/assets/index-D_LtXNgY.css 9.54 kB
+- dist/assets/index-D52YhS0C.js 296.41 kB
+
+Environment-limited verification:
+- lsp_diagnostics could not run for modified TypeScript files because typescript-language-server is not installed.
+- lsp_diagnostics could not run for modified Rust files because rust-analyzer is not installed.
+- Rust compile/test verification could not run because cargo is unavailable in this environment.
+
+Notes:
+- Frontend verification used the existing typed IPC boundary in src/services/tauri-client.ts.
+- Browser preview fallback for T7 was kept bounded inside src/services/data-table-client.ts and src/services/data-table-preview-client.ts.

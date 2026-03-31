@@ -104,3 +104,121 @@ pm run build.
 - Storage bootstrap is safest when SQLite schema comes from one migration source of truth; mixing inline schema setup with file-based migrations causes drift quickly.
 - App-data path policy should be centralized in AppPaths so DB/logs/screenshots/exports/config and settings bootstrap stay under one root.
 - A minimal persisted settings.json is enough for T2 bootstrap as long as it records filesystem locations and stays idempotent on rerun.
+
+## T2 follow-up: migration tracking consistency (2026-03-31)
+
+- File-based migration tracking only stays idempotent when `_migrations.name` matches the exact SQL filename that `MigrationRunner` reads from disk; trimming extensions in SQL bootstrap creates false pending migrations on rerun.
+- `_migrations` table creation should live behind one shared SQL definition so bootstrap code and migration runner cannot drift on defaults like `applied_at`.
+- A focused regression test that asserts stored migration `name` + `checksum` is enough to guard the orchestrator-reported defect even when Rust execution is blocked in the current container.
+## T5 rerun: service-boundary encryption and degraded bootstrap (2026-03-31)
+
+- Added `src-tauri/src/services/environment_service.rs` as the explicit boundary that accepts plaintext input for `environment.variable.upsert`, encrypts secret values before repository persistence, and returns masked output on read/list paths by default.
+- Tightened source-of-truth degraded semantics in `src-tauri/src/main.rs`: if the database already contains secret rows but `master.key` is missing, bootstrap now forces degraded mode instead of silently generating a replacement key that would orphan existing ciphertext.
+- Added `SecretService::force_degraded()` so degraded bootstrap state is reflected in the secret layer itself, ensuring secret-dependent operations stay blocked consistently without plaintext fallback.
+- Repaired T5-owned schema/repository drift for data tables by aligning repository SQL with migration column names (`columns_json`, `row_json`) and adding schema checks that better match model validation boundaries.
+## T6: Environment Manager UI + commands (2026-03-31)
+- T6 needed one extra shared field beyond the original placeholder DTOs: `EnvironmentDto.envType`. Without that, the UI could not render deterministic production-like warnings while still staying inside the typed IPC contract.
+- Mapping frontend dotted command names to Tauri-safe Rust handler names inside `src/services/tauri-client.ts` keeps `invokeCommand(...)` as the only frontend IPC boundary while allowing runtime registration via `generate_handler![environment_list, ...]`.
+- In this environment, lightweight source-contract tests are the strongest feasible TDD guard for T6 because they can prove route/runtime/contract wiring without adding a DOM test framework or requiring a missing Rust toolchain.
+## T6: regression follow-up (2026-03-31)
+- The real T6 runtime bug was not command-name translation but argument-object shape: Tauri command arguments are matched by Rust parameter name, so handlers declared as `fn environment_create(payload: ..., state: ...)` require frontend invocation as `{ payload: ... }`.
+- Source-existence tests were too weak for this regression; a focused frontend regression test that inspects the bridge adapter and backend error-code contract gives better protection without requiring a browser runner or Rust toolchain.
+- Degraded-mode cues must align with the backend's actual serialized secret-store error code (`SECRET_KEY_MISSING`), not the cross-layer security taxonomy name that looked plausible from shared TS enums.
+## T6 preview fallback learnings (2026-03-31)
+- The browser-preview failure was caused by a valid runtime assumption: `environmentClient` always called the real Tauri invoke path, so `vite preview` immediately surfaced the generic load error when `__TAURI_INTERNALS__` was absent.
+- Reusing the existing `__TAURI_INTERNALS__ in window` detection pattern from `useTauriEvent.ts` kept the preview fallback bounded and consistent with the rest of the codebase.
+- A tiny environment-only preview adapter backed by `localStorage` is enough to exercise T6 CRUD, masking, production warnings, and degraded secret-store cues without introducing mock infrastructure for other features.
+
+## T7: Data Table Manager UI + commands (2026-03-31)
+- T7 can reuse the exact T6 client-boundary pattern: keep real typed IPC in `src/services/tauri-client.ts` and hide browser-only preview behavior inside a feature-local `data-table-client` + `data-table-preview-client` pair.
+- `exactOptionalPropertyTypes` is a real constraint in this repo; data-table payload builders must omit optional keys entirely instead of sending `description: undefined` or `tableId: undefined`.
+- Association-ready metadata is easiest to keep stable by deriving it directly from table rows (`totalRowCount`, `enabledRowCount`) and exposing an explicit `canAssociateToTestCases`/`linkedTestCaseIds` contract now, without building T15 linkage UI yet.
+- Baseline CSV/JSON import stays deterministic when malformed payloads fail before any write and update paths replace rows only after parsing succeeds.
+
+## T8: API engine + endpoint/assertion persistence (2026-03-31)
+
+- Reusing the existing T6/T7 pattern (shared TS contracts + Rust contracts + handler registration in `lib.rs`/`main.rs`) keeps API feature expansion bounded without introducing raw frontend `invoke()` usage.
+- Missing-variable handling is most reliable at request-resolution stage before reqwest dispatch; returning a preflight-classified execution result avoids ambiguous transport failures.
+- Auth redaction is safer when implemented at preview-construction boundary (`request_preview`) with key-name based masking and auth-type specific preview strings (`[REDACTED]`).
+- Operator enforcement should happen at both persistence (`upsert_test_case`) and execution (`execute`) boundaries so invalid/unsupported operators cannot silently slip through either path.
+- Transport-vs-assertion failure separation is easiest to keep explicit with a dedicated `failureKind` field (`transport | assertion | preflight`) in the execution DTO.
+
+## T8 follow-up: query params persistence fix (2026-03-31)
+
+- Regression đã xác nhận root-cause thật nằm ở persistence boundary: `ApiRequestDto.queryParams` có trong contract nhưng bị rơi vì `ApiEndpoint` model và `ApiRepository` SQL chưa mang trường này.
+- Với SQLite+russqlite, lưu map query params dưới dạng JSON text (`query_params_json`) và đọc lại với `serde_json::from_str(...).unwrap_or_default()` là cách tối thiểu, tương thích dữ liệu cũ và tránh panic khi dữ liệu lỗi.
+- Để giữ behavior hiện tại, chỉ cần map thêm `endpoint.query_params = request.query_params.clone()` tại `upsert_test_case(...)`; không cần mở rộng command surface/UI.
+
+## T9: API Tester UI + result viewer (2026-03-31)
+
+- T9 có thể bám đúng pattern T6/T7 bằng cách giữ route-level state trong `src/routes/api-tester.tsx`, dồn mọi IPC vào `src/services/api-tester-client.ts`, và cô lập browser QA fallback trong `src/services/api-tester-preview-client.ts`.
+- Vì T8 chưa expose typed IPC list/load cho API test cases, một local workspace cache giới hạn theo feature (localStorage) là đủ để giữ collection tree usable mà không cần nở backend scope ngoài `api.testcase.upsert`, `api.testcase.delete`, và `api.execute`.
+- `exactOptionalPropertyTypes` tiếp tục là guardrail quan trọng: payload gửi xuống `api.execute`/auth DTO phải omit field optional hoàn toàn thay vì truyền `undefined`, nếu không `tsc` sẽ chặn ngay ở typecheck/build.
+- Result viewer rõ ràng hơn khi tách summary theo `failureKind` (`preflight`, `transport`, `assertion`) rồi mới render assertion-level actual-vs-expected details; QA không phải tự suy luận lỗi đến từ mạng hay từ assertion mismatch.
+- Preview fallback cần seed một response/result surface đủ giàu (`requestPreview`, redacted headers/query/auth, assertion results) để browser QA kiểm tra UI thật mà vẫn giữ nguyên policy không lộ secret.
+## T10: Export + artifact path baseline (2026-03-31)
+- T10 cần một service backend riêng (`src-tauri/src/services/artifact_service.rs`) để gom path resolution, preview-safe persistence, và sanitized report/export writing; nếu để rải trong handler sẽ khó tái sử dụng cho T15/T17.
+- `AppPaths` từ `src-tauri/src/utils/paths.rs` vẫn là source of truth phù hợp nhất cho artifact policy: exports/reports đi dưới `exports/`, screenshot artifacts đi dưới `screenshots/`, còn SQLite chỉ giữ manifest metadata nhẹ.
+- Trong môi trường thiếu `cargo`, một frontend source-assertion test riêng cho T10 đủ mạnh để khóa các invariant quan trọng: module service tồn tại, DTO/contracts có manifest/report export shape, migration metadata có mặt, và export flow đã chạm persistence helper thay vì chỉ trả content in-memory.
+- Sanitization baseline nên hoạt động trên JSON tree preview-safe và chặn mặc định các key/value nhạy cảm như authorization, bearer/basic, api_key, token, password, ciphertext, masked_preview trước khi ghi HTML/JSON export.
+
+## T11: BrowserAutomationService + runtime health scaffolding (2026-03-31)
+
+- Browser health baseline có thể triển khai an toàn bằng service layer riêng (`BrowserAutomationService`) trả về `BrowserHealthDto`, giữ nguyên stable IPC contract và không lộ runtime internals ra ngoài backend boundary.
+- Để hỗ trợ gate go/no-go tuần 6, health check nên phản ánh rõ 3 trạng thái `healthy|degraded|unavailable` với semantic Chromium-only thay vì chỉ trả boolean availability.
+- Event foundation `browser.health.changed` nên được phát ngay trong handler health check để downstream recorder/replay có thể subscribe lại contract cũ mà không cần thay đổi shape event.
+
+## T12: Recorder pipeline + step normalization + persistence (2026-03-31)
+
+- T12 có thể bám pattern T11 bằng cách giữ toàn bộ luồng recorder trong `BrowserAutomationService` (start/stop/cancel, normalize, confidence scoring, persist) thay vì để handler lib.rs xử lý trực tiếp logic browser/persistence.
+- Rule confidence deterministic dễ bảo trì khi gắn theo signal đơn giản và ổn định: selector mạnh (`#id`, `[name=]`, `data-testid`) + action/value hợp lệ => `high`; selector có nhưng yếu/thiếu một phần => `medium`; còn lại `low`.
+- Recovery path an toàn hơn khi `RecordingState` giữ `captured_steps` + `last_error` + `recoverable`: stop sau failure vẫn persist được partial steps vào `ui_script_steps` thay vì mất dữ liệu khi phiên ghi lỗi giữa chừng.
+- Source-assertion regression test riêng cho T12 (`tests/frontend/browser-recording-t12.test.ts`) đủ để khóa invariants recorder trong môi trường không có cargo/rust runtime.
+
+## T13: Web Recorder / Step Editor UI (2026-03-31)
+
+- T13 có thể bám đúng pattern T9 bằng cách giữ state nặng trong `src/routes/web-recorder.tsx`, dồn mọi typed IPC vào `src/services/web-recorder-client.ts`, và cô lập browser-preview fallback trong `src/services/web-recorder-preview-client.ts`.
+- Vì seam hiện tại chưa có typed list/load cho UI test cases, một workspace cache cục bộ theo feature là đủ để giữ draft `/web-recorder` usable mà không mở rộng backend surface ngoài `ui.testcase.upsert/delete` và `browser.recording.*`.
+- Low-confidence highlighting chỉ ổn định khi `UiStepDto` surfacing `confidence` ở shared TS/Rust contracts; nếu không UI buộc phải suy luận lại từ dữ liệu thiếu.
+- Conflict state record-vs-run có thể khóa rõ ràng ở UI bằng `useRunStore().status !== "idle"` mà chưa cần bước vào scope T14 replay execution.
+
+## T13 bugfix: preview live-step event seam (2026-03-31)
+
+- Root cause của bug preview là seam mismatch: `web-recorder-preview-client` phát `window.CustomEvent`, còn `useTauriEvent` trước đó chỉ subscribe qua Tauri `listen(...)`, nên route không bao giờ nhận `browser.recording.step.captured` trong preview.
+- Sửa ở hook event boundary nhỏ hơn và an toàn hơn sửa route: giữ nguyên Tauri typed path thật, chỉ thêm browser-local `window.addEventListener(...)` fallback khi không có `__TAURI_INTERNALS__`.
+- Để QA preview đáng tin cậy hơn, preview recorder nên persist luôn step đã emit realtime vào draft local thay vì chỉ emit transient event rồi để persisted state lệch khỏi UI stream.
+
+## T12 fix-on-top: E0308 error-type mismatches (2026-03-31)
+
+- Root-cause chính là alias shadow trong `error.rs`: `AppResult<T>` từng trỏ nhầm vào alias `Result<T>` (đang bind `TestForgeError`) thay vì `std::result::Result<T, AppError>`, làm nhiều hàm tưởng AppError nhưng thực tế bị suy luận TestForgeError.
+- Với `lib.rs`, command signatures nên ghi tường minh `std::result::Result<..., AppError>` để tránh bị generic alias `Result` trong cùng module kéo sai error type cho Tauri handlers.
+## T14: UI replay executor + screenshot-on-fail (2026-03-31)
+
+- T14 có thể triển khai an toàn bằng cách giữ toàn bộ runtime replay trong `BrowserAutomationService` và chỉ expose qua typed handlers (`browser_replay_start`, `browser_replay_cancel`) để không rò rỉ browser internals ra ngoài boundary.
+- Dùng `AppState` replay state machine riêng (`ReplayState::Idle|Running`) với cờ `cancel_requested` giúp cancel idempotent: gọi cancel lặp lại trả false thay vì tạo trạng thái orphan, và `finish_replay` luôn dọn trạng thái sau khi kết thúc replay.
+- Để bám T10 path policy, screenshot fail nên đi qua `ArtifactService::resolve_artifact_path(ArtifactKind::Screenshot, ...)` và lưu `artifact_manifests` bằng `persist_artifact_manifest` thay vì tạo storage nhánh riêng.
+- Progress semantics ổn định khi phát `browser.replay.progress` theo chuỗi `running` (bắt đầu + từng step), rồi kết thúc bằng `passed|failed|cancelled` kèm `currentStepId` khi có ngữ cảnh step.
+## T14 follow-up: replay defects fixed (2026-03-31)
+
+- Root cause của reject T14 là executor chỉ validate payload + sleep nên không có thao tác runtime thực tế; fix bằng `ChromiumCliReplayRuntimeAdapter` chạy Chromium headless CLI (`--headless`, `--dump-dom`, navigate URL) trong `BrowserAutomationService` để replay thực thi thật qua abstraction boundary.
+- Health gating phải bám semantics T11: browser flows blocked khi runtime không healthy. `start_replay(...)` đã chuyển sang chặn toàn bộ trạng thái khác `BrowserRuntimeStatus::Healthy` (bao gồm `degraded` + `unavailable`).
+- Screenshot-on-fail phải là artifact hợp lệ: thay logic file rỗng bằng capture Chromium thật qua `--screenshot=<path>`, validate file size > 0 trước khi persist manifest vào `artifact_manifests` qua `ArtifactService`.
+- Replay adapter hiện intentionally fail rõ ràng cho interaction actions (click/fill/select/check/uncheck) vì Chromium CLI không hỗ trợ tương tác DOM đầy đủ; lỗi này là explicit/honest failure semantics thay vì giả pass.
+## T14 interaction follow-up (2026-03-31)
+
+- Remaining reject root-cause: replay adapter vẫn hard-fail toàn bộ interaction steps bằng `unsupported_interaction_error(...)`, nên không replay được flow recorder cơ bản.
+- Fix đã áp dụng: bổ sung interaction execution path trong `ChromiumCliReplayRuntimeAdapter` (`click`, `fill`, `select`, `set_checked`) và gọi trực tiếp từ `execute_step(...)` cho các action tương ứng.
+- Runtime adapter hiện validate interaction bằng DOM snapshot thực (`--dump-dom`) trước khi ghi nhận thao tác; đồng thời lưu `interaction_history` để assertion text cơ bản có thể xác nhận qua dữ liệu interaction khi DOM chưa phản ánh trực tiếp.
+- Bài học quan trọng: trong môi trường không có full Playwright runtime, cần hỗ trợ “phase-1 practical interaction subset” trung thực thay vì reject blanket; chỉ fail explicit cho case advanced thực sự chưa cover.
+## T14 real-interaction fix (2026-03-31)
+
+- Root cause cuối cùng: interaction methods chỉ validate selector + lưu local memory, không có browser-side mutation thật; `assert_text` còn fallback theo memory gây false-positive.
+- Fix mới: thay interaction executor bằng Node+CDP runtime script ngay trong `BrowserAutomationService` (`NODE_CDP_INTERACTION_SCRIPT`) để thực thi thật trên trang: `click`, `fill`, `select`, `check/uncheck` qua `Runtime.evaluate`, sau đó lấy DOM mới (`document.documentElement.outerHTML`) làm nguồn sự thật.
+- Loại bỏ toàn bộ synthetic proof path: xoá `interaction_history`, `record_interaction`, `validate_selector_presence` fallback và xoá logic assert dựa trên local memory.
+- Adapter vẫn giữ browser internals bên trong service boundary và chỉ trả kết quả qua DTO/events hiện có.
+## T14 smoke harness verifiability update (2026-03-31)
+
+- Đã thêm smoke harness chuyên biệt `tests/frontend/browser-replay-t14-smoke.ts` để giảm ambiguity cho runtime verification trong môi trường hiện tại.
+- Harness chạy theo nguyên tắc honest gating: kiểm tra prerequisite Node + Chromium trước; nếu thiếu thì trả `SMOKE_BLOCKED` với chẩn đoán actionable, không pass giả.
+- Khi đủ prerequisite, harness tạo target HTML deterministic (`file://...`) và thực thi interaction thật qua CDP (`Runtime.evaluate`) rồi xác minh DOM side-effects (`clicked`, `alice`, `admin`, `checked`).
+- Kết quả hiện tại trên máy này: `SMOKE_BLOCKED` do thiếu Chromium executable, kèm danh sách candidate paths để setup nhanh.

@@ -106,10 +106,94 @@
 
 - Plan references `.sisyphus/drafts/automation-testing-tool-spec.md`, but the repository currently contains only `.sisyphus/drafts/automation-testing-tool.md`, so detailed section-by-section spec cross-checking was not possible from the expected path.
 - Rust verification remains blocked in this environment because both `cargo` and `rust-analyzer` are unavailable.
-- LSP diagnostics could not run because 	ypescript-language-server is not installed in this environment; verification used 	sc via 
-pm run build instead.
-- Existing shell smoke test is TypeScript ESM and cannot run with plain 
-ode; Node 22 --experimental-strip-types was used to execute it without adding new dependencies.
+- LSP diagnostics could not run because `typescript-language-server` is not installed in this environment; verification used `tsc` via `npm run build` instead.
+- Existing shell smoke test is TypeScript ESM and cannot run with plain `node`; Node 22 `--experimental-strip-types` was used to execute it without adding new dependencies.
 ## T2: Storage Bootstrap (2026-03-30)
 - Rust verification is blocked in this environment because both cargo and rust-analyzer are unavailable.
 - Existing scaffold outside T2 already contains broader compile-risk areas; this task repaired storage/bootstrap path but orchestrator should re-run cargo test/check on a Rust-enabled machine.
+
+## T2 follow-up: migration tracking consistency (2026-03-31)
+
+- Fresh T2 verification remains partially blocked: `cargo test --manifest-path src-tauri/Cargo.toml` fails immediately because `cargo` is not installed, and `lsp_diagnostics` for `.rs` files fails because `rust-analyzer` is missing.
+- Git inspection in this PowerShell environment should avoid bash-style `export ...`; use direct commands only to prevent shell-noise during evidence collection.
+## T5 rerun issues (2026-03-31)
+
+- Fresh Rust verification is still blocked in this environment: `cargo test --manifest-path D:\my\research\src-tauri\Cargo.toml` fails because `cargo` is not installed, and `lsp_diagnostics` for modified `.rs` files still cannot run because `rust-analyzer` is unavailable.
+- Existing T5 evidence from 2026-03-30 overstated repository-level confidence because it did not yet prove a real service boundary that encrypts plaintext command input before persistence; the new `EnvironmentService` is now the authoritative source for that path.
+## T6 issues (2026-03-31)
+- `lsp_diagnostics` remains unavailable for all modified TypeScript files because `typescript-language-server` is not installed, and for Rust files because `rust-analyzer` is not installed.
+- Fresh backend verification is still partially blocked: `cargo test --manifest-path D:\my\research\src-tauri\Cargo.toml` cannot run because `cargo` is not installed in this environment.
+- PowerShell shell behavior continues to reject bash-style `export ...`; evidence commands should use direct PowerShell-compatible invocations only.
+## T6 regression issues (2026-03-31)
+- Verification surfaced a runtime-specific IPC mismatch: Tauri command args are matched by Rust parameter name, so handlers declared with `payload: ...` do not work when frontend passes the payload object at the root of `invoke()` args.
+- Frontend degraded-mode cue logic was checking `SECURITY_KEY_MISSING`, but the backend currently serializes secret-store degraded cases as `SECRET_KEY_MISSING`; this prevented warning UI from activating at runtime.
+## T6 preview fallback issues (2026-03-31)
+- Fresh hands-on QA in browser preview previously failed with `Không thể tải danh sách môi trường.` because no Tauri runtime exists under `vite preview` in this environment.
+- `lsp_diagnostics` for modified TypeScript files still cannot run because `typescript-language-server` is not installed in the current environment.
+
+## T7 issues (2026-03-31)
+- `lsp_diagnostics` could not run for modified TypeScript files because `typescript-language-server` is not installed, and could not run for modified Rust files because `rust-analyzer` is not installed.
+- Fresh Rust verification remains partially blocked for T7: `cargo` is unavailable, so new `data_table_*` handlers/contracts could not be compile-tested locally in this environment.
+- TypeScript verification initially failed under `exactOptionalPropertyTypes`; T7 payload creation had to be rewritten to omit optional keys instead of passing explicit `undefined` values.
+
+## T8 issues (2026-03-31)
+
+- `lsp_diagnostics` could not run for modified TypeScript files because `typescript-language-server` is not installed, and could not run for modified Rust files because `rust-analyzer` is not installed in this environment.
+- Rust runtime verification remains partially blocked: `cargo test --manifest-path D:\my\research\src-tauri\Cargo.toml` cannot execute because `cargo` is unavailable.
+- PowerShell continues to reject bash-style `export ...`; verification/evidence commands must stay PowerShell-compatible.
+
+## T8 follow-up issues: query params persistence (2026-03-31)
+
+- `lsp_diagnostics` vẫn không khả dụng cho TS/Rust do thiếu `typescript-language-server` và `rust-analyzer`; ngoài ra `.sql` không có LSP server cấu hình sẵn trong môi trường hiện tại.
+- Không thể chạy `cargo test` để compile-verify migration + repository changes, nên verification thực tế dựa trên regression test nguồn + typecheck + build evidence.
+
+## T9 issues (2026-03-31)
+
+- `lsp_diagnostics` cho các file T9 (`src/routes/api-tester.tsx`, `src/services/api-tester-*.ts`, test files) vẫn không chạy được vì `typescript-language-server` chưa được cài; CSS diagnostics cũng bị chặn vì thiếu `biome` server.
+- Current T8 surface chưa có typed IPC list/load cho API test cases, nên collection tree của T9 phải dùng workspace cache cục bộ thay vì dữ liệu persisted được hydrate lại từ backend trên mỗi boot/runtime.
+## T10 issues (2026-03-31)
+- `lsp_diagnostics` chỉ xác nhận được các file TypeScript sửa trong T10; Rust diagnostics vẫn bị chặn vì `rust-analyzer` không có trong môi trường này.
+- Fresh backend compile/test verification cho `artifact_service.rs`, migration `003_add_artifact_manifests.sql`, và thay đổi `lib.rs` vẫn cần được re-run trên máy có `cargo` để xác nhận compile/runtime Rust end-to-end.
+- TDD cho T10 được thực hiện bằng source-assertion test `tests/frontend/export-artifact-t10.test.ts`; targeted red run đã fail đúng vì thiếu `src-tauri/src/services/artifact_service.rs` trước khi implementation được thêm vào.
+
+## T11 issues (2026-03-31)
+
+- Dù Rust source diagnostics hiện trả sạch cho các file T11 đã sửa, runtime compile/test Rust đầy đủ vẫn phụ thuộc môi trường có `cargo` (container hiện tại không cung cấp toolchain đó).
+- Browser runtime discovery baseline hiện dùng candidate path + env (`PLAYWRIGHT_*`); xác nhận executable discovery thực tế theo packaging target cần được kiểm chứng thêm ở môi trường Windows đóng gói.
+
+## T12 issues (2026-03-31)
+
+- Verification runtime recorder backend vẫn bị giới hạn bởi môi trường hiện tại: không thể chạy `cargo test`/Tauri runtime flow thật vì thiếu `cargo`; T12 được khóa bằng source-contract regression test + `npm test` + `npm run typecheck` + `npm run build`.
+- T12 intentionally chưa có browser runtime capture thực tế (Playwright event tap) trong môi trường này; pipeline recorder hiện đã sẵn state/persistence/contracts để T13 UI và T14 executor gắn vào cùng boundary mà không lộ browser handles.
+
+## T13 issues (2026-03-31)
+
+- `lsp_diagnostics` chạy sạch cho các file TypeScript/TSX mới sửa của T13, nhưng CSS diagnostics cho `src/index.css` vẫn bị chặn vì môi trường hiện tại thiếu `biome` (`Command not found: biome`).
+- Fresh runtime verification cho recorder UI vẫn bị giới hạn bởi môi trường không có `cargo`/Tauri runtime đầy đủ; bằng chứng hiện tại dựa trên regression test nguồn, `npm test`, `npm run typecheck`, và `npm run build`.
+
+## T13 bugfix issues (2026-03-31)
+
+- Hands-on QA finding là chính xác: preview fallback đổi `recordingStatus` được vì route tự set local state sau `startRecording()`, nhưng live step stream trước fix không hoạt động vì preview event không đi qua cùng transport mà `useTauriEvent` đang lắng nghe.
+## T14 issues (2026-03-31)
+
+- `lsp_diagnostics` chạy sạch cho tất cả file sửa của T14 trong môi trường hiện tại, nhưng verify compile/runtime Rust end-to-end vẫn cần re-check thêm ở máy có `cargo` do container này không cung cấp Rust toolchain.
+- T14 replay executor hiện là Chromium-only sequential baseline theo scope Phase 1; chưa có Playwright launch/runtime thực tế trong container này nên validation dựa trên source-regression + npm test/typecheck/build.
+## T14 follow-up issues (2026-03-31)
+
+- Rust LSP cho `src-tauri/src/main.rs` báo macro-error phụ thuộc `generate_context!` khi `dist` chưa tồn tại; sau khi build lại thì runtime verification pass qua `npm run build`.
+- Do môi trường không có `cargo`, replay runtime mới được verify qua source regression + TypeScript verification + build; compile/runtime Rust end-to-end vẫn cần xác nhận thêm trên máy có Rust toolchain.
+## T14 interaction follow-up issues (2026-03-31)
+
+- Interaction execution hiện dùng Chromium CLI + DOM presence validation, chưa đạt mức automation engine đầy đủ, không thao tác event-level như Playwright/CDP, nhưng đã loại bỏ hard-fail blanket và cho phép replay flow cơ bản theo scope phase-1.
+## T14 real-interaction issues (2026-03-31)
+
+- Runtime interaction hiện phụ thuộc Node runtime khả dụng tại máy chạy backend vì interaction executor dùng `node -e` + CDP để điều khiển Chromium.
+- Do constraints môi trường không có cargo runtime verification đầy đủ, bằng chứng chấp nhận hiện dựa trên source regression + test/typecheck/build pass.
+- `npm run test:t14:smoke` currently returns `SMOKE_BLOCKED` on this machine because no Chromium executable was found at the checked candidate paths.
+- Candidate paths checked by the smoke harness:
+  - `D:\my\research\ms-playwright\chromium\chrome-win\chrome.exe`
+  - `D:\my\research\src-tauri\ms-playwright\chromium\chrome-win\chrome.exe`
+## T14 smoke harness issues (2026-03-31)
+
+- Smoke harness hiện fail-fast đúng kỳ vọng khi thiếu Chromium runtime; đây là trạng thái blocked hợp lệ, không phải test pass.
+- Vì smoke script hiện exit code != 0 cho cả blocked/fail, CI cần đọc log status (`SMOKE_BLOCKED` vs `SMOKE_FAIL`) để phân biệt thiếu prerequisite và lỗi runtime thực thi.
