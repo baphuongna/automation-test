@@ -3,7 +3,12 @@ use rusqlite::{params, Connection, OptionalExtension};
 use uuid::Uuid;
 
 use crate::contracts::domain::{RunStatus, TestCaseType};
-use crate::contracts::dto::{RunResultDto, SuiteDto, SuiteItemDto};
+use serde_json::Value;
+
+use crate::contracts::dto::{
+    ArtifactManifestDto, RunCaseResultDto, RunDetailDto, RunHistoryEntryDto, RunResultDto,
+    SuiteDto, SuiteItemDto,
+};
 use crate::error::{Result, TestForgeError};
 use crate::models::DataTableRow;
 
@@ -29,7 +34,9 @@ pub struct PersistedSuite {
 pub struct PersistedRunSummary {
     pub run_id: String,
     pub suite_id: Option<String>,
+    pub suite_name: Option<String>,
     pub environment_id: String,
+    pub environment_name: String,
     pub status: RunStatus,
     pub started_at: String,
     pub finished_at: Option<String>,
@@ -37,6 +44,11 @@ pub struct PersistedRunSummary {
     pub passed_count: u32,
     pub failed_count: u32,
     pub skipped_count: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct PersistedRunCaseResult {
+    pub dto: RunCaseResultDto,
 }
 
 #[derive(Debug, Clone)]
@@ -141,6 +153,117 @@ impl<'a> RunnerRepository<'a> {
             .collect::<std::result::Result<Vec<_>, _>>()?;
 
         Ok(rows)
+    }
+
+    pub fn list_suites(&self) -> Result<Vec<SuiteDto>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT ts.id, ts.name, sc.id, sc.case_id, tc.case_type, sc.sort_order
+             FROM test_suites ts
+             LEFT JOIN suite_cases sc ON sc.suite_id = ts.id
+             LEFT JOIN test_cases tc ON tc.id = sc.case_id
+             ORDER BY ts.name COLLATE NOCASE ASC, sc.sort_order ASC",
+        )?;
+
+        let rows = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                    row.get::<_, Option<String>>(4)?,
+                    row.get::<_, Option<i32>>(5)?,
+                ))
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        let mut suites: Vec<SuiteDto> = Vec::new();
+        for (suite_id, suite_name, suite_case_id, case_id, case_type_raw, order) in rows {
+            let needs_new = suites
+                .last()
+                .map(|suite| suite.id != suite_id)
+                .unwrap_or(true);
+
+            if needs_new {
+                suites.push(SuiteDto {
+                    id: suite_id.clone(),
+                    name: suite_name,
+                    items: Vec::new(),
+                });
+            }
+
+            if let (Some(item_id), Some(test_case_id), Some(case_type_text), Some(item_order)) =
+                (suite_case_id, case_id, case_type_raw, order)
+            {
+                let item_type = match case_type_text.as_str() {
+                    "ui" => TestCaseType::Ui,
+                    _ => TestCaseType::Api,
+                };
+
+                if let Some(suite) = suites.last_mut() {
+                    suite.items.push(SuiteItemDto {
+                        id: item_id,
+                        test_case_id,
+                        r#type: item_type,
+                        order: item_order,
+                    });
+                }
+            }
+        }
+
+        Ok(suites)
+    }
+
+    pub fn list_run_history(&self, suite_id: Option<&str>) -> Result<Vec<RunHistoryEntryDto>> {
+        let base_query =
+            "SELECT tr.id, tr.suite_id, ts.name, tr.environment_id, env.name, tr.status, tr.started_at, tr.completed_at, tr.total_cases, tr.passed, tr.failed, tr.skipped
+             FROM test_runs tr
+             LEFT JOIN test_suites ts ON ts.id = tr.suite_id
+             JOIN environments env ON env.id = tr.environment_id";
+        let order_clause = " ORDER BY COALESCE(tr.completed_at, tr.started_at, tr.created_at) DESC, tr.created_at DESC";
+
+        let map_row = |row: &rusqlite::Row<'_>| -> rusqlite::Result<PersistedRunSummary> {
+            let status_raw: String = row.get(5)?;
+            let status = match status_raw.as_str() {
+                "queued" => RunStatus::Queued,
+                "running" => RunStatus::Running,
+                "skipped" => RunStatus::Skipped,
+                "passed" => RunStatus::Passed,
+                "cancelled" => RunStatus::Cancelled,
+                _ => RunStatus::Failed,
+            };
+
+            Ok(PersistedRunSummary {
+                run_id: row.get(0)?,
+                suite_id: row.get(1)?,
+                suite_name: row.get(2)?,
+                environment_id: row.get(3)?,
+                environment_name: row.get(4)?,
+                status,
+                started_at: row
+                    .get::<_, Option<String>>(6)?
+                    .unwrap_or_else(|| Utc::now().to_rfc3339()),
+                finished_at: row.get(7)?,
+                total_count: row.get::<_, i64>(8)? as u32,
+                passed_count: row.get::<_, i64>(9)? as u32,
+                failed_count: row.get::<_, i64>(10)? as u32,
+                skipped_count: row.get::<_, i64>(11)? as u32,
+            })
+        };
+
+        let items = if let Some(suite_id) = suite_id {
+            let query = format!("{base_query} WHERE tr.suite_id = ?1{order_clause}");
+            let mut stmt = self.conn.prepare(&query)?;
+            stmt.query_map(params![suite_id], map_row)?
+                .collect::<std::result::Result<Vec<_>, _>>()?
+        } else {
+            let query = format!("{base_query}{order_clause}");
+            let mut stmt = self.conn.prepare(&query)?;
+            stmt.query_map([], map_row)?
+                .collect::<std::result::Result<Vec<_>, _>>()?
+        };
+
+        Ok(items.into_iter().map(Self::to_run_history_entry).collect())
     }
 
     pub fn create_suite_run(
@@ -250,11 +373,14 @@ impl<'a> RunnerRepository<'a> {
 
     pub fn load_run_result(&self, run_id: &str) -> Result<RunResultDto> {
         let summary = self.conn.query_row(
-            "SELECT id, suite_id, environment_id, status, started_at, completed_at, total_cases, passed, failed, skipped
-             FROM test_runs WHERE id = ?1",
+            "SELECT tr.id, tr.suite_id, ts.name, tr.environment_id, env.name, tr.status, tr.started_at, tr.completed_at, tr.total_cases, tr.passed, tr.failed, tr.skipped
+             FROM test_runs tr
+             LEFT JOIN test_suites ts ON ts.id = tr.suite_id
+             JOIN environments env ON env.id = tr.environment_id
+             WHERE tr.id = ?1",
             params![run_id],
             |row| {
-                let status_raw: String = row.get(3)?;
+                let status_raw: String = row.get(5)?;
                 let status = match status_raw.as_str() {
                     "queued" => RunStatus::Queued,
                     "running" => RunStatus::Running,
@@ -267,19 +393,148 @@ impl<'a> RunnerRepository<'a> {
                 Ok(PersistedRunSummary {
                     run_id: row.get(0)?,
                     suite_id: row.get(1)?,
-                    environment_id: row.get(2)?,
+                    suite_name: row.get(2)?,
+                    environment_id: row.get(3)?,
+                    environment_name: row.get(4)?,
                     status,
-                    started_at: row.get::<_, Option<String>>(4)?.unwrap_or_else(|| Utc::now().to_rfc3339()),
-                    finished_at: row.get(5)?,
-                    total_count: row.get::<_, i64>(6)? as u32,
-                    passed_count: row.get::<_, i64>(7)? as u32,
-                    failed_count: row.get::<_, i64>(8)? as u32,
-                    skipped_count: row.get::<_, i64>(9)? as u32,
+                    started_at: row.get::<_, Option<String>>(6)?.unwrap_or_else(|| Utc::now().to_rfc3339()),
+                    finished_at: row.get(7)?,
+                    total_count: row.get::<_, i64>(8)? as u32,
+                    passed_count: row.get::<_, i64>(9)? as u32,
+                    failed_count: row.get::<_, i64>(10)? as u32,
+                    skipped_count: row.get::<_, i64>(11)? as u32,
                 })
             },
         )?;
 
-        Ok(RunResultDto {
+        Ok(Self::to_run_result_dto(summary))
+    }
+
+    pub fn load_run_detail(&self, run_id: &str) -> Result<RunDetailDto> {
+        let summary = self.conn.query_row(
+            "SELECT tr.id, tr.suite_id, ts.name, tr.environment_id, env.name, tr.status, tr.started_at, tr.completed_at, tr.total_cases, tr.passed, tr.failed, tr.skipped
+             FROM test_runs tr
+             LEFT JOIN test_suites ts ON ts.id = tr.suite_id
+             JOIN environments env ON env.id = tr.environment_id
+             WHERE tr.id = ?1",
+            params![run_id],
+            |row| {
+                let status_raw: String = row.get(5)?;
+                let status = match status_raw.as_str() {
+                    "queued" => RunStatus::Queued,
+                    "running" => RunStatus::Running,
+                    "skipped" => RunStatus::Skipped,
+                    "passed" => RunStatus::Passed,
+                    "cancelled" => RunStatus::Cancelled,
+                    _ => RunStatus::Failed,
+                };
+
+                Ok(PersistedRunSummary {
+                    run_id: row.get(0)?,
+                    suite_id: row.get(1)?,
+                    suite_name: row.get(2)?,
+                    environment_id: row.get(3)?,
+                    environment_name: row.get(4)?,
+                    status,
+                    started_at: row.get::<_, Option<String>>(6)?.unwrap_or_else(|| Utc::now().to_rfc3339()),
+                    finished_at: row.get(7)?,
+                    total_count: row.get::<_, i64>(8)? as u32,
+                    passed_count: row.get::<_, i64>(9)? as u32,
+                    failed_count: row.get::<_, i64>(10)? as u32,
+                    skipped_count: row.get::<_, i64>(11)? as u32,
+                })
+            },
+        )?;
+
+        let result_artifacts = self.load_artifacts_for_run(&summary.run_id)?;
+
+        let mut stmt = self.conn.prepare(
+            "SELECT trr.id, trr.case_id, tc.name, tc.case_type, trr.data_row_id, dtr.row_index, trr.status, trr.duration_ms,
+                    trr.error_message, trr.error_code, trr.request_log_json, trr.response_log_json, trr.assertion_results_json, trr.screenshots_json
+             FROM test_run_results trr
+             JOIN test_cases tc ON tc.id = trr.case_id
+             LEFT JOIN data_table_rows dtr ON dtr.id = trr.data_row_id
+             WHERE trr.run_id = ?1
+             ORDER BY trr.created_at ASC, tc.name COLLATE NOCASE ASC",
+        )?;
+
+        let rows = stmt
+            .query_map(params![run_id], |row| {
+                let status_raw: String = row.get(6)?;
+                let status = match status_raw.as_str() {
+                    "queued" => RunStatus::Queued,
+                    "running" => RunStatus::Running,
+                    "skipped" => RunStatus::Skipped,
+                    "passed" => RunStatus::Passed,
+                    "cancelled" => RunStatus::Cancelled,
+                    _ => RunStatus::Failed,
+                };
+
+                let case_type_raw: String = row.get(3)?;
+                let case_type = match case_type_raw.as_str() {
+                    "ui" => TestCaseType::Ui,
+                    _ => TestCaseType::Api,
+                };
+
+                let screenshots_json = row
+                    .get::<_, Option<String>>(13)?
+                    .unwrap_or_else(|| "[]".to_string());
+                let artifact_paths = parse_string_array(&screenshots_json);
+                let artifacts = result_artifacts
+                    .iter()
+                    .filter(|artifact| {
+                        artifact_paths.iter().any(|path| {
+                            artifact.file_path == *path || artifact.relative_path == *path
+                        })
+                    })
+                    .cloned()
+                    .collect::<Vec<_>>();
+
+                let request_log = row
+                    .get::<_, Option<String>>(10)?
+                    .unwrap_or_else(|| "{}".to_string());
+                let response_log = row
+                    .get::<_, Option<String>>(11)?
+                    .unwrap_or_else(|| "{}".to_string());
+                let assertions_log = row
+                    .get::<_, Option<String>>(12)?
+                    .unwrap_or_else(|| "[]".to_string());
+                let error_message = row.get::<_, Option<String>>(8)?;
+                let error_code = row.get::<_, Option<String>>(9)?;
+
+                Ok(PersistedRunCaseResult {
+                    dto: RunCaseResultDto {
+                        id: row.get(0)?,
+                        case_id: row.get(1)?,
+                        case_name: row.get(2)?,
+                        test_case_type: case_type,
+                        data_row_id: row.get(4)?,
+                        data_row_label: row
+                            .get::<_, Option<i64>>(5)?
+                            .map(|value| format!("Row {}", value + 1)),
+                        status,
+                        duration_ms: row.get::<_, i64>(7)?.max(0) as u64,
+                        error_message: error_message.clone(),
+                        error_code: error_code.clone(),
+                        failure_category: classify_failure_category(&error_code, &error_message),
+                        request_preview: sanitize_preview_text(&request_log),
+                        response_preview: sanitize_preview_text(&response_log),
+                        assertion_preview: sanitize_preview_text(&assertions_log),
+                        artifacts,
+                    },
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        Ok(RunDetailDto {
+            summary: Self::to_run_history_entry(summary.clone()),
+            results: rows.into_iter().map(|item| item.dto).collect(),
+            artifacts: result_artifacts,
+        })
+    }
+
+    fn to_run_result_dto(summary: PersistedRunSummary) -> RunResultDto {
+        RunResultDto {
             run_id: summary.run_id,
             status: summary.status,
             suite_id: summary.suite_id,
@@ -290,6 +545,140 @@ impl<'a> RunnerRepository<'a> {
             passed_count: summary.passed_count,
             failed_count: summary.failed_count,
             skipped_count: summary.skipped_count,
-        })
+        }
     }
+
+    fn to_run_history_entry(summary: PersistedRunSummary) -> RunHistoryEntryDto {
+        RunHistoryEntryDto {
+            summary: Self::to_run_result_dto(summary.clone()),
+            suite_name: summary.suite_name,
+            environment_name: summary.environment_name,
+        }
+    }
+
+    fn load_artifacts_for_run(&self, run_id: &str) -> Result<Vec<ArtifactManifestDto>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT am.id, am.artifact_type, am.logical_name, am.file_path, am.relative_path, am.preview_json, am.created_at
+             FROM artifact_manifests am
+             WHERE EXISTS (
+                 SELECT 1
+                 FROM test_run_results trr
+                 WHERE trr.run_id = ?1
+                   AND trr.screenshots_json LIKE '%' || am.file_path || '%'
+             )
+             ORDER BY am.created_at DESC",
+        )?;
+
+        let items = stmt
+            .query_map(params![run_id], |row| {
+                Ok(ArtifactManifestDto {
+                    id: row.get(0)?,
+                    artifact_type: row.get(1)?,
+                    logical_name: row.get(2)?,
+                    file_path: row.get(3)?,
+                    relative_path: row.get(4)?,
+                    preview_json: row.get(5)?,
+                    created_at: row.get(6)?,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        Ok(items)
+    }
+}
+
+fn parse_string_array(json_text: &str) -> Vec<String> {
+    serde_json::from_str::<Vec<String>>(json_text).unwrap_or_default()
+}
+
+fn classify_failure_category(
+    error_code: &Option<String>,
+    error_message: &Option<String>,
+) -> String {
+    let code = error_code
+        .as_deref()
+        .map(|value| value.to_ascii_lowercase())
+        .unwrap_or_default();
+    let message = error_message
+        .as_deref()
+        .map(|value| value.to_ascii_lowercase())
+        .unwrap_or_default();
+
+    if code.contains("preflight")
+        || message.contains("variable")
+        || message.contains("build failed")
+    {
+        return "preflight".to_string();
+    }
+
+    if code.contains("assert") || message.contains("assert") {
+        return "assertion".to_string();
+    }
+
+    if code.contains("cancel") || message.contains("cancel") {
+        return "cancelled".to_string();
+    }
+
+    if code.contains("timeout") || message.contains("timeout") {
+        return "timeout".to_string();
+    }
+
+    if code.contains("network")
+        || code.contains("transport")
+        || message.contains("network")
+        || message.contains("http")
+    {
+        return "transport".to_string();
+    }
+
+    "execution".to_string()
+}
+
+fn sanitize_preview_text(raw_json: &str) -> String {
+    let parsed = serde_json::from_str::<Value>(raw_json)
+        .unwrap_or_else(|_| Value::String(raw_json.to_string()));
+    let sanitized = sanitize_json_value(parsed);
+    serde_json::to_string_pretty(&sanitized).unwrap_or_else(|_| "{}".to_string())
+}
+
+fn sanitize_json_value(value: Value) -> Value {
+    match value {
+        Value::Object(map) => Value::Object(
+            map.into_iter()
+                .map(|(key, item)| {
+                    if should_redact_key(&key) {
+                        (key, Value::String("[REDACTED]".to_string()))
+                    } else {
+                        (key, sanitize_json_value(item))
+                    }
+                })
+                .collect(),
+        ),
+        Value::Array(items) => Value::Array(items.into_iter().map(sanitize_json_value).collect()),
+        Value::String(text) if should_redact_value(&text) => {
+            Value::String("[REDACTED]".to_string())
+        }
+        other => other,
+    }
+}
+
+fn should_redact_key(key: &str) -> bool {
+    let normalized = key.to_ascii_lowercase();
+    [
+        "authorization",
+        "token",
+        "password",
+        "secret",
+        "api_key",
+        "apikey",
+        "cookie",
+        "set-cookie",
+    ]
+    .iter()
+    .any(|candidate| normalized.contains(candidate))
+}
+
+fn should_redact_value(value: &str) -> bool {
+    let normalized = value.to_ascii_lowercase();
+    normalized.contains("bearer ") || normalized.contains("basic ") || normalized.contains("token")
 }

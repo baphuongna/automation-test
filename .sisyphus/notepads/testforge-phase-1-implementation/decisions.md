@@ -229,3 +229,8 @@
 - Chosen location: `tests/frontend/browser-replay-t14-smoke.ts` + npm entrypoint `test:t14:smoke` để orchestrator chạy độc lập, không phụ thuộc full Tauri runtime.
 - Chosen smoke target: HTML tĩnh deterministic nội bộ thay vì external website để tránh flakiness mạng và giữ kiểm chứng interaction rõ ràng.
 - Chosen status model: `SMOKE_PASS | SMOKE_BLOCKED | SMOKE_FAIL` với diagnostics JSON in stdout; chỉ PASS khi interaction path thực sự chạy và DOM transitions đúng.
+
+## T16 decisions (2026-04-01)
+- Chosen read-side seam: add only unner.suite.list, unner.run.history, and unner.run.detail through the existing typed command boundary; rerun-failed continues to flow through unner.suite.execute({ rerunFailedFromRunId }) with no separate rerun command.
+- Chosen detail contract: RunDetailDto returns run summary + per-case/per-row results + artifact manifests, while each row carries explicit ailureCategory, equestPreview, esponsePreview, and ssertionPreview so the route can render rich diagnostics without re-parsing backend storage shapes.
+- Chosen UI structure: keep reporting embedded inside /test-runner as a route-level three-panel view instead of adding a separate reporting route, matching the locked Phase 1 scope and the existing pi-tester/web-recorder screen style.

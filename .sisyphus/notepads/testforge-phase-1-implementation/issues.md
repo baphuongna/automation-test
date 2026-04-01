@@ -197,3 +197,7 @@
 
 - Smoke harness hiện fail-fast đúng kỳ vọng khi thiếu Chromium runtime; đây là trạng thái blocked hợp lệ, không phải test pass.
 - Vì smoke script hiện exit code != 0 cho cả blocked/fail, CI cần đọc log status (`SMOKE_BLOCKED` vs `SMOKE_FAIL`) để phân biệt thiếu prerequisite và lỗi runtime thực thi.
+
+## T16 issues (2026-04-01)
+- lsp_diagnostics ran clean for all modified TypeScript and Rust files in scope, but CSS diagnostics remain blocked in this environment because the configured iome server is not installed.
+- Fresh Rust compile/runtime verification for the new read-side runner handlers still cannot be executed locally because cargo is unavailable; confidence is strengthened through source regression tests, TypeScript typecheck, and production build evidence.

@@ -201,6 +201,35 @@ export interface RunResultDto {
   skippedCount: number;
 }
 
+export interface RunHistoryEntryDto extends RunResultDto {
+  suiteName?: string;
+  environmentName: string;
+}
+
+export interface RunCaseResultDto {
+  id: EntityId;
+  caseId: EntityId;
+  caseName: string;
+  testCaseType: TestCaseType;
+  dataRowId?: EntityId;
+  dataRowLabel?: string;
+  status: RunStatus;
+  durationMs: number;
+  errorMessage?: string;
+  errorCode?: string;
+  failureCategory: string;
+  requestPreview: string;
+  responsePreview: string;
+  assertionPreview: string;
+  artifacts: ArtifactManifestDto[];
+}
+
+export interface RunDetailDto {
+  summary: RunHistoryEntryDto;
+  results: RunCaseResultDto[];
+  artifacts: ArtifactManifestDto[];
+}
+
 export interface UiReplayResultDto {
   runId: EntityId;
   status: ReplayStatus;

@@ -4,7 +4,7 @@ use super::domain::{EntityId, EnvironmentType};
 use super::dto::{
     ApiAssertionDto, ApiExecutionResultDto, ApiRequestDto, ApiTestCaseDto, DataTableColumnDto,
     DataTableExportDto, DataTableImportResultDto, DataTableRowDto, EnvironmentVariableDto,
-    SuiteDto, UiTestCaseDto,
+    RunDetailDto, RunHistoryEntryDto, SuiteDto, UiTestCaseDto,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -164,6 +164,18 @@ pub struct RunnerSuiteCancelCommand {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct RunnerRunHistoryCommand {
+    pub suite_id: Option<EntityId>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RunnerRunDetailCommand {
+    pub run_id: EntityId,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 #[serde(tag = "command", content = "payload")]
 pub enum CommandEnvelope {
     #[serde(rename = "environment.list")]
@@ -218,6 +230,12 @@ pub enum CommandEnvelope {
     BrowserReplayCancel(BrowserReplayCancelCommand),
     #[serde(rename = "runner.suite.execute")]
     RunnerSuiteExecute(RunnerSuiteExecuteCommand),
+    #[serde(rename = "runner.suite.list")]
+    RunnerSuiteList(EmptyCommandPayload),
+    #[serde(rename = "runner.run.history")]
+    RunnerRunHistory(RunnerRunHistoryCommand),
+    #[serde(rename = "runner.run.detail")]
+    RunnerRunDetail(RunnerRunDetailCommand),
     #[serde(rename = "runner.suite.cancel")]
     RunnerSuiteCancel(RunnerSuiteCancelCommand),
 }
@@ -228,6 +246,9 @@ pub struct RunnerSuiteExecuteResponse {
     pub run_id: EntityId,
     pub suite: SuiteDto,
 }
+
+#[allow(dead_code)]
+fn _keep_t16_type_imports(_history: RunHistoryEntryDto, _detail: RunDetailDto) {}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]

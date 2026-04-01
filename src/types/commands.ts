@@ -10,6 +10,8 @@ import type {
   DataTableRowDto,
   EnvironmentDto,
   EnvironmentVariableDto,
+  RunDetailDto,
+  RunHistoryEntryDto,
   SuiteDto,
   UiReplayResultDto,
   UiTestCaseDto
@@ -109,6 +111,13 @@ export interface CommandPayloadMap {
     environmentId: EntityId;
     rerunFailedFromRunId?: EntityId;
   };
+  "runner.suite.list": Record<string, never>;
+  "runner.run.history": {
+    suiteId?: EntityId;
+  };
+  "runner.run.detail": {
+    runId: EntityId;
+  };
   "runner.suite.cancel": {
     runId: EntityId;
   };
@@ -144,6 +153,9 @@ export interface CommandResponseMap {
     runId: EntityId;
     suite: SuiteDto;
   };
+  "runner.suite.list": SuiteDto[];
+  "runner.run.history": RunHistoryEntryDto[];
+  "runner.run.detail": RunDetailDto;
   "runner.suite.cancel": { cancelled: true };
 }
 

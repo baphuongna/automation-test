@@ -1,6 +1,34 @@
 import { invokeCommand } from "./tauri-client";
 
 export const runnerClient = {
+  async listSuites() {
+    const result = await invokeCommand("runner.suite.list", {});
+    if (!result.success || result.data === null) {
+      throw result.error ?? new Error("Missing command result for runner.suite.list");
+    }
+
+    return result.data;
+  },
+
+  async listRunHistory(input: { suiteId?: string } = {}) {
+    const payload = input.suiteId ? { suiteId: input.suiteId } : {};
+    const result = await invokeCommand("runner.run.history", payload);
+    if (!result.success || result.data === null) {
+      throw result.error ?? new Error("Missing command result for runner.run.history");
+    }
+
+    return result.data;
+  },
+
+  async getRunDetail(input: { runId: string }) {
+    const result = await invokeCommand("runner.run.detail", input);
+    if (!result.success || result.data === null) {
+      throw result.error ?? new Error("Missing command result for runner.run.detail");
+    }
+
+    return result.data;
+  },
+
   async executeSuite(input: { suiteId: string; environmentId: string; rerunFailedFromRunId?: string }) {
     const result = await invokeCommand("runner.suite.execute", input);
     if (!result.success || result.data === null) {

@@ -1171,7 +1171,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `feat(runner): add suite orchestration and progress events`
 
-- [ ] T16. Runner / History UI + detail panel + rerun-failed
+- [x] T16. Runner / History UI + detail panel + rerun-failed
 
   **What to do**:
   - Build Runner screen, run history list, detail panel, progress bar/counters, and rerun-failed UX.

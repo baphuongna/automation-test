@@ -63,7 +63,8 @@ use tauri::State;
 use contracts::commands::{
     ApiExecuteCommand, BrowserHealthCheckCommand, BrowserRecordingCancelCommand,
     BrowserRecordingStartCommand, BrowserRecordingStopCommand, BrowserReplayCancelCommand,
-    BrowserReplayStartCommand, RunnerSuiteCancelCommand, RunnerSuiteExecuteCommand,
+    BrowserReplayStartCommand, RunnerRunDetailCommand, RunnerRunHistoryCommand,
+    RunnerSuiteCancelCommand, RunnerSuiteExecuteCommand,
     DataTableCreateCommand, DataTableExportCommand, DataTableImportCommand, DataTableRowUpsertCommand,
     DataTableUpdateCommand, DeleteByIdCommand, EmptyCommandPayload, EnvironmentCreateCommand,
     EnvironmentUpdateCommand, EnvironmentVariableUpsertCommand,
@@ -72,7 +73,7 @@ use contracts::dto::{
     ApiExecutionResultDto, BrowserHealthDto,
     DataTableAssociationMetadataDto, DataTableColumnDto, DataTableDto, DataTableExportDto,
     DataTableImportResultDto, DataTableRowDto, EnvironmentDto, EnvironmentVariableDto,
-    UiReplayResultDto, UiTestCaseDto,
+    RunDetailDto, RunHistoryEntryDto, UiReplayResultDto, UiTestCaseDto,
 };
 use error::AppError;
 use models::{ColumnDefinition, DataTable, DataTableRow, Environment, EnvironmentType as ModelEnvironmentType, VariableType};
@@ -771,6 +772,47 @@ pub async fn runner_suite_execute(
             payload.rerun_failed_from_run_id.as_deref(),
         )
         .await
+}
+
+#[tauri::command]
+pub fn runner_suite_list(
+    _payload: EmptyCommandPayload,
+    state: State<'_, std::sync::Arc<AppState>>,
+) -> std::result::Result<Vec<contracts::dto::SuiteDto>, AppError> {
+    let db = state
+        .db()
+        .read()
+        .map_err(|_| AppError::internal("Database lock poisoned"))?;
+    let repository = RunnerRepository::new(db.connection());
+    repository.list_suites().map_err(map_command_error)
+}
+
+#[tauri::command]
+pub fn runner_run_history(
+    payload: RunnerRunHistoryCommand,
+    state: State<'_, std::sync::Arc<AppState>>,
+) -> std::result::Result<Vec<RunHistoryEntryDto>, AppError> {
+    let db = state
+        .db()
+        .read()
+        .map_err(|_| AppError::internal("Database lock poisoned"))?;
+    let repository = RunnerRepository::new(db.connection());
+    repository
+        .list_run_history(payload.suite_id.as_deref())
+        .map_err(map_command_error)
+}
+
+#[tauri::command]
+pub fn runner_run_detail(
+    payload: RunnerRunDetailCommand,
+    state: State<'_, std::sync::Arc<AppState>>,
+) -> std::result::Result<RunDetailDto, AppError> {
+    let db = state
+        .db()
+        .read()
+        .map_err(|_| AppError::internal("Database lock poisoned"))?;
+    let repository = RunnerRepository::new(db.connection());
+    repository.load_run_detail(&payload.run_id).map_err(map_command_error)
 }
 
 #[tauri::command]

@@ -254,6 +254,43 @@ pub struct RunResultDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct RunHistoryEntryDto {
+    #[serde(flatten)]
+    pub summary: RunResultDto,
+    pub suite_name: Option<String>,
+    pub environment_name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RunCaseResultDto {
+    pub id: EntityId,
+    pub case_id: EntityId,
+    pub case_name: String,
+    pub test_case_type: TestCaseType,
+    pub data_row_id: Option<EntityId>,
+    pub data_row_label: Option<String>,
+    pub status: RunStatus,
+    pub duration_ms: u64,
+    pub error_message: Option<String>,
+    pub error_code: Option<String>,
+    pub failure_category: String,
+    pub request_preview: String,
+    pub response_preview: String,
+    pub assertion_preview: String,
+    pub artifacts: Vec<ArtifactManifestDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RunDetailDto {
+    pub summary: RunHistoryEntryDto,
+    pub results: Vec<RunCaseResultDto>,
+    pub artifacts: Vec<ArtifactManifestDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct UiReplayResultDto {
     pub run_id: EntityId,
     pub status: ReplayStatus,

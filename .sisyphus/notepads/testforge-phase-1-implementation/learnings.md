@@ -222,3 +222,8 @@ pm run build.
 - Harness chạy theo nguyên tắc honest gating: kiểm tra prerequisite Node + Chromium trước; nếu thiếu thì trả `SMOKE_BLOCKED` với chẩn đoán actionable, không pass giả.
 - Khi đủ prerequisite, harness tạo target HTML deterministic (`file://...`) và thực thi interaction thật qua CDP (`Runtime.evaluate`) rồi xác minh DOM side-effects (`clicked`, `alice`, `admin`, `checked`).
 - Kết quả hiện tại trên máy này: `SMOKE_BLOCKED` do thiếu Chromium executable, kèm danh sách candidate paths để setup nhanh.
+
+## T16: Runner / History UI + detail panel + rerun-failed (2026-04-01)
+- T16 can stay within the existing dense route-level screen pattern by using a three-column runner console (control/progress, history, detail) rather than introducing extra routes or component sprawl.
+- The safest read-side boundary is to sanitize request/response/assertion previews inside RunnerRepository::load_run_detail(...), so the UI only consumes preview-safe strings and artifact manifests, never raw persisted logs.
+- Reusing useRunStore + subscribeRunnerEvents(...) for the active progress card keeps live runner UX aligned with T15 semantics and avoids creating a second progress transport just for UI polish.
