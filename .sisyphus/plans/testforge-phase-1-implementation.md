@@ -1111,7 +1111,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `feat(ui-runner): add ui replay execution and screenshots`
 
-- [ ] T15. Test case + suite runner orchestration + progress events
+- [x] T15. Test case + suite runner orchestration + progress events
 
   **What to do**:
   - Implement test case abstraction handling, suite composition, mixed execution orchestration, rerun-failed support, progress events, and result persistence.

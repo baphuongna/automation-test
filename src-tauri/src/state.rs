@@ -67,6 +67,7 @@ pub enum RunState {
         run_id: String,
         suite_id: String,
         start_time: chrono::DateTime<chrono::Utc>,
+        cancel_requested: bool,
     },
 }
 
@@ -385,6 +386,7 @@ impl AppState {
                     run_id,
                     suite_id,
                     start_time: chrono::Utc::now(),
+                    cancel_requested: false,
                 };
                 Ok(())
             }
@@ -392,8 +394,62 @@ impl AppState {
         }
     }
 
-    pub fn stop_run(&self) {
-        *self.run_state.write().unwrap() = RunState::Idle;
+    pub fn request_run_cancel(&self, expected_run_id: &str) -> AppResult<bool> {
+        let mut state = self.run_state.write().unwrap();
+        match &mut *state {
+            RunState::Running {
+                run_id,
+                cancel_requested,
+                ..
+            } => {
+                if run_id != expected_run_id {
+                    return Err(AppError::validation(
+                        "Yêu cầu cancel suite run không khớp runId đang hoạt động.",
+                    ));
+                }
+
+                if *cancel_requested {
+                    Ok(false)
+                } else {
+                    *cancel_requested = true;
+                    Ok(true)
+                }
+            }
+            RunState::Idle => Ok(false),
+        }
+    }
+
+    pub fn is_run_cancel_requested(&self, expected_run_id: &str) -> AppResult<bool> {
+        let state = self.run_state.read().unwrap();
+        match &*state {
+            RunState::Running {
+                run_id,
+                cancel_requested,
+                ..
+            } => {
+                if run_id != expected_run_id {
+                    return Err(AppError::validation(
+                        "Yêu cầu kiểm tra suite run không khớp runId đang hoạt động.",
+                    ));
+                }
+
+                Ok(*cancel_requested)
+            }
+            RunState::Idle => Ok(false),
+        }
+    }
+
+    pub fn finish_run(&self, expected_run_id: &str) {
+        let mut state = self.run_state.write().unwrap();
+        if let RunState::Running { run_id, .. } = &*state {
+            if run_id == expected_run_id {
+                *state = RunState::Idle;
+            }
+        }
+    }
+
+    pub fn stop_run(&self, expected_run_id: &str) {
+        self.finish_run(expected_run_id);
     }
 
     pub fn config(&self) -> AppConfig {
@@ -491,6 +547,28 @@ mod tests {
 
         let error = result.err().unwrap();
         assert!(matches!(error.code, crate::error::ErrorCode::RunInProgress));
+    }
+
+    #[test]
+    fn run_state_cancel_is_idempotent() {
+        let state = create_state();
+
+        state
+            .start_run("run-1".to_string(), "suite-1".to_string())
+            .unwrap();
+
+        let first_cancel = state.request_run_cancel("run-1").unwrap();
+        let second_cancel = state.request_run_cancel("run-1").unwrap();
+
+        assert!(first_cancel);
+        assert!(!second_cancel);
+        assert!(state.is_run_cancel_requested("run-1").unwrap());
+
+        state.finish_run("run-1");
+        state.finish_run("run-1");
+
+        assert_eq!(state.run_state(), RunState::Idle);
+        assert!(!state.request_run_cancel("run-1").unwrap());
     }
 
     #[test]

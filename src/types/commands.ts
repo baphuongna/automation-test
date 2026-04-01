@@ -107,6 +107,7 @@ export interface CommandPayloadMap {
   "runner.suite.execute": {
     suiteId: EntityId;
     environmentId: EntityId;
+    rerunFailedFromRunId?: EntityId;
   };
   "runner.suite.cancel": {
     runId: EntityId;

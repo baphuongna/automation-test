@@ -25,6 +25,7 @@ pub enum RunStatus {
     Idle,
     Queued,
     Running,
+    Skipped,
     Passed,
     Failed,
     Cancelled,

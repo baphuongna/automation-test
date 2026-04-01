@@ -153,6 +153,7 @@ pub struct BrowserReplayCancelCommand {
 pub struct RunnerSuiteExecuteCommand {
     pub suite_id: EntityId,
     pub environment_id: EntityId,
+    pub rerun_failed_from_run_id: Option<EntityId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -260,6 +261,7 @@ mod tests {
         let envelope = CommandEnvelope::RunnerSuiteExecute(super::RunnerSuiteExecuteCommand {
             suite_id: "suite-1".to_string(),
             environment_id: "env-1".to_string(),
+            rerun_failed_from_run_id: None,
         });
 
         let json = serde_json::to_string(&envelope).expect("failed to serialize command envelope");

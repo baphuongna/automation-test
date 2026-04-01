@@ -191,10 +191,14 @@ export interface SuiteDto {
 export interface RunResultDto {
   runId: EntityId;
   status: RunStatus;
+  suiteId?: EntityId;
+  environmentId?: EntityId;
   startedAt: IsoDateTime;
   finishedAt?: IsoDateTime;
+  totalCount: number;
   passedCount: number;
   failedCount: number;
+  skippedCount: number;
 }
 
 export interface UiReplayResultDto {

@@ -11,6 +11,7 @@ export const RUN_STATUSES = [
   "idle",
   "queued",
   "running",
+  "skipped",
   "passed",
   "failed",
   "cancelled"

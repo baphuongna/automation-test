@@ -15,6 +15,7 @@ use testforge::{
     environment_create, environment_delete, environment_list, environment_update,
     environment_variable_delete, environment_variable_upsert,
     error::{AppError, AppResult, TestForgeError},
+    runner_suite_cancel, runner_suite_execute,
     services::SecretService,
     AppState,
 };
@@ -96,6 +97,8 @@ pub fn run() {
             browser_recording_cancel,
             browser_replay_start,
             browser_replay_cancel,
+            runner_suite_execute,
+            runner_suite_cancel,
             data_table_list,
             data_table_create,
             data_table_update,

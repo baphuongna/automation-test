@@ -46,6 +46,7 @@ pub struct BrowserReplayProgressEvent {
 pub struct RunnerExecutionStartedEvent {
     pub run_id: EntityId,
     pub suite_id: EntityId,
+    pub environment_id: EntityId,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -54,7 +55,13 @@ pub struct RunnerExecutionProgressEvent {
     pub run_id: EntityId,
     pub test_case_id: EntityId,
     pub test_case_type: TestCaseType,
+    pub data_row_id: Option<EntityId>,
     pub status: RunStatus,
+    pub completed_count: u32,
+    pub total_count: u32,
+    pub passed_count: u32,
+    pub failed_count: u32,
+    pub skipped_count: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

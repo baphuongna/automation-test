@@ -24,12 +24,19 @@ export interface EventPayloadMap {
   "runner.execution.started": {
     runId: EntityId;
     suiteId: EntityId;
+    environmentId: EntityId;
   };
   "runner.execution.progress": {
     runId: EntityId;
     testCaseId: EntityId;
     testCaseType: TestCaseType;
+    dataRowId?: EntityId;
     status: RunStatus;
+    completedCount: number;
+    totalCount: number;
+    passedCount: number;
+    failedCount: number;
+    skippedCount: number;
   };
   "runner.execution.completed": RunResultDto;
 }

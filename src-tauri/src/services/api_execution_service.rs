@@ -13,6 +13,19 @@ use std::time::Instant;
 
 const MAX_BODY_PREVIEW_BYTES: usize = 2_048;
 
+pub enum ExecutionPersistenceTarget<'a> {
+    Standalone {
+        environment_id: &'a str,
+        test_case_id: &'a str,
+    },
+    SuiteRun {
+        run_id: &'a str,
+        environment_id: &'a str,
+        test_case_id: &'a str,
+        data_row_id: Option<&'a str>,
+    },
+}
+
 pub struct ApiExecutionService<'a> {
     api_repository: ApiRepository<'a>,
     environment_repository: EnvironmentRepository<'a>,
@@ -87,6 +100,64 @@ impl<'a> ApiExecutionService<'a> {
         request: ApiRequestDto,
         assertions: Vec<ApiAssertionDto>,
     ) -> Result<ApiExecutionResultDto, TestForgeError> {
+        let persistence_target = test_case_id.map(|case_id| ExecutionPersistenceTarget::Standalone {
+            environment_id,
+            test_case_id: case_id,
+        });
+        self.execute_with_persistence(environment_id, request, assertions, persistence_target)
+            .await
+    }
+
+    pub async fn execute_for_suite_run(
+        &self,
+        run_id: &str,
+        environment_id: &str,
+        test_case_id: &str,
+        data_row_id: Option<&str>,
+    ) -> Result<ApiExecutionResultDto, TestForgeError> {
+        let endpoint = self.api_repository.find_endpoint(test_case_id)?;
+        let assertions = self
+            .api_repository
+            .find_assertions(test_case_id)?
+            .into_iter()
+            .map(|assertion| ApiAssertionDto {
+                id: assertion.id,
+                operator: assertion.operator,
+                expected_value: assertion.expected_value,
+                source_path: Some(assertion.target),
+            })
+            .collect::<Vec<_>>();
+
+        let request = ApiRequestDto {
+            method: endpoint.method,
+            url: endpoint.url,
+            headers: endpoint.headers,
+            query_params: endpoint.query_params,
+            body: endpoint.body,
+            auth: None,
+        };
+
+        self.execute_with_persistence(
+            environment_id,
+            request,
+            assertions,
+            Some(ExecutionPersistenceTarget::SuiteRun {
+                run_id,
+                environment_id,
+                test_case_id,
+                data_row_id,
+            }),
+        )
+        .await
+    }
+
+    async fn execute_with_persistence(
+        &self,
+        environment_id: &str,
+        request: ApiRequestDto,
+        assertions: Vec<ApiAssertionDto>,
+        persistence_target: Option<ExecutionPersistenceTarget<'_>>,
+    ) -> Result<ApiExecutionResultDto, TestForgeError> {
         for assertion in &assertions {
             validate_assertion_operator(assertion.operator)?;
         }
@@ -151,8 +222,8 @@ impl<'a> ApiExecutionService<'a> {
                     request_preview: request_preview.clone(),
                 };
 
-                if let Some(case_id) = test_case_id {
-                    self.persist_result(environment_id, case_id, &result)?;
+                if let Some(target) = persistence_target.as_ref() {
+                    self.persist_result(target, &result)?;
                 }
 
                 Ok(result)
@@ -179,8 +250,8 @@ impl<'a> ApiExecutionService<'a> {
                     request_preview: request_preview.clone(),
                 };
 
-                if let Some(case_id) = test_case_id {
-                    self.persist_result(environment_id, case_id, &result)?;
+                if let Some(target) = persistence_target.as_ref() {
+                    self.persist_result(target, &result)?;
                 }
 
                 Ok(result)
@@ -190,8 +261,7 @@ impl<'a> ApiExecutionService<'a> {
 
     fn persist_result(
         &self,
-        environment_id: &str,
-        test_case_id: &str,
+        target: &ExecutionPersistenceTarget<'_>,
         result: &ApiExecutionResultDto,
     ) -> Result<(), TestForgeError> {
         let request_log_json = serde_json::to_string(&result.request_preview)?;
@@ -203,17 +273,40 @@ impl<'a> ApiExecutionService<'a> {
         }))?;
         let assertion_results_json = serde_json::to_string(&result.assertions)?;
 
-        self.api_repository.insert_run_result(
-            environment_id,
-            test_case_id,
-            &result.status,
-            &request_log_json,
-            &response_log_json,
-            &assertion_results_json,
-            result.error_message.as_deref(),
-            result.error_code.as_deref(),
-            result.duration_ms,
-        )
+        match target {
+            ExecutionPersistenceTarget::Standalone {
+                environment_id,
+                test_case_id,
+            } => self.api_repository.insert_run_result(
+                environment_id,
+                test_case_id,
+                &result.status,
+                &request_log_json,
+                &response_log_json,
+                &assertion_results_json,
+                result.error_message.as_deref(),
+                result.error_code.as_deref(),
+                result.duration_ms,
+            ),
+            ExecutionPersistenceTarget::SuiteRun {
+                run_id,
+                environment_id,
+                test_case_id,
+                data_row_id,
+            } => self.api_repository.insert_suite_run_result(
+                run_id,
+                environment_id,
+                test_case_id,
+                *data_row_id,
+                &result.status,
+                &request_log_json,
+                &response_log_json,
+                &assertion_results_json,
+                result.error_message.as_deref(),
+                result.error_code.as_deref(),
+                result.duration_ms,
+            ),
+        }
     }
 
     fn resolve_request(&self, environment_id: &str, request: &ApiRequestDto) -> Result<ApiRequestDto, TestForgeError> {

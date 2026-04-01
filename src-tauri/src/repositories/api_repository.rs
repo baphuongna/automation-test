@@ -56,7 +56,12 @@ impl<'a> ApiRepository<'a> {
         Ok(())
     }
 
-    pub fn upsert_test_case_link(&self, test_case_id: &str, name: &str, endpoint_id: &str) -> Result<()> {
+    pub fn upsert_test_case_link(
+        &self,
+        test_case_id: &str,
+        name: &str,
+        endpoint_id: &str,
+    ) -> Result<()> {
         let now = Utc::now().to_rfc3339();
         self.conn.execute(
             "INSERT OR REPLACE INTO test_cases (id, name, description, case_type, api_endpoint_id, ui_script_id, data_table_id, tags_json, enabled, created_at, updated_at) VALUES (?1, ?2, NULL, 'api', ?3, NULL, NULL, '[]', 1, COALESCE((SELECT created_at FROM test_cases WHERE id = ?1), ?4), ?5)",
@@ -67,8 +72,10 @@ impl<'a> ApiRepository<'a> {
     }
 
     pub fn replace_assertions(&self, endpoint_id: &str, assertions: &[ApiAssertion]) -> Result<()> {
-        self.conn
-            .execute("DELETE FROM assertions WHERE endpoint_id = ?1", params![endpoint_id])?;
+        self.conn.execute(
+            "DELETE FROM assertions WHERE endpoint_id = ?1",
+            params![endpoint_id],
+        )?;
 
         for (index, assertion) in assertions.iter().enumerate() {
             self.conn.execute(
@@ -93,12 +100,15 @@ impl<'a> ApiRepository<'a> {
     }
 
     pub fn delete_endpoint(&self, endpoint_id: &str) -> Result<()> {
-        self.conn
-            .execute("DELETE FROM test_cases WHERE api_endpoint_id = ?1", params![endpoint_id])?;
+        self.conn.execute(
+            "DELETE FROM test_cases WHERE api_endpoint_id = ?1",
+            params![endpoint_id],
+        )?;
 
-        let affected = self
-            .conn
-            .execute("DELETE FROM api_endpoints WHERE id = ?1", params![endpoint_id])?;
+        let affected = self.conn.execute(
+            "DELETE FROM api_endpoints WHERE id = ?1",
+            params![endpoint_id],
+        )?;
 
         if affected == 0 {
             return Err(TestForgeError::EndpointNotFound {
@@ -219,6 +229,44 @@ impl<'a> ApiRepository<'a> {
                 error_code,
                 now,
                 now,
+                now,
+            ],
+        )?;
+
+        Ok(())
+    }
+
+    pub fn insert_suite_run_result(
+        &self,
+        run_id: &str,
+        _environment_id: &str,
+        test_case_id: &str,
+        data_row_id: Option<&str>,
+        status: &str,
+        request_log_json: &str,
+        response_log_json: &str,
+        assertion_results_json: &str,
+        error_message: Option<&str>,
+        error_code: Option<&str>,
+        duration_ms: u64,
+    ) -> Result<()> {
+        let run_result_id = format!("run-result-{}", uuid::Uuid::new_v4());
+        let now = Utc::now().to_rfc3339();
+
+        self.conn.execute(
+            "INSERT INTO test_run_results (id, run_id, case_id, data_row_id, status, duration_ms, request_log_json, response_log_json, assertion_results_json, screenshots_json, error_message, error_code, started_at, completed_at, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, '[]', ?10, ?11, ?12, ?12, ?12)",
+            params![
+                run_result_id,
+                run_id,
+                test_case_id,
+                data_row_id,
+                status,
+                duration_ms as i64,
+                request_log_json,
+                response_log_json,
+                assertion_results_json,
+                error_message,
+                error_code,
                 now,
             ],
         )?;

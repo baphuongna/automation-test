@@ -159,6 +159,32 @@ impl BrowserAutomationService {
         result
     }
 
+    pub fn start_replay_for_suite_run(
+        &self,
+        state: &AppState,
+        app: &tauri::AppHandle,
+        suite_run_id: &str,
+        test_case_id: &str,
+    ) -> AppResult<UiReplayResultDto> {
+        let health = self.check_runtime_health();
+        if health.runtime_status != BrowserRuntimeStatus::Healthy {
+            return Err(AppError::new(
+                crate::error::ErrorCode::BrowserRuntime,
+                "Browser replay tạm thời không khả dụng.",
+                health.message,
+            )
+            .with_context("testCaseId", test_case_id)
+            .with_context("suiteRunId", suite_run_id)
+            .with_recoverable(true));
+        }
+
+        let replay_run_id = format!("{suite_run_id}:{test_case_id}");
+        state.start_replay(replay_run_id.clone(), test_case_id.to_string())?;
+        let result = self.execute_replay(state, app, &replay_run_id, test_case_id);
+        state.finish_replay(&replay_run_id);
+        result
+    }
+
     /// Request replay cancellation (idempotent).
     pub fn cancel_replay(
         &self,

@@ -63,7 +63,7 @@ use tauri::State;
 use contracts::commands::{
     ApiExecuteCommand, BrowserHealthCheckCommand, BrowserRecordingCancelCommand,
     BrowserRecordingStartCommand, BrowserRecordingStopCommand, BrowserReplayCancelCommand,
-    BrowserReplayStartCommand,
+    BrowserReplayStartCommand, RunnerSuiteCancelCommand, RunnerSuiteExecuteCommand,
     DataTableCreateCommand, DataTableExportCommand, DataTableImportCommand, DataTableRowUpsertCommand,
     DataTableUpdateCommand, DeleteByIdCommand, EmptyCommandPayload, EnvironmentCreateCommand,
     EnvironmentUpdateCommand, EnvironmentVariableUpsertCommand,
@@ -76,7 +76,7 @@ use contracts::dto::{
 };
 use error::AppError;
 use models::{ColumnDefinition, DataTable, DataTableRow, Environment, EnvironmentType as ModelEnvironmentType, VariableType};
-use repositories::{ApiRepository, DataTableRepository, EnvironmentRepository};
+use repositories::{ApiRepository, DataTableRepository, EnvironmentRepository, RunnerRepository};
 use services::artifact_service::ArtifactKind;
 
 // Re-export main types for convenience
@@ -412,6 +412,33 @@ fn with_api_execution_service<T>(
     ))
 }
 
+fn with_runner_orchestration_service<T>(
+    state: &AppState,
+    run: impl FnOnce(services::RunnerOrchestrationService<'_>) -> AppResult<T>,
+) -> AppResult<T> {
+    let db = state
+        .db()
+        .read()
+        .map_err(|_| AppError::internal("Database lock poisoned"))?;
+    let secret_service = state.secret_service();
+    let secret_guard = secret_service
+        .read()
+        .map_err(|_| AppError::internal("Secret service lock poisoned"))?;
+
+    let api_service = services::ApiExecutionService::new(
+        ApiRepository::new(db.connection()),
+        EnvironmentRepository::new(db.connection()),
+        &secret_guard,
+    );
+    let runner_service = services::RunnerOrchestrationService::new(
+        RunnerRepository::new(db.connection()),
+        api_service,
+        services::BrowserAutomationService::new(state.paths().clone()),
+    );
+
+    run(runner_service)
+}
+
 fn normalize_variable_id(id: &str) -> Option<&str> {
     let trimmed = id.trim();
     if trimmed.is_empty() {
@@ -719,6 +746,41 @@ pub fn browser_replay_cancel(
 ) -> std::result::Result<contracts::commands::AckResponse, AppError> {
     let service = services::BrowserAutomationService::new(state.paths().clone());
     let cancelled = service.cancel_replay(state.inner().as_ref(), &app, &payload.run_id)?;
+
+    Ok(contracts::commands::AckResponse {
+        deleted: None,
+        started: None,
+        cancelled: Some(cancelled),
+    })
+}
+
+#[tauri::command]
+pub async fn runner_suite_execute(
+    payload: RunnerSuiteExecuteCommand,
+    state: State<'_, std::sync::Arc<AppState>>,
+    app: tauri::AppHandle,
+) -> std::result::Result<contracts::commands::RunnerSuiteExecuteResponse, AppError> {
+    // runner.execution.started / runner.execution.completed are emitted inside RunnerOrchestrationService.
+    let service = with_runner_orchestration_service(state.inner().as_ref(), Ok)?;
+    service
+        .execute_suite(
+            state.inner().as_ref(),
+            &app,
+            &payload.suite_id,
+            &payload.environment_id,
+            payload.rerun_failed_from_run_id.as_deref(),
+        )
+        .await
+}
+
+#[tauri::command]
+pub fn runner_suite_cancel(
+    payload: RunnerSuiteCancelCommand,
+    state: State<'_, std::sync::Arc<AppState>>,
+    app: tauri::AppHandle,
+) -> std::result::Result<contracts::commands::AckResponse, AppError> {
+    let service = with_runner_orchestration_service(state.inner().as_ref(), Ok)?;
+    let cancelled = service.cancel_suite(state.inner().as_ref(), &payload.run_id, &app)?;
 
     Ok(contracts::commands::AckResponse {
         deleted: None,

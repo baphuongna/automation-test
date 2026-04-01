@@ -242,10 +242,14 @@ pub struct SuiteDto {
 pub struct RunResultDto {
     pub run_id: EntityId,
     pub status: RunStatus,
+    pub suite_id: Option<EntityId>,
+    pub environment_id: Option<EntityId>,
     pub started_at: IsoDateTime,
     pub finished_at: Option<IsoDateTime>,
+    pub total_count: u32,
     pub passed_count: u32,
     pub failed_count: u32,
+    pub skipped_count: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
