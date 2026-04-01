@@ -1427,11 +1427,11 @@ Wave FINAL (parallel verification)
   - Run full type/lint/test/build verification.
   - Review for direct IPC leakage, secret logging, unstable abstractions, and over-scoped features.
 
-- [ ] F3. **Real QA Scenario Execution** — `unspecified-high`
+- [x] F3. **Real QA Scenario Execution** — `unspecified-high`
   - Execute end-to-end scenarios for environment creation, API test, UI record/replay, suite run, and degraded-mode failure.
   - Save final evidence under `.sisyphus/evidence/final-qa/`.
 
-- [ ] F4. **Scope Fidelity and Fallback Readiness Check** — `deep`
+- [x] F4. **Scope Fidelity and Fallback Readiness Check** — `deep`
   - Verify browser abstraction remains isolated and fallback-ready.
   - Confirm Week-6 browser viability gate can be assessed from implemented evidence.
 

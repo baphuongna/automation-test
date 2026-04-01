@@ -273,3 +273,7 @@ ormalize_body_preview hi?n h?u thay v� t?o policy preview th? hai, gi? T18 har
 ## F1 packaging compliance fix (2026-04-01)
 - Removed the stale `bundle.icon` list from `src-tauri/tauri.conf.json` because every referenced path under `src-tauri/icons/` is absent in the current workspace and Tauri v2 allows `bundle.icon` to be omitted (default `[]`).
 - Chose config-only remediation instead of adding new icon assets because this is the smallest honest fix for the current repo state and avoids introducing synthetic branding files outside the narrow compliance scope.
+
+## F4 verdict decision (2026-04-01)
+- Chosen F4 verdict: APPROVE, vì guardrail isolation còn nguyên (frontend invoke boundary không rò rỉ, browser runtime internals nằm trong `BrowserAutomationService`) và bằng chứng T19/F3 đã đủ để đánh giá Week-6 gate một cách trung thực.
+- Chosen gate interpretation: chấp nhận trạng thái gate `BLOCKED` là assessable/valid outcome trong môi trường thiếu Chromium runtime, thay vì coi BLOCKED là thiếu khả năng đánh giá.

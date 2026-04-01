@@ -294,16 +294,26 @@ pm run build.
  - A Tauri bundle config that references non-existent icon assets is a real packaging compliance gap even when frontend verification (`typecheck`/`build`) still passes.
  - When the repo has no real bundle icon files, removing stale icon references is more honest than adding placeholder branding assets; in Tauri v2 the bundle icon list is optional and defaults to empty.
 
-## F2 code quality review learnings (2026-04-01)
-- A final verification review must treat a missing required verification class (for example lint when the plan explicitly requires lint) as a real review gap, not as an implicit pass hidden by test/typecheck/build success.
-- Error-level `lsp_diagnostics` findings in final review evidence need explicit disposition; if they cannot be proven harmless environment noise, they block a strict code-quality approval even when the primary project commands still pass.
-- For Tauri projects, `generate_context![]` + `build.rs` + `tauri-build` should be checked together before classifying `OUT_DIR env var is not set` as a defect; when that wiring is present, editor-only diagnostics can be legitimate build-script context noise rather than code-quality failure.
+ ## F2 code quality review learnings (2026-04-01)
+ - A final verification review must treat a missing required verification class (for example lint when the plan explicitly requires lint) as a real review gap, not as an implicit pass hidden by test/typecheck/build success.
+ - Error-level `lsp_diagnostics` findings in final review evidence need explicit disposition; if they cannot be proven harmless environment noise, they block a strict code-quality approval even when the primary project commands still pass.
+ - For Tauri projects, `generate_context![]` + `build.rs` + `tauri-build` should be checked together before classifying `OUT_DIR env var is not set` as a defect; when that wiring is present, editor-only diagnostics can be legitimate build-script context noise rather than code-quality failure.
+
+## F3 real QA execution learnings (2026-04-01)
+- Browser-only `vite preview` is sufficient to honestly exercise the preview fallback seams for Environment Manager, API Tester, and Web Recorder record/save flows; these routes can be audited through real UI interactions and screenshots instead of source-only claims.
+- API execution in preview depends on in-app active environment state, so a hard reload/direct route open can clear the state and produce a truthful `Select an environment before running the API test.` blocker until the environment is reselected through normal app navigation.
+- The current Web Recorder preview path supports preflight plus recording/stop-save, but it does not surface a replay action in the browser-only UI path; replay still needs separate runtime evidence instead of inference from recording success.
 
 ## F2 blocker remediation: code quality review unblock (2026-04-01)
 - Added a real executable lint path via ESLint (
 pm run lint) scoped to src/**/*.{ts,tsx}, 	ests/frontend/**/*.ts, and ite.config.ts, then fixed the repo's surfaced lint violations so the command is honest pass evidence instead of a renamed typecheck.
 - Resolved the real Rust E0308 blocker in src-tauri/src/services/secret_service.rs by passing key.as_slice() into Aes256Gcm::new_from_slice(...) for both encrypt/decrypt paths; rust-analyzer no longer reports the mismatched &Zeroizing<[u8; 32]> type there.
 - src-tauri/src/main.rs still shows generate_context![] -> OUT_DIR env var is not set in rust-analyzer, but repo evidence supports treating it as build-environment noise: src-tauri/build.rs calls 	auri_build::build(), src-tauri/Cargo.toml declares 	auri-build, and required verification commands (
+
+## F4: Scope fidelity and fallback readiness check (2026-04-01)
+- Guardrail IPC frontend vẫn được giữ đúng: tìm kiếm `invoke(` trong `src/**/*.ts(x)` không có kết quả ngoài `src/services/tauri-client.ts`, và import `@tauri-apps/api/core` chỉ xuất hiện tại seam này.
+- Browser abstraction vẫn cô lập phía backend: các command browser (`browser.health.check`, `browser.recording.*`, `browser.replay.*`) trong `src-tauri/src/lib.rs` đều tạo/đi qua `BrowserAutomationService`; runtime internals (`chromium_candidates`, `resolve_chromium_executable`, `ChromiumCliReplayRuntimeAdapter`) nằm trong `src-tauri/src/services/browser_automation_service.rs`.
+- Bằng chứng hiện có đủ để đánh giá gate trung thực: `task-T19-browser-gate.txt` đã ghi verdict `BLOCKED` với lý do runtime Chromium thiếu, và `final-qa-report-2026-04-01.txt` giữ đúng phân loại PASS/BLOCKED thay vì nâng giả replay/suite run.
 pm run lint, 
 pm test, 
 pm run typecheck, 

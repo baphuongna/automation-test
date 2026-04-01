@@ -1,0 +1,56 @@
+F3 command log
+Date: 2026-04-01
+
+Commands run for scenario execution and supporting evidence:
+
+1. `npm run build`
+   - Result: PASS
+   - Summary: `tsc && vite build` completed successfully.
+
+2. `npm run preview -- --host 127.0.0.1 --port 4173`
+   - Result: PASS
+   - Usage: Started the built preview server used for all browser-driven scenario execution.
+
+3. `Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4173`
+   - Result: PASS
+   - Summary: Returned HTTP 200 confirming preview server readiness.
+
+4. Browser-driven scenario execution against `http://127.0.0.1:4173`
+   - Result: MIXED
+   - Flows executed:
+     - `/environment-manager` -> environment creation PASS
+     - `/environment-manager?previewDegraded=1` -> degraded-mode secret write blocked as expected (PASS for degraded scenario)
+     - `/api-tester` -> API request PASS after internal navigation restored active environment state
+     - `/web-recorder` -> preflight + record + stop/save PASS
+     - `/test-runner` -> suite run BLOCKED because runner screen could not load in browser-only preview path
+
+5. `npm run test:t14:smoke`
+   - Result: BLOCKED
+   - Output:
+     `[BROWSER_REPLAY_T14_SMOKE] SMOKE_BLOCKED :: Chromium executable is missing; set PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH or install browser runtime.`
+     Candidate paths checked:
+     - `D:\my\research\ms-playwright\chromium\chrome-win\chrome.exe`
+     - `D:\my\research\src-tauri\ms-playwright\chromium\chrome-win\chrome.exe`
+
+6. `node --import tsx tests/frontend/browser-replay-t14.test.ts`
+   - Result: PASS
+   - Summary: replay source regression contract test passed, but this did not override the runtime BLOCKED verdict.
+
+7. `node --import tsx tests/frontend/environment-manager.test.ts`
+   - Result: PASS
+
+8. `node --import tsx tests/frontend/api-tester-t9.test.ts`
+   - Result: PASS
+
+9. `node --import tsx tests/frontend/web-recorder-t13.test.ts`
+   - Result: PASS
+
+10. `node --import tsx tests/frontend/test-runner-t16.test.ts`
+    - Result: PASS
+
+11. `node --import tsx tests/frontend/suite-runner-t15.test.ts`
+    - Result: PASS
+
+Notes:
+- The browser automation evidence files in this folder were captured from the built preview app, not from source-only inspection.
+- Regression/source tests are included here as supporting evidence only; final PASS/BLOCKED scenario verdicts were still based on real observed runtime behavior.

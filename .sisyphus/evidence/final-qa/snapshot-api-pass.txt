@@ -1,0 +1,622 @@
+uid=17_0 RootWebArea "TestForge" url="http://127.0.0.1:4173/api-tester"
+  uid=24_0 ignored
+    uid=24_1 ignored
+      uid=24_2 generic
+        uid=24_3 ignored
+          uid=17_5 complementary "Primary navigation"
+            uid=24_4 ignored
+              uid=24_5 ignored
+                uid=17_8 StaticText "TestForge"
+                  uid=24_6 InlineTextBox "TestForge"
+              uid=24_7 ignored
+                uid=17_11 StaticText "MVP shell placeholder"
+                  uid=24_6 InlineTextBox "MVP shell placeholder"
+            uid=17_12 navigation
+              uid=17_13 link "API Tester" url="http://127.0.0.1:4173/api-tester"
+                uid=24_8 ignored
+                  uid=17_15 StaticText "API Tester"
+                    uid=24_6 InlineTextBox "API Tester"
+              uid=17_16 link "Web Recorder" url="http://127.0.0.1:4173/web-recorder"
+                uid=24_9 ignored
+                  uid=17_18 StaticText "Web Recorder"
+                    uid=24_6 InlineTextBox "Web Recorder"
+              uid=17_19 link "Test Runner" url="http://127.0.0.1:4173/test-runner"
+                uid=24_10 ignored
+                  uid=17_21 StaticText "Test Runner"
+                    uid=24_6 InlineTextBox "Test Runner"
+              uid=17_22 link "Environment" url="http://127.0.0.1:4173/environment-manager"
+                uid=24_11 ignored
+                  uid=17_24 StaticText "Environment"
+                    uid=24_6 InlineTextBox "Environment"
+              uid=17_25 link "Data Manager" url="http://127.0.0.1:4173/data-manager"
+                uid=24_12 ignored
+                  uid=17_27 StaticText "Data Manager"
+                    uid=24_6 InlineTextBox "Data Manager"
+              uid=17_28 link "Settings" url="http://127.0.0.1:4173/settings"
+                uid=24_13 ignored
+                  uid=17_30 StaticText "Settings"
+                    uid=24_6 InlineTextBox "Settings"
+          uid=24_14 ignored
+            uid=17_32 banner "Tab placeholder"
+              uid=24_15 ignored
+                uid=17_34 StaticText "Shell Overview"
+                  uid=24_6 InlineTextBox "Shell Overview"
+              uid=24_16 ignored
+                uid=17_36 StaticText "Placeholder Route"
+                  uid=24_6 InlineTextBox "Placeholder Route"
+              uid=24_17 ignored
+                uid=17_38 StaticText "Build Verified"
+                  uid=24_6 InlineTextBox "Build Verified"
+            uid=17_39 main "Main content"
+              uid=24_18 generic
+                uid=24_19 sectionheader
+                  uid=24_20 ignored
+                    uid=24_21 generic
+                      uid=22_0 StaticText "API TESTER"
+                        uid=24_6 InlineTextBox "API TESTER"
+                    uid=22_1 heading "Author requests, define assertions, and inspect actual vs expected API behavior" level="1"
+                      uid=24_22 StaticText "Author requests, define assertions, and inspect actual vs expected API behavior"
+                        uid=24_6 InlineTextBox "Author requests, define assertions, and inspect actual vs expected API behavior"
+                    uid=24_23 paragraph
+                      uid=22_2 StaticText "Collection tree, request builder, redacted request preview, and result viewer all stay on the typed T8 surface. Transport, preflight, and assertion failures are separated explicitly for QA clarity."
+                        uid=24_6 InlineTextBox "Collection tree, request builder, redacted request preview, and result viewer all stay on the typed T8 surface. Transport, "
+                        uid=24_6 InlineTextBox "preflight, and assertion failures are separated explicitly for QA clarity."
+                  uid=24_24 ignored
+                    uid=22_3 button "New request"
+                      uid=24_25 StaticText "New request"
+                        uid=24_6 InlineTextBox "New request"
+                    uid=22_4 button "Run request"
+                      uid=24_26 StaticText "Run request"
+                        uid=24_6 InlineTextBox "Run request"
+                uid=24_27 generic
+                  uid=22_5 StaticText "Preview fallback active - browser-only T9 verification path."
+                    uid=24_6 InlineTextBox "Preview fallback active - browser-only T9 verification path."
+                uid=24_28 generic
+                  uid=23_0 StaticText "Request passed."
+                    uid=24_6 InlineTextBox "Request passed."
+                uid=24_29 ignored
+                  uid=24_30 generic
+                    uid=24_31 ignored
+                      uid=24_32 ignored
+                        uid=24_33 generic
+                          uid=22_6 StaticText "COLLECTION"
+                            uid=24_6 InlineTextBox "COLLECTION"
+                        uid=22_7 heading "Collection tree" level="2"
+                          uid=24_34 StaticText "Collection tree"
+                            uid=24_6 InlineTextBox "Collection tree"
+                      uid=24_35 ignored
+                        uid=22_8 StaticText "1 items"
+                          uid=24_6 InlineTextBox "1 items"
+                    uid=24_36 ignored
+                      uid=24_37 ignored
+                        uid=24_38 ignored
+                          uid=22_9 StaticText "DRAFT"
+                            uid=24_6 InlineTextBox "DRAFT"
+                        uid=22_10 button "Preview · List users GET · https://preview.testforge.local/users"
+                          uid=24_39 strong
+                            uid=24_40 StaticText "Preview · List users"
+                              uid=24_6 InlineTextBox "Preview · List users"
+                          uid=24_41 ignored
+                            uid=24_42 StaticText "GET"
+                              uid=24_6 InlineTextBox "GET"
+                            uid=24_43 StaticText " · "
+                              uid=24_6 InlineTextBox " · "
+                            uid=24_44 StaticText "https://preview.testforge.local/users"
+                              uid=24_6 InlineTextBox "https://preview.testforge.local/users"
+                      uid=24_45 ignored
+                        uid=24_46 ignored
+                          uid=22_11 StaticText "SAVED"
+                            uid=24_6 InlineTextBox "SAVED"
+                        uid=24_47 generic
+                          uid=22_12 StaticText "No Saved collection items yet."
+                            uid=24_6 InlineTextBox "No Saved collection items yet."
+                  uid=24_48 generic
+                    uid=24_49 ignored
+                      uid=24_50 ignored
+                        uid=24_51 generic
+                          uid=22_13 StaticText "BUILDER"
+                            uid=24_6 InlineTextBox "BUILDER"
+                        uid=22_14 heading "Request builder" level="2"
+                          uid=24_52 StaticText "Request builder"
+                            uid=24_6 InlineTextBox "Request builder"
+                      uid=24_53 ignored
+                        uid=22_15 StaticText "Environment · F3 Staging QA"
+                          uid=24_6 InlineTextBox "Environment · F3 Staging QA"
+                    uid=24_54 tablist "API builder tabs" orientation="horizontal"
+                      uid=22_16 tab "Request" selectable selected
+                        uid=24_55 StaticText "Request"
+                          uid=24_6 InlineTextBox "Request"
+                      uid=22_17 tab "Auth" selectable
+                        uid=24_56 StaticText "Auth"
+                          uid=24_6 InlineTextBox "Auth"
+                      uid=22_18 tab "Headers" selectable
+                        uid=24_57 StaticText "Headers"
+                          uid=24_6 InlineTextBox "Headers"
+                      uid=22_19 tab "Body" selectable
+                        uid=24_58 StaticText "Body"
+                          uid=24_6 InlineTextBox "Body"
+                    uid=24_59 generic "Request builder"
+                      uid=24_60 LabelText
+                        uid=24_61 ignored
+                          uid=22_20 StaticText "Request name"
+                            uid=24_6 InlineTextBox "Request name"
+                        uid=22_21 textbox "Request name" value="Preview · List users"
+                          uid=24_62 ignored
+                          uid=24_63 generic
+                            uid=24_64 StaticText "Preview · List users"
+                              uid=24_6 InlineTextBox "Preview · List users"
+                      uid=24_65 ignored
+                        uid=24_66 LabelText
+                          uid=24_67 ignored
+                            uid=22_22 StaticText "Method"
+                              uid=24_6 InlineTextBox "Method"
+                          uid=22_23 combobox "Method" expandable haspopup="menu" value="GET"
+                            uid=24_68 MenuListPopup
+                              uid=24_69 ignored
+                                uid=22_24 option "GET" selectable selected value="GET"
+                                uid=22_25 option "POST" selectable value="POST"
+                                uid=22_26 option "PUT" selectable value="PUT"
+                                uid=22_27 option "PATCH" selectable value="PATCH"
+                                uid=22_28 option "DELETE" selectable value="DELETE"
+                        uid=24_70 LabelText
+                          uid=24_71 ignored
+                            uid=22_29 StaticText "URL"
+                              uid=24_6 InlineTextBox "URL"
+                          uid=22_30 textbox "URL" value="https://preview.testforge.local/users"
+                            uid=24_72 ignored
+                            uid=24_73 generic
+                              uid=24_74 StaticText "https://preview.testforge.local/users"
+                                uid=24_6 InlineTextBox "https://preview.testforge.local/users"
+                      uid=24_75 LabelText
+                        uid=24_76 ignored
+                          uid=22_31 StaticText "Query params"
+                            uid=24_6 InlineTextBox "Query params"
+                        uid=22_32 textbox "Query params" multiline value="page: 1
+api_key: preview-query-secret"
+                          uid=24_77 ignored
+                          uid=24_78 generic
+                            uid=24_79 StaticText "page: 1"
+                              uid=24_6 InlineTextBox "page: 1"
+                            uid=24_80 LineBreak "
+"
+                              uid=24_6 InlineTextBox "
+"
+                            uid=24_81 StaticText "api_key: preview-query-secret"
+                              uid=24_6 InlineTextBox "api_key: preview-query-secret"
+                    uid=22_33 region "Assertions"
+                      uid=24_82 ignored
+                        uid=24_83 ignored
+                          uid=24_84 generic
+                            uid=22_34 StaticText "ASSERTIONS"
+                              uid=24_6 InlineTextBox "ASSERTIONS"
+                          uid=22_35 heading "Assertion builder UI" level="3"
+                            uid=24_85 StaticText "Assertion builder UI"
+                              uid=24_6 InlineTextBox "Assertion builder UI"
+                        uid=22_36 button "Add assertion"
+                          uid=24_86 StaticText "Add assertion"
+                            uid=24_6 InlineTextBox "Add assertion"
+                      uid=24_87 ignored
+                        uid=24_88 article
+                          uid=24_89 ignored
+                            uid=24_90 strong
+                              uid=22_37 StaticText "Assertion "
+                                uid=24_6 InlineTextBox "Assertion "
+                              uid=22_38 StaticText "1"
+                                uid=24_6 InlineTextBox "1"
+                            uid=22_39 button "Remove"
+                              uid=24_91 StaticText "Remove"
+                                uid=24_6 InlineTextBox "Remove"
+                          uid=24_92 ignored
+                            uid=24_93 LabelText
+                              uid=24_94 ignored
+                                uid=22_40 StaticText "Operator"
+                                  uid=24_6 InlineTextBox "Operator"
+                              uid=22_41 combobox "Operator" expandable haspopup="menu" value="Status equals"
+                                uid=24_95 MenuListPopup
+                                  uid=24_96 ignored
+                                    uid=22_42 option "Status equals" selectable selected value="Status equals"
+                                    uid=22_43 option "JSON path exists" selectable value="JSON path exists"
+                                    uid=22_44 option "JSON path equals" selectable value="JSON path equals"
+                                    uid=22_45 option "Body contains" selectable value="Body contains"
+                                    uid=22_46 option "Header equals" selectable value="Header equals"
+                            uid=24_97 LabelText
+                              uid=24_98 ignored
+                                uid=22_47 StaticText "Expected value"
+                                  uid=24_6 InlineTextBox "Expected value"
+                              uid=22_48 textbox "Expected value" value="200"
+                                uid=24_99 ignored
+                                uid=24_100 generic
+                                  uid=24_101 StaticText "200"
+                                    uid=24_6 InlineTextBox "200"
+                          uid=24_102 LabelText
+                            uid=24_103 ignored
+                              uid=22_49 StaticText "Source path"
+                                uid=24_6 InlineTextBox "Source path"
+                            uid=22_50 textbox "Source path"
+                              uid=24_104 ignored
+                              uid=24_105 generic
+                          uid=24_106 paragraph
+                            uid=22_51 StaticText "Compare the HTTP status code."
+                              uid=24_6 InlineTextBox "Compare the HTTP status code."
+                        uid=24_107 article
+                          uid=24_108 ignored
+                            uid=24_109 strong
+                              uid=22_52 StaticText "Assertion "
+                                uid=24_6 InlineTextBox "Assertion "
+                              uid=22_53 StaticText "2"
+                                uid=24_6 InlineTextBox "2"
+                            uid=22_54 button "Remove"
+                              uid=24_110 StaticText "Remove"
+                                uid=24_6 InlineTextBox "Remove"
+                          uid=24_111 ignored
+                            uid=24_112 LabelText
+                              uid=24_113 ignored
+                                uid=22_55 StaticText "Operator"
+                                  uid=24_6 InlineTextBox "Operator"
+                              uid=22_56 combobox "Operator" expandable haspopup="menu" value="JSON path equals"
+                                uid=24_114 MenuListPopup
+                                  uid=24_115 ignored
+                                    uid=22_57 option "Status equals" selectable value="Status equals"
+                                    uid=22_58 option "JSON path exists" selectable value="JSON path exists"
+                                    uid=22_59 option "JSON path equals" selectable selected value="JSON path equals"
+                                    uid=22_60 option "Body contains" selectable value="Body contains"
+                                    uid=22_61 option "Header equals" selectable value="Header equals"
+                            uid=24_116 LabelText
+                              uid=24_117 ignored
+                                uid=22_62 StaticText "Expected value"
+                                  uid=24_6 InlineTextBox "Expected value"
+                              uid=22_63 textbox "Expected value" value="admin"
+                                uid=24_118 ignored
+                                uid=24_119 generic
+                                  uid=24_120 StaticText "admin"
+                                    uid=24_6 InlineTextBox "admin"
+                          uid=24_121 LabelText
+                            uid=24_122 ignored
+                              uid=22_64 StaticText "Source path"
+                                uid=24_6 InlineTextBox "Source path"
+                            uid=22_65 textbox "Source path" value="$.data.0.role"
+                              uid=24_123 ignored
+                              uid=24_124 generic
+                                uid=24_125 StaticText "$.data.0.role"
+                                  uid=24_6 InlineTextBox "$.data.0.role"
+                          uid=24_126 paragraph
+                            uid=22_66 StaticText "Compare the resolved JSON path value."
+                              uid=24_6 InlineTextBox "Compare the resolved JSON path value."
+                    uid=24_127 ignored
+                      uid=22_67 button "Save request"
+                        uid=24_128 StaticText "Save request"
+                          uid=24_6 InlineTextBox "Save request"
+                      uid=22_68 button "Run request"
+                        uid=24_129 StaticText "Run request"
+                          uid=24_6 InlineTextBox "Run request"
+                      uid=22_69 button "Delete request"
+                        uid=24_130 StaticText "Delete request"
+                          uid=24_6 InlineTextBox "Delete request"
+                  uid=24_131 generic
+                    uid=24_132 ignored
+                      uid=24_133 ignored
+                        uid=24_134 generic
+                          uid=22_70 StaticText "RESPONSE VIEWER"
+                            uid=24_6 InlineTextBox "RESPONSE VIEWER"
+                        uid=22_71 heading "Result state panels" level="2"
+                          uid=24_135 StaticText "Result state panels"
+                            uid=24_6 InlineTextBox "Result state panels"
+                      uid=24_136 ignored
+                        uid=22_72 StaticText "186 ms"
+                          uid=24_6 InlineTextBox "186 ms"
+                    uid=24_137 article
+                      uid=24_138 ignored
+                        uid=23_1 heading "Assertions passed" level="3"
+                          uid=24_139 StaticText "Assertions passed"
+                            uid=24_6 InlineTextBox "Assertions passed"
+                        uid=24_140 paragraph
+                          uid=23_2 StaticText "Transport succeeded and all assertions matched expected values."
+                            uid=24_6 InlineTextBox "Transport succeeded and all assertions matched expected values."
+                      uid=24_141 DescriptionList
+                        uid=24_142 ignored
+                          uid=24_143 term "Status"
+                            uid=23_3 StaticText "Status"
+                              uid=24_6 InlineTextBox "Status"
+                          uid=24_144 definition
+                            uid=23_4 StaticText "passed"
+                              uid=24_6 InlineTextBox "passed"
+                        uid=24_145 ignored
+                          uid=24_146 term "transport"
+                            uid=23_5 StaticText "transport"
+                              uid=24_6 InlineTextBox "transport"
+                          uid=24_147 definition
+                            uid=23_6 StaticText "success"
+                              uid=24_6 InlineTextBox "success"
+                        uid=24_148 ignored
+                          uid=24_149 term "failureKind"
+                            uid=23_7 StaticText "failureKind"
+                              uid=24_6 InlineTextBox "failureKind"
+                          uid=24_150 definition
+                            uid=23_8 StaticText "none"
+                              uid=24_6 InlineTextBox "none"
+                        uid=24_151 ignored
+                          uid=24_152 term "statusCode"
+                            uid=23_9 StaticText "statusCode"
+                              uid=24_6 InlineTextBox "statusCode"
+                          uid=24_153 definition
+                            uid=23_10 StaticText "200"
+                              uid=24_6 InlineTextBox "200"
+                    uid=24_154 generic
+                      uid=24_155 ignored
+                        uid=24_156 ignored
+                          uid=24_157 generic
+                            uid=23_11 StaticText "REQUEST PREVIEW"
+                              uid=24_6 InlineTextBox "REQUEST PREVIEW"
+                          uid=23_12 heading "Redacted request preview" level="3"
+                            uid=24_158 StaticText "Redacted request preview"
+                              uid=24_6 InlineTextBox "Redacted request preview"
+                        uid=24_159 ignored
+                          uid=23_13 StaticText "GET"
+                            uid=24_6 InlineTextBox "GET"
+                          uid=23_14 StaticText " · "
+                            uid=24_6 InlineTextBox " · "
+                          uid=23_15 StaticText "https://preview.testforge.local/users"
+                            uid=24_6 InlineTextBox "https://preview.testforge.local/users"
+                      uid=24_160 DescriptionList
+                        uid=24_161 ignored
+                          uid=24_162 term "Auth"
+                            uid=23_16 StaticText "Auth"
+                              uid=24_6 InlineTextBox "Auth"
+                          uid=24_163 definition
+                            uid=23_17 StaticText "Bearer [REDACTED]"
+                              uid=24_6 InlineTextBox "Bearer [REDACTED]"
+                        uid=24_164 ignored
+                          uid=24_165 term "Headers"
+                            uid=23_18 StaticText "Headers"
+                              uid=24_6 InlineTextBox "Headers"
+                          uid=24_166 definition
+                            uid=23_19 StaticText "2"
+                              uid=24_6 InlineTextBox "2"
+                        uid=24_167 ignored
+                          uid=24_168 term "Query params"
+                            uid=23_20 StaticText "Query params"
+                              uid=24_6 InlineTextBox "Query params"
+                          uid=24_169 definition
+                            uid=23_21 StaticText "2"
+                              uid=24_6 InlineTextBox "2"
+                      uid=24_170 ignored
+                        uid=24_171 ignored
+                          uid=23_22 heading "Headers" level="4"
+                            uid=24_172 StaticText "Headers"
+                              uid=24_6 InlineTextBox "Headers"
+                          uid=24_173 generic
+                            uid=23_23 StaticText "{
+  "Accept": "application/json",
+  "Authorization": "[REDACTED]"
+}"
+                              uid=24_6 InlineTextBox "{"
+                              uid=24_6 InlineTextBox "
+"
+                              uid=24_6 InlineTextBox "  "
+                              uid=24_6 InlineTextBox ""Accept":"
+                              uid=24_6 InlineTextBox " "
+                              uid=24_6 InlineTextBox ""application/json","
+                              uid=24_6 InlineTextBox "
+"
+                              uid=24_6 InlineTextBox "  "
+                              uid=24_6 InlineTextBox ""Authorization": ""
+                              uid=24_6 InlineTextBox "[REDACTED]""
+                              uid=24_6 InlineTextBox "
+"
+                              uid=24_6 InlineTextBox "}"
+                        uid=24_174 ignored
+                          uid=23_24 heading "Query params" level="4"
+                            uid=24_175 StaticText "Query params"
+                              uid=24_6 InlineTextBox "Query params"
+                          uid=24_176 generic
+                            uid=23_25 StaticText "{
+  "page": "1",
+  "api_key": "[REDACTED]"
+}"
+                              uid=24_6 InlineTextBox "{"
+                              uid=24_6 InlineTextBox "
+"
+                              uid=24_6 InlineTextBox "  "
+                              uid=24_6 InlineTextBox ""page": "1","
+                              uid=24_6 InlineTextBox "
+"
+                              uid=24_6 InlineTextBox "  "
+                              uid=24_6 InlineTextBox ""api_key": "[REDACTED]""
+                              uid=24_6 InlineTextBox "
+"
+                              uid=24_6 InlineTextBox "}"
+                      uid=24_177 ignored
+                        uid=23_26 heading "Body preview" level="4"
+                          uid=24_178 StaticText "Body preview"
+                            uid=24_6 InlineTextBox "Body preview"
+                        uid=24_179 generic
+                          uid=23_27 StaticText "No request body"
+                            uid=24_6 InlineTextBox "No request body"
+                    uid=24_180 generic
+                      uid=24_181 ignored
+                        uid=24_182 ignored
+                          uid=24_183 generic
+                            uid=23_28 StaticText "ASSERTIONS"
+                              uid=24_6 InlineTextBox "ASSERTIONS"
+                          uid=23_29 heading "Assertion summary" level="3"
+                            uid=24_184 StaticText "Assertion summary"
+                              uid=24_6 InlineTextBox "Assertion summary"
+                        uid=24_185 ignored
+                          uid=23_30 StaticText "2"
+                            uid=24_6 InlineTextBox "2"
+                          uid=23_31 StaticText "/"
+                            uid=24_6 InlineTextBox "/"
+                          uid=23_32 StaticText "2"
+                            uid=24_6 InlineTextBox "2"
+                          uid=23_33 StaticText " passed"
+                            uid=24_6 InlineTextBox " passed"
+                      uid=24_186 ignored
+                        uid=24_187 ignored
+                          uid=24_188 term "total"
+                            uid=23_34 StaticText "total"
+                              uid=24_6 InlineTextBox "total"
+                          uid=24_189 definition
+                            uid=23_35 StaticText "2"
+                              uid=24_6 InlineTextBox "2"
+                        uid=24_190 ignored
+                          uid=24_191 term "passed"
+                            uid=23_36 StaticText "passed"
+                              uid=24_6 InlineTextBox "passed"
+                          uid=24_192 definition
+                            uid=23_37 StaticText "2"
+                              uid=24_6 InlineTextBox "2"
+                        uid=24_193 ignored
+                          uid=24_194 term "failed"
+                            uid=23_38 StaticText "failed"
+                              uid=24_6 InlineTextBox "failed"
+                          uid=24_195 definition
+                            uid=23_39 StaticText "0"
+                              uid=24_6 InlineTextBox "0"
+                      uid=24_196 ignored
+                        uid=24_197 article
+                          uid=24_198 ignored
+                            uid=24_199 strong
+                              uid=23_40 StaticText "Status equals"
+                                uid=24_6 InlineTextBox "Status equals"
+                            uid=24_200 ignored
+                              uid=23_41 StaticText "Passed"
+                                uid=24_6 InlineTextBox "Passed"
+                          uid=24_201 DescriptionList
+                            uid=24_202 ignored
+                              uid=24_203 term "expected"
+                                uid=23_42 StaticText "expected"
+                                  uid=24_6 InlineTextBox "expected"
+                              uid=24_204 definition
+                                uid=23_43 StaticText "200"
+                                  uid=24_6 InlineTextBox "200"
+                            uid=24_205 ignored
+                              uid=24_206 term "actual"
+                                uid=23_44 StaticText "actual"
+                                  uid=24_6 InlineTextBox "actual"
+                              uid=24_207 definition
+                                uid=23_45 StaticText "200"
+                                  uid=24_6 InlineTextBox "200"
+                        uid=24_208 article
+                          uid=24_209 ignored
+                            uid=24_210 strong
+                              uid=23_46 StaticText "JSON path equals"
+                                uid=24_6 InlineTextBox "JSON path equals"
+                            uid=24_211 ignored
+                              uid=23_47 StaticText "Passed"
+                                uid=24_6 InlineTextBox "Passed"
+                          uid=24_212 DescriptionList
+                            uid=24_213 ignored
+                              uid=24_214 term "expected"
+                                uid=23_48 StaticText "expected"
+                                  uid=24_6 InlineTextBox "expected"
+                              uid=24_215 definition
+                                uid=23_49 StaticText "admin"
+                                  uid=24_6 InlineTextBox "admin"
+                            uid=24_216 ignored
+                              uid=24_217 term "actual"
+                                uid=23_50 StaticText "actual"
+                                  uid=24_6 InlineTextBox "actual"
+                              uid=24_218 definition
+                                uid=23_51 StaticText "admin"
+                                  uid=24_6 InlineTextBox "admin"
+                          uid=24_219 paragraph
+                            uid=23_52 StaticText "Source path: "
+                              uid=24_6 InlineTextBox "Source path: "
+                            uid=23_53 StaticText "$.data.0.role"
+                              uid=24_6 InlineTextBox "$.data.0.role"
+                    uid=24_220 generic
+                      uid=24_221 ignored
+                        uid=24_222 ignored
+                          uid=24_223 generic
+                            uid=23_54 StaticText "RESPONSE VIEWER"
+                              uid=24_6 InlineTextBox "RESPONSE VIEWER"
+                          uid=23_55 heading "Response viewer" level="3"
+                            uid=24_224 StaticText "Response viewer"
+                              uid=24_6 InlineTextBox "Response viewer"
+                        uid=24_225 ignored
+                          uid=23_56 StaticText "No explicit error code"
+                            uid=24_6 InlineTextBox "No explicit error code"
+                      uid=24_226 ignored
+                        uid=24_227 ignored
+                          uid=23_57 heading "Response headers" level="4"
+                            uid=24_228 StaticText "Response headers"
+                              uid=24_6 InlineTextBox "Response headers"
+                          uid=24_229 generic
+                            uid=23_58 StaticText "content-type: application/json
+x-preview-mode: true"
+                              uid=24_6 InlineTextBox "content-type:"
+                              uid=24_6 InlineTextBox " "
+                              uid=24_6 InlineTextBox "application/json"
+                              uid=24_6 InlineTextBox "
+"
+                              uid=24_6 InlineTextBox "x-preview-mode: true"
+                        uid=24_230 ignored
+                          uid=23_59 heading "Body preview" level="4"
+                            uid=24_231 StaticText "Body preview"
+                              uid=24_6 InlineTextBox "Body preview"
+                          uid=24_232 generic
+                            uid=23_60 StaticText "{
+  "ok": true,
+  "data": [
+    {
+      "id": 1,
+      "role": "admin",
+      "email": "qa@testforge.local"
+    }
+  ],
+  "message": "Preview response body"
+}"
+                              uid=24_6 InlineTextBox "{"
+                              uid=24_6 InlineTextBox "
+"
+                              uid=24_6 InlineTextBox "  "
+                              uid=24_6 InlineTextBox ""ok": true,"
+                              uid=24_6 InlineTextBox "
+"
+                              uid=24_6 InlineTextBox "  "
+                              uid=24_6 InlineTextBox ""data": ["
+                              uid=24_6 InlineTextBox "
+"
+                              uid=24_6 InlineTextBox "    "
+                              uid=24_6 InlineTextBox "{"
+                              uid=24_6 InlineTextBox "
+"
+                              uid=24_6 InlineTextBox "      "
+                              uid=24_6 InlineTextBox ""id": 1,"
+                              uid=24_6 InlineTextBox "
+"
+                              uid=24_6 InlineTextBox "      "
+                              uid=24_6 InlineTextBox ""role": "admin","
+                              uid=24_6 InlineTextBox "
+"
+                              uid=24_6 InlineTextBox "      "
+                              uid=24_6 InlineTextBox ""email":"
+                              uid=24_6 InlineTextBox " "
+                              uid=24_6 InlineTextBox ""qa@testforge.local""
+                              uid=24_6 InlineTextBox "
+"
+                              uid=24_6 InlineTextBox "    "
+                              uid=24_6 InlineTextBox "}"
+                              uid=24_6 InlineTextBox "
+"
+                              uid=24_6 InlineTextBox "  "
+                              uid=24_6 InlineTextBox "],"
+                              uid=24_6 InlineTextBox "
+"
+                              uid=24_6 InlineTextBox "  "
+                              uid=24_6 InlineTextBox ""message": "Preview"
+                              uid=24_6 InlineTextBox " "
+                              uid=24_6 InlineTextBox "response body""
+                              uid=24_6 InlineTextBox "
+"
+                              uid=24_6 InlineTextBox "}"
+            uid=17_233 contentinfo "Status bar placeholder"
+              uid=24_233 ignored
+                uid=17_235 StaticText "Shell metadata unavailable"
+                  uid=24_6 InlineTextBox "Shell metadata unavailable"
+              uid=24_234 ignored
+                uid=17_237 StaticText "Ready"
+                  uid=24_6 InlineTextBox "Ready"
+              uid=24_235 ignored
+                uid=17_239 StaticText "Version unavailable"
+                  uid=24_6 InlineTextBox "Version unavailable"

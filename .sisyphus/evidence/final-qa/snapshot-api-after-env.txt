@@ -1,0 +1,317 @@
+uid=17_0 RootWebArea "TestForge" url="http://127.0.0.1:4173/api-tester"
+  uid=17_1 ignored
+    uid=17_2 ignored
+      uid=17_3 generic
+        uid=17_4 ignored
+          uid=17_5 complementary "Primary navigation"
+            uid=17_6 ignored
+              uid=17_7 ignored
+                uid=17_8 StaticText "TestForge"
+                  uid=17_9 InlineTextBox "TestForge"
+              uid=17_10 ignored
+                uid=17_11 StaticText "MVP shell placeholder"
+                  uid=17_9 InlineTextBox "MVP shell placeholder"
+            uid=17_12 navigation
+              uid=17_13 link "API Tester" url="http://127.0.0.1:4173/api-tester"
+                uid=17_14 ignored
+                  uid=17_15 StaticText "API Tester"
+                    uid=17_9 InlineTextBox "API Tester"
+              uid=17_16 link "Web Recorder" url="http://127.0.0.1:4173/web-recorder"
+                uid=17_17 ignored
+                  uid=17_18 StaticText "Web Recorder"
+                    uid=17_9 InlineTextBox "Web Recorder"
+              uid=17_19 link "Test Runner" url="http://127.0.0.1:4173/test-runner"
+                uid=17_20 ignored
+                  uid=17_21 StaticText "Test Runner"
+                    uid=17_9 InlineTextBox "Test Runner"
+              uid=17_22 link "Environment" url="http://127.0.0.1:4173/environment-manager"
+                uid=17_23 ignored
+                  uid=17_24 StaticText "Environment"
+                    uid=17_9 InlineTextBox "Environment"
+              uid=17_25 link "Data Manager" url="http://127.0.0.1:4173/data-manager"
+                uid=17_26 ignored
+                  uid=17_27 StaticText "Data Manager"
+                    uid=17_9 InlineTextBox "Data Manager"
+              uid=17_28 link "Settings" url="http://127.0.0.1:4173/settings"
+                uid=17_29 ignored
+                  uid=17_30 StaticText "Settings"
+                    uid=17_9 InlineTextBox "Settings"
+          uid=17_31 ignored
+            uid=17_32 banner "Tab placeholder"
+              uid=17_33 ignored
+                uid=17_34 StaticText "Shell Overview"
+                  uid=17_9 InlineTextBox "Shell Overview"
+              uid=17_35 ignored
+                uid=17_36 StaticText "Placeholder Route"
+                  uid=17_9 InlineTextBox "Placeholder Route"
+              uid=17_37 ignored
+                uid=17_38 StaticText "Build Verified"
+                  uid=17_9 InlineTextBox "Build Verified"
+            uid=17_39 main "Main content"
+              uid=17_40 generic
+                uid=17_41 sectionheader
+                  uid=17_42 ignored
+                    uid=17_43 generic
+                      uid=17_44 StaticText "API TESTER"
+                        uid=17_9 InlineTextBox "API TESTER"
+                    uid=17_45 heading "Author requests, define assertions, and inspect actual vs expected API behavior" level="1"
+                      uid=17_46 StaticText "Author requests, define assertions, and inspect actual vs expected API behavior"
+                        uid=17_9 InlineTextBox "Author requests, define assertions, and inspect actual vs expected API behavior"
+                    uid=17_47 paragraph
+                      uid=17_48 StaticText "Collection tree, request builder, redacted request preview, and result viewer all stay on the typed T8 surface. Transport, preflight, and assertion failures are separated explicitly for QA clarity."
+                        uid=17_9 InlineTextBox "Collection tree, request builder, redacted request preview, and result viewer all stay on the typed T8 surface. Transport, "
+                        uid=17_9 InlineTextBox "preflight, and assertion failures are separated explicitly for QA clarity."
+                  uid=17_49 ignored
+                    uid=17_50 button "New request"
+                      uid=17_51 StaticText "New request"
+                        uid=17_9 InlineTextBox "New request"
+                    uid=17_52 button "Run request"
+                      uid=17_53 StaticText "Run request"
+                        uid=17_9 InlineTextBox "Run request"
+                uid=17_54 generic
+                  uid=17_55 StaticText "Preview fallback active - browser-only T9 verification path."
+                    uid=17_9 InlineTextBox "Preview fallback active - browser-only T9 verification path."
+                uid=17_56 ignored
+                  uid=17_57 generic
+                    uid=17_58 ignored
+                      uid=17_59 ignored
+                        uid=17_60 generic
+                          uid=17_61 StaticText "COLLECTION"
+                            uid=17_9 InlineTextBox "COLLECTION"
+                        uid=17_62 heading "Collection tree" level="2"
+                          uid=17_63 StaticText "Collection tree"
+                            uid=17_9 InlineTextBox "Collection tree"
+                      uid=17_64 ignored
+                        uid=17_65 StaticText "1 items"
+                          uid=17_9 InlineTextBox "1 items"
+                    uid=17_66 ignored
+                      uid=17_67 ignored
+                        uid=17_68 ignored
+                          uid=17_69 StaticText "DRAFT"
+                            uid=17_9 InlineTextBox "DRAFT"
+                        uid=17_70 button "Preview · List users GET · https://preview.testforge.local/users"
+                          uid=17_71 strong
+                            uid=17_72 StaticText "Preview · List users"
+                              uid=17_9 InlineTextBox "Preview · List users"
+                          uid=17_73 ignored
+                            uid=17_74 StaticText "GET"
+                              uid=17_9 InlineTextBox "GET"
+                            uid=17_75 StaticText " · "
+                              uid=17_9 InlineTextBox " · "
+                            uid=17_76 StaticText "https://preview.testforge.local/users"
+                              uid=17_9 InlineTextBox "https://preview.testforge.local/users"
+                      uid=17_77 ignored
+                        uid=17_78 ignored
+                          uid=17_79 StaticText "SAVED"
+                            uid=17_9 InlineTextBox "SAVED"
+                        uid=17_80 generic
+                          uid=17_81 StaticText "No Saved collection items yet."
+                            uid=17_9 InlineTextBox "No Saved collection items yet."
+                  uid=17_82 generic
+                    uid=17_83 ignored
+                      uid=17_84 ignored
+                        uid=17_85 generic
+                          uid=17_86 StaticText "BUILDER"
+                            uid=17_9 InlineTextBox "BUILDER"
+                        uid=17_87 heading "Request builder" level="2"
+                          uid=17_88 StaticText "Request builder"
+                            uid=17_9 InlineTextBox "Request builder"
+                      uid=17_89 ignored
+                        uid=17_90 StaticText "Select environment in Environment Manager"
+                          uid=17_9 InlineTextBox "Select environment in Environment Manager"
+                    uid=17_91 tablist "API builder tabs" orientation="horizontal"
+                      uid=17_92 tab "Request" selectable selected
+                        uid=17_93 StaticText "Request"
+                          uid=17_9 InlineTextBox "Request"
+                      uid=17_94 tab "Auth" selectable
+                        uid=17_95 StaticText "Auth"
+                          uid=17_9 InlineTextBox "Auth"
+                      uid=17_96 tab "Headers" selectable
+                        uid=17_97 StaticText "Headers"
+                          uid=17_9 InlineTextBox "Headers"
+                      uid=17_98 tab "Body" selectable
+                        uid=17_99 StaticText "Body"
+                          uid=17_9 InlineTextBox "Body"
+                    uid=17_100 generic "Request builder"
+                      uid=17_101 LabelText
+                        uid=17_102 ignored
+                          uid=17_103 StaticText "Request name"
+                            uid=17_9 InlineTextBox "Request name"
+                        uid=17_104 textbox "Request name" value="Preview · List users"
+                          uid=17_105 ignored
+                          uid=17_106 generic
+                            uid=17_107 StaticText "Preview · List users"
+                              uid=17_9 InlineTextBox "Preview · List users"
+                      uid=17_108 ignored
+                        uid=17_109 LabelText
+                          uid=17_110 ignored
+                            uid=17_111 StaticText "Method"
+                              uid=17_9 InlineTextBox "Method"
+                          uid=17_112 combobox "Method" expandable haspopup="menu" value="GET"
+                            uid=17_113 MenuListPopup
+                              uid=17_114 ignored
+                                uid=17_115 option "GET" selectable selected value="GET"
+                                uid=17_116 option "POST" selectable value="POST"
+                                uid=17_117 option "PUT" selectable value="PUT"
+                                uid=17_118 option "PATCH" selectable value="PATCH"
+                                uid=17_119 option "DELETE" selectable value="DELETE"
+                        uid=17_120 LabelText
+                          uid=17_121 ignored
+                            uid=17_122 StaticText "URL"
+                              uid=17_9 InlineTextBox "URL"
+                          uid=17_123 textbox "URL" value="https://preview.testforge.local/users"
+                            uid=17_124 ignored
+                            uid=17_125 generic
+                              uid=17_126 StaticText "https://preview.testforge.local/users"
+                                uid=17_9 InlineTextBox "https://preview.testforge.local/users"
+                      uid=17_127 LabelText
+                        uid=17_128 ignored
+                          uid=17_129 StaticText "Query params"
+                            uid=17_9 InlineTextBox "Query params"
+                        uid=17_130 textbox "Query params" multiline value="page: 1
+api_key: preview-query-secret"
+                          uid=17_131 ignored
+                          uid=17_132 generic
+                            uid=17_133 StaticText "page: 1"
+                              uid=17_9 InlineTextBox "page: 1"
+                            uid=17_134 LineBreak "
+"
+                              uid=17_9 InlineTextBox "
+"
+                            uid=17_135 StaticText "api_key: preview-query-secret"
+                              uid=17_9 InlineTextBox "api_key: preview-query-secret"
+                    uid=17_136 region "Assertions"
+                      uid=17_137 ignored
+                        uid=17_138 ignored
+                          uid=17_139 generic
+                            uid=17_140 StaticText "ASSERTIONS"
+                              uid=17_9 InlineTextBox "ASSERTIONS"
+                          uid=17_141 heading "Assertion builder UI" level="3"
+                            uid=17_142 StaticText "Assertion builder UI"
+                              uid=17_9 InlineTextBox "Assertion builder UI"
+                        uid=17_143 button "Add assertion"
+                          uid=17_144 StaticText "Add assertion"
+                            uid=17_9 InlineTextBox "Add assertion"
+                      uid=17_145 ignored
+                        uid=17_146 article
+                          uid=17_147 ignored
+                            uid=17_148 strong
+                              uid=17_149 StaticText "Assertion "
+                                uid=17_9 InlineTextBox "Assertion "
+                              uid=17_150 StaticText "1"
+                                uid=17_9 InlineTextBox "1"
+                            uid=17_151 button "Remove"
+                              uid=17_152 StaticText "Remove"
+                                uid=17_9 InlineTextBox "Remove"
+                          uid=17_153 ignored
+                            uid=17_154 LabelText
+                              uid=17_155 ignored
+                                uid=17_156 StaticText "Operator"
+                                  uid=17_9 InlineTextBox "Operator"
+                              uid=17_157 combobox "Operator" expandable haspopup="menu" value="Status equals"
+                                uid=17_158 MenuListPopup
+                                  uid=17_159 ignored
+                                    uid=17_160 option "Status equals" selectable selected value="Status equals"
+                                    uid=17_161 option "JSON path exists" selectable value="JSON path exists"
+                                    uid=17_162 option "JSON path equals" selectable value="JSON path equals"
+                                    uid=17_163 option "Body contains" selectable value="Body contains"
+                                    uid=17_164 option "Header equals" selectable value="Header equals"
+                            uid=17_165 LabelText
+                              uid=17_166 ignored
+                                uid=17_167 StaticText "Expected value"
+                                  uid=17_9 InlineTextBox "Expected value"
+                              uid=17_168 textbox "Expected value" value="200"
+                                uid=17_169 ignored
+                                uid=17_170 generic
+                                  uid=17_171 StaticText "200"
+                                    uid=17_9 InlineTextBox "200"
+                          uid=17_172 LabelText
+                            uid=17_173 ignored
+                              uid=17_174 StaticText "Source path"
+                                uid=17_9 InlineTextBox "Source path"
+                            uid=17_175 textbox "Source path"
+                              uid=17_176 ignored
+                              uid=17_177 generic
+                          uid=17_178 paragraph
+                            uid=17_179 StaticText "Compare the HTTP status code."
+                              uid=17_9 InlineTextBox "Compare the HTTP status code."
+                        uid=17_180 article
+                          uid=17_181 ignored
+                            uid=17_182 strong
+                              uid=17_183 StaticText "Assertion "
+                                uid=17_9 InlineTextBox "Assertion "
+                              uid=17_184 StaticText "2"
+                                uid=17_9 InlineTextBox "2"
+                            uid=17_185 button "Remove"
+                              uid=17_186 StaticText "Remove"
+                                uid=17_9 InlineTextBox "Remove"
+                          uid=17_187 ignored
+                            uid=17_188 LabelText
+                              uid=17_189 ignored
+                                uid=17_190 StaticText "Operator"
+                                  uid=17_9 InlineTextBox "Operator"
+                              uid=17_191 combobox "Operator" expandable haspopup="menu" value="JSON path equals"
+                                uid=17_192 MenuListPopup
+                                  uid=17_193 ignored
+                                    uid=17_194 option "Status equals" selectable value="Status equals"
+                                    uid=17_195 option "JSON path exists" selectable value="JSON path exists"
+                                    uid=17_196 option "JSON path equals" selectable selected value="JSON path equals"
+                                    uid=17_197 option "Body contains" selectable value="Body contains"
+                                    uid=17_198 option "Header equals" selectable value="Header equals"
+                            uid=17_199 LabelText
+                              uid=17_200 ignored
+                                uid=17_201 StaticText "Expected value"
+                                  uid=17_9 InlineTextBox "Expected value"
+                              uid=17_202 textbox "Expected value" value="admin"
+                                uid=17_203 ignored
+                                uid=17_204 generic
+                                  uid=17_205 StaticText "admin"
+                                    uid=17_9 InlineTextBox "admin"
+                          uid=17_206 LabelText
+                            uid=17_207 ignored
+                              uid=17_208 StaticText "Source path"
+                                uid=17_9 InlineTextBox "Source path"
+                            uid=17_209 textbox "Source path" value="$.data.0.role"
+                              uid=17_210 ignored
+                              uid=17_211 generic
+                                uid=17_212 StaticText "$.data.0.role"
+                                  uid=17_9 InlineTextBox "$.data.0.role"
+                          uid=17_213 paragraph
+                            uid=17_214 StaticText "Compare the resolved JSON path value."
+                              uid=17_9 InlineTextBox "Compare the resolved JSON path value."
+                    uid=17_215 ignored
+                      uid=17_216 button "Save request"
+                        uid=17_217 StaticText "Save request"
+                          uid=17_9 InlineTextBox "Save request"
+                      uid=17_218 button "Run request"
+                        uid=17_219 StaticText "Run request"
+                          uid=17_9 InlineTextBox "Run request"
+                      uid=17_220 button "Delete request"
+                        uid=17_221 StaticText "Delete request"
+                          uid=17_9 InlineTextBox "Delete request"
+                  uid=17_222 generic
+                    uid=17_223 ignored
+                      uid=17_224 ignored
+                        uid=17_225 generic
+                          uid=17_226 StaticText "RESPONSE VIEWER"
+                            uid=17_9 InlineTextBox "RESPONSE VIEWER"
+                        uid=17_227 heading "Result state panels" level="2"
+                          uid=17_228 StaticText "Result state panels"
+                            uid=17_9 InlineTextBox "Result state panels"
+                      uid=17_229 ignored
+                        uid=17_230 StaticText "Waiting for first run"
+                          uid=17_9 InlineTextBox "Waiting for first run"
+                    uid=17_231 generic
+                      uid=17_232 StaticText "Empty state · Response viewer, assertion summary, and actual vs expected details appear after a run."
+                        uid=17_9 InlineTextBox "Empty state · Response viewer, assertion summary, and actual vs "
+                        uid=17_9 InlineTextBox "expected details appear after a run."
+            uid=17_233 contentinfo "Status bar placeholder"
+              uid=17_234 ignored
+                uid=17_235 StaticText "Shell metadata unavailable"
+                  uid=17_9 InlineTextBox "Shell metadata unavailable"
+              uid=17_236 ignored
+                uid=17_237 StaticText "Ready"
+                  uid=17_9 InlineTextBox "Ready"
+              uid=17_238 ignored
+                uid=17_239 StaticText "Version unavailable"
+                  uid=17_9 InlineTextBox "Version unavailable"

@@ -221,15 +221,23 @@
 - Existing shell smoke assertions were still pinned to placeholder status-bar text/signature and had to be updated to the new shell metadata/status-bar contract introduced by T17.
 
 ## T18 issues (2026-04-01)
-- lsp_diagnostics hi?n tr? s?ch cho toàn b? file T18 dã s?a, nhung file test ngu?n 	ests/frontend/reliability-hardening-t18.test.ts v?n có th? hi?n l?i Node ambient types trong m?t s? ng? c?nh LSP c?a workspace; verification th?c t? du?c xác nh?n qua 
+- lsp_diagnostics hi?n tr? s?ch cho toï¿½n b? file T18 dï¿½ s?a, nhung file test ngu?n 	ests/frontend/reliability-hardening-t18.test.ts v?n cï¿½ th? hi?n l?i Node ambient types trong m?t s? ng? c?nh LSP c?a workspace; verification th?c t? du?c xï¿½c nh?n qua 
 ode --import tsx, 
 pm test, 
-pm run typecheck, và 
+pm run typecheck, vï¿½ 
 pm run build.
-- Rust end-to-end compile/runtime verification ngoài b? m?t source diagnostics v?n ti?p t?c ph? thu?c môi tru?ng có cargo; trong container hi?n t?i T18 du?c khóa b?ng source regression test + diagnostics + TypeScript verification/build.
+- Rust end-to-end compile/runtime verification ngoï¿½i b? m?t source diagnostics v?n ti?p t?c ph? thu?c mï¿½i tru?ng cï¿½ cargo; trong container hi?n t?i T18 du?c khï¿½a b?ng source regression test + diagnostics + TypeScript verification/build.
 
 
 ## T19 issues (2026-04-01)
-- Browser viability evidence hi?n v?n b? blocked ? bu?c runtime smoke th?t vì máy này không có Chromium executable t?i các candidate path mà tests/frontend/browser-replay-t14-smoke.ts ki?m tra; vì v?y browser gate ch? có th? ghi BLOCKED ch? không du?c nâng lên PASS.
-- lsp_diagnostics cho package.json v?n b? ch?n vì workspace chua cài biome; verification th?c t? cho T19 du?c xác nh?n qua diagnostics s?ch trên hai file TS m?i, npm test, npm run typecheck và npm run build.
-- Cargo v?n không kh? d?ng trong môi tru?ng hi?n t?i, nên T19 ch? có th? d?a trên seam/regression evidence phía frontend + smoke runtime T14 thay vì compile/package verification Rust end-to-end.
+- Browser viability evidence hi?n v?n b? blocked ? bu?c runtime smoke th?t vï¿½ mï¿½y nï¿½y khï¿½ng cï¿½ Chromium executable t?i cï¿½c candidate path mï¿½ tests/frontend/browser-replay-t14-smoke.ts ki?m tra; vï¿½ v?y browser gate ch? cï¿½ th? ghi BLOCKED ch? khï¿½ng du?c nï¿½ng lï¿½n PASS.
+- lsp_diagnostics cho package.json v?n b? ch?n vï¿½ workspace chua cï¿½i biome; verification th?c t? cho T19 du?c xï¿½c nh?n qua diagnostics s?ch trï¿½n hai file TS m?i, npm test, npm run typecheck vï¿½ npm run build.
+- Cargo v?n khï¿½ng kh? d?ng trong mï¿½i tru?ng hi?n t?i, nï¿½n T19 ch? cï¿½ th? d?a trï¿½n seam/regression evidence phï¿½a frontend + smoke runtime T14 thay vï¿½ compile/package verification Rust end-to-end.
+
+## F3 real QA execution issues (2026-04-01)
+- Real suite execution remains blocked in the browser-only preview environment: `/test-runner` renders but surfaces `KhÃ´ng thá»ƒ táº£i runner screen.` and no suite/run hydration because the runner flow still depends on Tauri IPC/runtime rather than preview fallback storage.
+- Real replay execution remains blocked on this machine because `npm run test:t14:smoke` cannot find a Chromium executable at the checked candidate paths; this is an environment/runtime prerequisite blocker, not a pass.
+
+## F4 scope/fallback review issues (2026-04-01)
+- Week-6 browser viability gate váº«n á»Ÿ tráº¡ng thÃ¡i BLOCKED theo evidence hiá»‡n cÃ³ vÃ¬ runtime Chromium cÃ²n thiáº¿u trÃªn mÃ¡y kiá»ƒm tra (`task-T19-browser-gate.txt`, `final-qa-report-2026-04-01.txt`).
+- ÄÃ¢y lÃ  blocker assessability á»Ÿ má»©c mÃ´i trÆ°á»ng runtime (khÃ´ng pháº£i thiáº¿u seam kiáº¿n trÃºc): gate Ä‘Ã£ cÃ³ tiÃªu chÃ­ vÃ  verdict trung thá»±c, nhÆ°ng chÆ°a thá»ƒ nÃ¢ng lÃªn PASS náº¿u chÆ°a bá»• sung Chromium hoáº·c cáº¥u hÃ¬nh `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`.

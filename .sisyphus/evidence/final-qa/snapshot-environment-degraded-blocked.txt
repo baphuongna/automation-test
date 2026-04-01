@@ -1,0 +1,233 @@
+uid=11_0 RootWebArea "TestForge" url="http://127.0.0.1:4173/environment-manager?previewDegraded=1"
+  uid=16_0 ignored
+    uid=16_1 ignored
+      uid=16_2 generic
+        uid=16_3 ignored
+          uid=11_5 complementary "Primary navigation"
+            uid=16_4 ignored
+              uid=16_5 ignored
+                uid=11_8 StaticText "TestForge"
+                  uid=16_6 InlineTextBox "TestForge"
+              uid=16_7 ignored
+                uid=11_11 StaticText "MVP shell placeholder"
+                  uid=16_6 InlineTextBox "MVP shell placeholder"
+            uid=11_12 navigation
+              uid=11_13 link "API Tester" url="http://127.0.0.1:4173/api-tester"
+                uid=16_8 ignored
+                  uid=11_15 StaticText "API Tester"
+                    uid=16_6 InlineTextBox "API Tester"
+              uid=11_16 link "Web Recorder" url="http://127.0.0.1:4173/web-recorder"
+                uid=16_9 ignored
+                  uid=11_18 StaticText "Web Recorder"
+                    uid=16_6 InlineTextBox "Web Recorder"
+              uid=11_19 link "Test Runner" url="http://127.0.0.1:4173/test-runner"
+                uid=16_10 ignored
+                  uid=11_21 StaticText "Test Runner"
+                    uid=16_6 InlineTextBox "Test Runner"
+              uid=11_22 link "Environment" url="http://127.0.0.1:4173/environment-manager"
+                uid=16_11 ignored
+                  uid=11_24 StaticText "Environment"
+                    uid=16_6 InlineTextBox "Environment"
+              uid=11_25 link "Data Manager" url="http://127.0.0.1:4173/data-manager"
+                uid=16_12 ignored
+                  uid=11_27 StaticText "Data Manager"
+                    uid=16_6 InlineTextBox "Data Manager"
+              uid=11_28 link "Settings" url="http://127.0.0.1:4173/settings"
+                uid=16_13 ignored
+                  uid=11_30 StaticText "Settings"
+                    uid=16_6 InlineTextBox "Settings"
+          uid=16_14 ignored
+            uid=11_32 banner "Tab placeholder"
+              uid=16_15 ignored
+                uid=11_34 StaticText "Shell Overview"
+                  uid=16_6 InlineTextBox "Shell Overview"
+              uid=16_16 ignored
+                uid=11_36 StaticText "Placeholder Route"
+                  uid=16_6 InlineTextBox "Placeholder Route"
+              uid=16_17 ignored
+                uid=11_38 StaticText "Build Verified"
+                  uid=16_6 InlineTextBox "Build Verified"
+            uid=11_39 main "Main content"
+              uid=16_18 generic
+                uid=16_19 sectionheader
+                  uid=16_20 ignored
+                    uid=16_21 generic
+                      uid=11_44 StaticText "ENVIRONMENT MANAGER"
+                        uid=16_6 InlineTextBox "ENVIRONMENT MANAGER"
+                    uid=11_45 heading "Manage environments, defaults, and secret-safe variables" level="1"
+                      uid=16_22 StaticText "Manage environments, defaults, and secret-safe variables"
+                        uid=16_6 InlineTextBox "Manage environments, defaults, and secret-safe variables"
+                    uid=16_23 paragraph
+                      uid=11_48 StaticText "Secrets remain masked by default on every list view. Use this screen to create, update, delete, and set the default environment without leaving the typed IPC boundary."
+                        uid=16_6 InlineTextBox "Secrets remain masked by default on every list view. Use this screen to create, update, delete, and set the "
+                        uid=16_6 InlineTextBox "default environment without leaving the typed IPC boundary."
+                  uid=11_49 button "New environment"
+                    uid=16_24 StaticText "New environment"
+                      uid=16_6 InlineTextBox "New environment"
+                uid=16_25 generic
+                  uid=11_52 StaticText "Preview fallback active - browser-only T6 verification path."
+                    uid=16_6 InlineTextBox "Preview fallback active - browser-only T6 verification path."
+                uid=16_26 generic
+                  uid=15_0 StaticText "Không thể lưu biến môi trường."
+                    uid=16_6 InlineTextBox "Không thể lưu biến môi trường."
+                uid=16_27 generic
+                  uid=11_54 StaticText "Secret store degraded. "
+                    uid=16_6 InlineTextBox "Secret store degraded. "
+                  uid=11_55 StaticText "Secret store degraded. Secret operations are blocked until the master key is available again."
+                    uid=16_6 InlineTextBox "Secret store degraded. Secret operations are blocked until the master key is available again."
+                uid=16_28 ignored
+                  uid=16_29 generic
+                    uid=16_30 ignored
+                      uid=11_59 heading "Environments" level="2"
+                        uid=16_31 StaticText "Environments"
+                          uid=16_6 InlineTextBox "Environments"
+                      uid=16_32 ignored
+                        uid=11_62 StaticText "3 items"
+                          uid=16_6 InlineTextBox "3 items"
+                    uid=16_33 list
+                      uid=11_64 button "Development Preview DEFAULT Development"
+                        uid=16_34 ignored
+                          uid=16_35 strong
+                            uid=16_36 StaticText "Development Preview"
+                              uid=16_6 InlineTextBox "Development Preview"
+                          uid=16_37 ignored
+                            uid=16_38 StaticText "DEFAULT"
+                              uid=16_6 InlineTextBox "DEFAULT"
+                        uid=16_39 StaticText "Development"
+                          uid=16_6 InlineTextBox "Development"
+                      uid=11_71 button "Production Preview PRODUCTION-LIKE ENVIRONMENT Production"
+                        uid=16_40 ignored
+                          uid=16_41 strong
+                            uid=16_42 StaticText "Production Preview"
+                              uid=16_6 InlineTextBox "Production Preview"
+                          uid=16_43 ignored
+                            uid=16_44 StaticText "PRODUCTION-LIKE ENVIRONMENT"
+                              uid=16_6 InlineTextBox "PRODUCTION-LIKE "
+                              uid=16_6 InlineTextBox "ENVIRONMENT"
+                        uid=16_45 StaticText "Production"
+                          uid=16_6 InlineTextBox "Production"
+                      uid=11_78 button "F3 Staging QA Staging"
+                        uid=16_46 ignored
+                          uid=16_47 strong
+                            uid=16_48 StaticText "F3 Staging QA"
+                              uid=16_6 InlineTextBox "F3 Staging QA"
+                        uid=16_49 StaticText "Staging"
+                          uid=16_6 InlineTextBox "Staging"
+                  uid=16_50 generic
+                    uid=16_51 ignored
+                      uid=11_85 heading "Edit environment" level="2"
+                        uid=16_52 StaticText "Edit environment"
+                          uid=16_6 InlineTextBox "Edit environment"
+                      uid=16_53 ignored
+                        uid=11_88 StaticText "Default environment selection lives here."
+                          uid=16_6 InlineTextBox "Default environment selection lives here."
+                    uid=16_54 generic
+                      uid=16_55 LabelText
+                        uid=16_56 ignored
+                          uid=11_92 StaticText "Name"
+                            uid=16_6 InlineTextBox "Name"
+                        uid=11_93 textbox "Name" value="F3 Staging QA"
+                          uid=16_57 ignored
+                          uid=16_58 generic
+                            uid=16_59 StaticText "F3 Staging QA"
+                              uid=16_6 InlineTextBox "F3 Staging QA"
+                      uid=16_60 LabelText
+                        uid=16_61 ignored
+                          uid=11_99 StaticText "Environment type"
+                            uid=16_6 InlineTextBox "Environment type"
+                        uid=11_100 combobox "Environment type" expandable haspopup="menu" value="Staging"
+                          uid=16_62 MenuListPopup
+                            uid=16_63 ignored
+                              uid=11_103 option "Development" selectable value="Development"
+                              uid=11_104 option "Staging" selectable selected value="Staging"
+                              uid=11_105 option "Production" selectable value="Production"
+                              uid=11_106 option "Custom" selectable value="Custom"
+                      uid=16_64 LabelText
+                        uid=11_108 checkbox "Set as default environment"
+                        uid=16_65 ignored
+                          uid=11_110 StaticText "Set as default environment"
+                            uid=16_6 InlineTextBox "Set as default environment"
+                      uid=16_66 ignored
+                        uid=11_112 button "Update environment"
+                          uid=16_67 StaticText "Update environment"
+                            uid=16_6 InlineTextBox "Update environment"
+                        uid=11_114 button "Reset form"
+                          uid=16_68 StaticText "Reset form"
+                            uid=16_6 InlineTextBox "Reset form"
+                        uid=11_116 button "Delete environment"
+                          uid=16_69 StaticText "Delete environment"
+                            uid=16_6 InlineTextBox "Delete environment"
+                  uid=16_70 generic
+                    uid=16_71 ignored
+                      uid=11_120 heading "Variables" level="2"
+                        uid=16_72 StaticText "Variables"
+                          uid=16_6 InlineTextBox "Variables"
+                      uid=16_73 ignored
+                        uid=11_123 StaticText "Secret values are masked by default."
+                          uid=16_6 InlineTextBox "Secret values are masked by default."
+                    uid=16_74 generic
+                      uid=16_75 LabelText
+                        uid=16_76 ignored
+                          uid=11_127 StaticText "Variable key"
+                            uid=16_6 InlineTextBox "Variable key"
+                        uid=11_128 textbox "Variable key" value="DEGRADED_SECRET"
+                          uid=16_77 ignored
+                          uid=16_78 generic
+                            uid=16_79 StaticText "DEGRADED_SECRET"
+                              uid=16_6 InlineTextBox "DEGRADED_SECRET"
+                      uid=16_80 LabelText
+                        uid=16_81 ignored
+                          uid=11_133 StaticText "Variable kind"
+                            uid=16_6 InlineTextBox "Variable kind"
+                        uid=11_134 combobox "Variable kind" expandable haspopup="menu" value="Secret"
+                          uid=16_82 MenuListPopup
+                            uid=16_83 ignored
+                              uid=11_137 option "Plain text" selectable value="Plain text"
+                              uid=11_138 option "Secret" selectable selected value="Secret"
+                      uid=16_84 LabelText
+                        uid=16_85 ignored
+                          uid=11_141 StaticText "Secret value"
+                            uid=16_6 InlineTextBox "Secret value"
+                        uid=11_142 textbox "Secret value" value="••••••••••••••"
+                          uid=16_86 ignored
+                          uid=16_87 generic
+                            uid=16_88 StaticText "••••••••••••••"
+                              uid=16_6 InlineTextBox "••••••••••••••"
+                      uid=16_89 ignored
+                        uid=11_146 button "Save variable"
+                          uid=16_90 StaticText "Save variable"
+                            uid=16_6 InlineTextBox "Save variable"
+                        uid=11_148 button "Clear variable form"
+                          uid=16_91 StaticText "Clear variable form"
+                            uid=16_6 InlineTextBox "Clear variable form"
+                    uid=16_92 ignored
+                      uid=16_93 article
+                        uid=16_94 ignored
+                          uid=16_95 ignored
+                            uid=16_96 strong
+                              uid=12_0 StaticText "API_TOKEN"
+                                uid=16_6 InlineTextBox "API_TOKEN"
+                            uid=16_97 ignored
+                              uid=12_1 StaticText "SECRET"
+                                uid=16_6 InlineTextBox "SECRET"
+                          uid=16_98 paragraph
+                            uid=12_2 StaticText "su••••ue (masked by default) (masked by default)"
+                              uid=16_6 InlineTextBox "su••••ue (masked by default) (masked by "
+                              uid=16_6 InlineTextBox "default)"
+                        uid=16_99 ignored
+                          uid=12_3 button "Edit variable"
+                            uid=16_100 StaticText "Edit variable"
+                              uid=16_6 InlineTextBox "Edit variable"
+                          uid=12_4 button "Delete variable"
+                            uid=16_101 StaticText "Delete variable"
+                              uid=16_6 InlineTextBox "Delete variable"
+            uid=11_165 contentinfo "Status bar placeholder"
+              uid=16_102 ignored
+                uid=11_167 StaticText "Shell metadata unavailable"
+                  uid=16_6 InlineTextBox "Shell metadata unavailable"
+              uid=16_103 ignored
+                uid=11_169 StaticText "Ready"
+                  uid=16_6 InlineTextBox "Ready"
+              uid=16_104 ignored
+                uid=11_171 StaticText "Version unavailable"
+                  uid=16_6 InlineTextBox "Version unavailable"

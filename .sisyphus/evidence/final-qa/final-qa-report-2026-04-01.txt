@@ -1,0 +1,153 @@
+F3 Real QA Scenario Execution
+Date: 2026-04-01
+
+Scope:
+- Real end-to-end QA execution against the current built product state
+- Evidence-only task: no product source files changed
+- Verdicts recorded as PASS / FAIL / BLOCKED based on actual observed behavior
+
+Environment used:
+- Frontend built with `npm run build`
+- Preview server started with `npm run preview -- --host 127.0.0.1 --port 4173`
+- Browser automation executed against `http://127.0.0.1:4173`
+- Replay runtime smoke executed with `npm run test:t14:smoke`
+
+Scenario results:
+
+1) Environment creation
+- Verdict: PASS
+- Route: `/environment-manager`
+- What actually ran:
+  1. Opened Environment Manager in the built preview app.
+  2. Clicked `New environment`.
+  3. Entered name `F3 Staging QA`.
+  4. Changed environment type to `Staging`.
+  5. Clicked `Create environment`.
+  6. Changed variable kind to `Secret`.
+  7. Entered variable key `API_TOKEN` and secret value `super-secret-value`.
+  8. Clicked `Save variable`.
+- Observed result:
+  - UI showed `Environment created.` then `Variable saved.`
+  - The new environment `F3 Staging QA` appeared in the environment list.
+  - The saved secret rendered as masked preview text (`su••••ue ...`) rather than plaintext.
+- Evidence:
+  - `environment-created-and-secret-saved.png`
+  - `snapshot-environment-pass.txt`
+
+2) Degraded-mode failure
+- Verdict: PASS
+- Route: `/environment-manager?previewDegraded=1`
+- What actually ran:
+  1. Opened Environment Manager with `previewDegraded=1`.
+  2. Confirmed degraded banner was visible on load.
+  3. Selected environment `F3 Staging QA`.
+  4. Changed variable kind to `Secret`.
+  5. Entered variable key `DEGRADED_SECRET` and value `blocked-secret`.
+  6. Clicked `Save variable`.
+- Observed result:
+  - UI showed degraded warning before mutation.
+  - Secret write did not succeed.
+  - UI showed `Không thể lưu biến môi trường.` and `Secret operations are blocked until the master key is available again.`
+  - Existing secret list remained unchanged.
+- Evidence:
+  - `environment-degraded-initial.png`
+  - `environment-degraded-blocked-secret-write.png`
+  - `snapshot-environment-degraded-initial.txt`
+  - `snapshot-environment-degraded-blocked.txt`
+
+3) API test execution
+- Verdict: PASS
+- Route: `/api-tester`
+- What actually ran:
+  1. Navigated internally from Environment Manager back to API Tester so the in-app active environment state remained available.
+  2. Confirmed builder banner showed `Environment · F3 Staging QA`.
+  3. Executed the seeded request `Preview · List users`.
+- Observed result:
+  - UI showed `Request passed.`
+  - Result panel showed `Assertions passed`.
+  - Duration rendered as `186 ms`.
+  - Status rendered as `passed`, `statusCode` as `200`, and `failureKind` as `none`.
+  - Request preview redacted secret-bearing values:
+    - `Authorization` header displayed as `[REDACTED]`
+    - `api_key` query parameter displayed as `[REDACTED]`
+    - Auth preview displayed as `Bearer [REDACTED]`
+  - Assertion summary showed `2/2 passed`.
+- Important note:
+  - A direct fresh load of `/api-tester` initially showed `Select an environment before running the API test.` because route-local execution depends on the in-app active environment state. That was resolved by using real internal navigation in the same browser session.
+- Evidence:
+  - `api-before-run.png`
+  - `api-request-pass.png`
+  - `snapshot-api-missing-active-environment.txt`
+  - `snapshot-api-pass.txt`
+
+4) UI record flow
+- Verdict: PASS
+- Route: `/web-recorder`
+- What actually ran:
+  1. Opened Web Recorder in the built preview app.
+  2. Clicked `Run preflight`.
+  3. Clicked `Start recording`.
+  4. Observed live state transition to `RECORDING` and captured-step growth.
+  5. Clicked `Stop and save`.
+- Observed result:
+  - Preflight completed successfully and runtime displayed `healthy`.
+  - UI showed `Recording started. Live steps will stream into the editor.`
+  - Recording state switched to `RECORDING`.
+  - Captured steps increased and included a new click step with stable selector `button[data-testid=preview-submit]`.
+  - After stop, UI showed `Recording stopped and normalized draft saved.`
+  - Final normalized editor queue contained 2 persisted steps.
+- Evidence:
+  - `web-recorder-before-record.png`
+  - `web-recorder-record-pass.png`
+  - `snapshot-web-recorder-record-pass.txt`
+
+5) UI replay execution
+- Verdict: BLOCKED
+- What actually ran:
+  1. Verified the built preview Web Recorder UI has record/save controls but no replay action surfaced in this browser-only preview path.
+  2. Ran the repository's real replay smoke harness: `npm run test:t14:smoke`.
+- Observed result:
+  - Runtime replay could not be proven on this machine.
+  - Smoke output: `[BROWSER_REPLAY_T14_SMOKE] SMOKE_BLOCKED :: Chromium executable is missing; set PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH or install browser runtime.`
+  - Candidate paths checked by the harness:
+    - `D:\my\research\ms-playwright\chromium\chrome-win\chrome.exe`
+    - `D:\my\research\src-tauri\ms-playwright\chromium\chrome-win\chrome.exe`
+- Actionable blocker:
+  - Install/provide a Chromium runtime at one of the checked paths or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`, then rerun `npm run test:t14:smoke` on a machine that can exercise the runtime.
+- Evidence:
+  - `web-recorder-record-pass.png`
+  - command output recorded in `final-qa-commands-2026-04-01.txt`
+
+6) Suite run
+- Verdict: BLOCKED
+- Route: `/test-runner`
+- What actually ran:
+  1. Opened Test Runner in the built preview app.
+  2. Inspected the rendered runner state and controls.
+  3. Verified that environment state was present in the UI (`Environment ready · F3 Staging QA`).
+- Observed result:
+  - UI rendered `Không thể tải runner screen.`
+  - `Run suite` stayed disabled.
+  - No suites or run history were available in the preview session.
+  - This built preview path does not provide the desktop/Tauri runner IPC surface needed to hydrate suites/history and start suite execution.
+- Actionable blocker:
+  - Execute the suite scenario in a real Tauri/desktop runtime where `runner.suite.list`, `runner.run.history`, and `runner.suite.execute` are available, then capture the same evidence again.
+- Evidence:
+  - `test-runner-initial.png`
+  - `snapshot-test-runner-blocked.txt`
+
+Overall verdict summary:
+- PASS:
+  - Environment creation
+  - Degraded-mode failure handling
+  - API test execution
+  - UI record flow
+- BLOCKED:
+  - UI replay runtime execution
+  - Suite run execution
+- FAIL:
+  - None observed in this execution wave
+
+Honesty policy applied:
+- Browser replay was not upgraded to PASS because runtime prerequisites were missing.
+- Suite execution was not upgraded to PASS because the browser-only preview path could not load the runner IPC-backed data/run surface.

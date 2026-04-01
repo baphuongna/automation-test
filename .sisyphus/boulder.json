@@ -58,7 +58,34 @@
     "ses_2bcdfe210ffeeg8KdO2VllPAhi",
     "ses_2bcdfe228ffeHZmwiuXrYJFPfD",
     "ses_2bcdfe221ffedMGm8iAf9TEcVJ",
-    "ses_2bca13a61ffeGpMVtaGgLGTPqg"
+    "ses_2bca13a61ffeGpMVtaGgLGTPqg",
+    "ses_2bc7dd1b4ffeSFeO5mjKIU6jtE",
+    "ses_2bc7dd94bffe5qTXC3IHxSNyjx",
+    "ses_2bc7dcc60ffejyJx3wmchwMuUf",
+    "ses_2bc767747ffevNEKWaopfzRQby",
+    "ses_2bc60d6b7ffefgKyIXidCY1AEM",
+    "ses_2bc60d642ffeShNhSudTsMuAd2",
+    "ses_2b936a27dffeDWXGX9QpaPinv0",
+    "ses_2b9319204ffem7zOW4HdYhC4Bs",
+    "ses_2b9173b5effed7DYsQGsdUSFFc",
+    "ses_2b917427cffen7e79k4Bx3Zogd",
+    "ses_2b9109e8dffea0Q7Dexw0JWXhI",
+    "ses_2b8eb1d37ffebdKCjZyKOPvA2F",
+    "ses_2b8e9d1b0ffe7LjKsAH4QXyRgl",
+    "ses_2b8eb1d25ffe1RtZIqb5UkJEob",
+    "ses_2b8e4b47dffeqIqZVLpXvlp3ma",
+    "ses_2b8ccfa0affeJGtIMlh3Lxf73h",
+    "ses_2b8cd0672ffeQreU0tMm3oChXR",
+    "ses_2b8c8055affeUckB5uIv9u2HR7",
+    "ses_2b87e3162ffevGgwg347fRIlvO",
+    "ses_2b87619e7ffezkpjMwPjRFHfEu",
+    "ses_2b86a3283ffe7MtzXMyNQ45HN0",
+    "ses_2b862731fffeDERASHpSvZcvkL",
+    "ses_2b8579a77ffe0ZPyHCWiCq7g5p",
+    "ses_2b8579a26ffeqfd5R8avWg6Ww0",
+    "ses_2b851a2b0ffeaKL7PPrsb1jjHs",
+    "ses_2b84986bbffeIvhDK9dUZuqlCi",
+    "ses_2b8333ef0ffeV0LenH3UsFYXfg"
   ],
   "plan_name": "testforge-phase-1-implementation",
   "worktree_path": null,
@@ -67,10 +94,37 @@
       "task_key": "final-wave:f1",
       "task_label": "F1",
       "task_title": "**Plan Compliance Audit** — `oracle`",
-      "session_id": "ses_2bca13a61ffeGpMVtaGgLGTPqg",
+      "session_id": "ses_2b87619e7ffezkpjMwPjRFHfEu",
       "agent": "Sisyphus-Junior",
-      "category": "writing",
-      "updated_at": "2026-03-31T10:24:25.753Z"
+      "category": "quick",
+      "updated_at": "2026-04-01T05:39:18.039Z"
+    },
+    "final-wave:f2": {
+      "task_key": "final-wave:f2",
+      "task_label": "F2",
+      "task_title": "**Code Quality Review** — `unspecified-high`",
+      "session_id": "ses_2b862731fffeDERASHpSvZcvkL",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-04-01T06:05:20.985Z"
+    },
+    "final-wave:f3": {
+      "task_key": "final-wave:f3",
+      "task_label": "F3",
+      "task_title": "**Real QA Scenario Execution** — `unspecified-high`",
+      "session_id": "ses_2b84986bbffeIvhDK9dUZuqlCi",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-04-01T06:37:18.335Z"
+    },
+    "final-wave:f4": {
+      "task_key": "final-wave:f4",
+      "task_label": "F4",
+      "task_title": "**Scope Fidelity and Fallback Readiness Check** — `deep`",
+      "session_id": "ses_2b8333ef0ffeV0LenH3UsFYXfg",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-04-01T06:54:56.773Z"
     }
   }
 }
