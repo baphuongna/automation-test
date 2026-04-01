@@ -94,9 +94,14 @@ impl AppPaths {
 
         let settings = BootstrapSettings::new(self);
         let payload = serde_json::to_string_pretty(&settings)?;
-        fs::write(&settings_path, payload)
-            .map_err(|error| AppError::storage_init(format!("Không thể tạo settings bootstrap: {error}")))?;
+        fs::write(&settings_path, payload).map_err(|error| {
+            AppError::storage_init(format!("Không thể tạo settings bootstrap: {error}"))
+        })?;
         Ok(())
+    }
+
+    pub fn detect_first_run(&self) -> bool {
+        !self.settings_file().exists()
     }
 
     pub fn database_file(&self) -> PathBuf {
@@ -138,7 +143,9 @@ pub fn default_app_data_dir() -> AppResult<PathBuf> {
             .map(PathBuf::from)
             .or_else(dirs::data_local_dir)
             .map(|path| path.join(APP_NAME))
-            .ok_or_else(|| AppError::storage_path("Không xác định được thư mục LOCALAPPDATA cho TestForge"))
+            .ok_or_else(|| {
+                AppError::storage_path("Không xác định được thư mục LOCALAPPDATA cho TestForge")
+            })
     }
 
     #[cfg(target_os = "macos")]
@@ -149,7 +156,9 @@ pub fn default_app_data_dir() -> AppResult<PathBuf> {
                     .join("Application Support")
                     .join(APP_NAME)
             })
-            .ok_or_else(|| AppError::storage_path("Không xác định được home directory cho TestForge"))
+            .ok_or_else(|| {
+                AppError::storage_path("Không xác định được home directory cho TestForge")
+            })
     }
 
     #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
@@ -157,14 +166,17 @@ pub fn default_app_data_dir() -> AppResult<PathBuf> {
         dirs::data_local_dir()
             .or_else(|| dirs::home_dir().map(|home| home.join(".local").join("share")))
             .map(|path| path.join(APP_NAME))
-            .ok_or_else(|| AppError::storage_path("Không xác định được app data directory cho TestForge"))
+            .ok_or_else(|| {
+                AppError::storage_path("Không xác định được app data directory cho TestForge")
+            })
     }
 }
 
 /// Ensure a directory exists.
 pub fn ensure_dir_exists(path: &Path) -> AppResult<()> {
-    fs::create_dir_all(path)
-        .map_err(|error| AppError::storage_init(format!("Không thể tạo thư mục {:?}: {error}", path)))
+    fs::create_dir_all(path).map_err(|error| {
+        AppError::storage_init(format!("Không thể tạo thư mục {:?}: {error}", path))
+    })
 }
 
 pub fn database_path(app_data_dir: &Path) -> PathBuf {

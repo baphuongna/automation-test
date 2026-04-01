@@ -12,6 +12,7 @@ import type {
   EnvironmentVariableDto,
   RunDetailDto,
   RunHistoryEntryDto,
+  ShellMetadataDto,
   SuiteDto,
   UiReplayResultDto,
   UiTestCaseDto
@@ -92,6 +93,7 @@ export interface CommandPayloadMap {
     testCaseId: EntityId;
     startUrl: string;
   };
+  "shell.metadata.get": Record<string, never>;
   "browser.health.check": Record<string, never>;
   "browser.recording.stop": {
     testCaseId: EntityId;
@@ -144,6 +146,7 @@ export interface CommandResponseMap {
   "ui.testcase.upsert": UiTestCaseDto;
   "ui.testcase.delete": { deleted: true };
   "browser.recording.start": { started: true };
+  "shell.metadata.get": ShellMetadataDto;
   "browser.health.check": BrowserHealthDto;
   "browser.recording.stop": UiTestCaseDto;
   "browser.recording.cancel": { cancelled: true };

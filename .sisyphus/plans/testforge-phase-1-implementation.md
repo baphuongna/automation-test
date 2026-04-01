@@ -1230,7 +1230,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `feat(runner-ui): add history detail and rerun-failed ui`
 
-- [ ] T17. Packaging, first-run bootstrap, and Windows distribution flow
+- [x] T17. Packaging, first-run bootstrap, and Windows distribution flow
 
   **What to do**:
   - Prepare Windows-first packaging flow, first-run initialization, runtime verification, version display, and manual-update-safe directory separation.

@@ -201,3 +201,21 @@
 ## T16 issues (2026-04-01)
 - lsp_diagnostics ran clean for all modified TypeScript and Rust files in scope, but CSS diagnostics remain blocked in this environment because the configured iome server is not installed.
 - Fresh Rust compile/runtime verification for the new read-side runner handlers still cannot be executed locally because cargo is unavailable; confidence is strengthened through source regression tests, TypeScript typecheck, and production build evidence.
+
+## T17 exploration issues (2026-04-01)
+- Repo hiện chưa có bằng chứng về Windows distribution flow hoàn chỉnh: không thấy script/package command riêng cho `tauri build`, không thấy `@tauri-apps/cli` trong `package.json`, và không thấy file updater/release như `latest.json`, `*.msi`, `*.nsis`, `*.wxs`, `*.iss`, hay publish config khác trong repo.
+- `src-tauri/tauri.conf.json` đang để `build.beforeDevCommand = "npm run dev"`; đây là seam hiện hữu nhưng mâu thuẫn với workflow build-only đã được nhắc trong notepad/instructions, nên packaging/dev-distribution flow hiện chưa đồng bộ hoàn toàn với cách chạy được yêu cầu ở môi trường này.
+- `src-tauri/icons/**/*` không có file nào trong workspace hiện tại dù `tauri.conf.json` tham chiếu nhiều icon path; đây là gap cần kiểm chứng vì bundle Windows thường phụ thuộc icon assets tồn tại thật.
+- Browser runtime discovery cho flow UI hiện phụ thuộc executable ở app-data (`ms-playwright/.../chrome.exe`) hoặc env overrides; chưa thấy bootstrap installer/first-run nào tải/copy runtime này, nên packaged app có nguy cơ khởi động ở trạng thái `degraded` hoặc `unavailable` cho browser flows trên máy mới.
+- `build.rs` chỉ gọi `tauri_build::build()`; không thấy custom bundling hook/resource copy step cho Windows payload bổ sung.
+- Cargo/Rust end-to-end packaging verification vẫn bị chặn trong môi trường hiện tại, nên chưa thể xác nhận local `tauri build`/MSI output thực sự tồn tại hoặc compile được.
+## T17: Packaging, first-run bootstrap, and Windows distribution flow (2026-04-01)
+
+### Current gaps noted during read-only exploration
+- Runtime missing/degraded guidance is currently feature-local to `src/routes/web-recorder.tsx`; users outside that route do not get a clear shell-level explanation that browser automation is blocked while data/API features remain usable.
+- `src/components/StatusBar.tsx` shows `v0.1.0` as a literal string, so version display exists visually but is not sourced from runtime/package metadata.
+- Backend bootstrap state (`degraded_mode`, `master_key_initialized`, resolved `AppPaths`) is created in `src-tauri/src/main.rs` and stored in `AppState`, but there is no existing typed command/event exposing that startup snapshot to the shell or settings page.
+- Settings screen (`src/routes/settings.tsx`) remains a placeholder and does not currently surface bootstrap/runtime/version information.
+## T17 issues (2026-04-01)
+- Rust end-to-end compile/package verification remains partially blocked in this environment because cargo is unavailable; confidence comes from source regression tests, TypeScript typecheck, and production build evidence.
+- Existing shell smoke assertions were still pinned to placeholder status-bar text/signature and had to be updated to the new shell metadata/status-bar contract introduced by T17.

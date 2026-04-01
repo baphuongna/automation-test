@@ -242,3 +242,11 @@ export interface BrowserHealthDto {
   message: string;
   checkedAt: IsoDateTime;
 }
+
+export interface ShellMetadataDto {
+  appVersion: string;
+  isFirstRun: boolean;
+  degradedMode: boolean;
+  masterKeyInitialized: boolean;
+  browserRuntime: BrowserHealthDto;
+}

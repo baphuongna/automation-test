@@ -8,6 +8,14 @@ use crate::error::{AppError, AppResult};
 use crate::services::SecretService;
 use crate::utils::paths::AppPaths;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ShellBootstrapSnapshot {
+    pub app_version: String,
+    pub is_first_run: bool,
+    pub degraded_mode: bool,
+    pub master_key_initialized: bool,
+}
+
 /// Application configuration bootstrap.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppConfig {
@@ -94,10 +102,16 @@ pub struct AppState {
     run_state: RwLock<RunState>,
     degraded_mode: RwLock<bool>,
     master_key_initialized: RwLock<bool>,
+    shell_bootstrap_snapshot: RwLock<ShellBootstrapSnapshot>,
 }
 
 impl AppState {
-    pub fn new(db: Database, secret_service: SecretService, paths: AppPaths) -> Self {
+    pub fn new(
+        db: Database,
+        secret_service: SecretService,
+        paths: AppPaths,
+        shell_bootstrap_snapshot: ShellBootstrapSnapshot,
+    ) -> Self {
         Self {
             db: Arc::new(RwLock::new(db)),
             secret_service: Arc::new(RwLock::new(secret_service)),
@@ -109,6 +123,7 @@ impl AppState {
             run_state: RwLock::new(RunState::Idle),
             degraded_mode: RwLock::new(false),
             master_key_initialized: RwLock::new(false),
+            shell_bootstrap_snapshot: RwLock::new(shell_bootstrap_snapshot),
         }
     }
 
@@ -130,6 +145,7 @@ impl AppState {
 
     pub fn set_degraded_mode(&self, value: bool) {
         *self.degraded_mode.write().unwrap() = value;
+        self.shell_bootstrap_snapshot.write().unwrap().degraded_mode = value;
     }
 
     pub fn is_master_key_initialized(&self) -> bool {
@@ -138,6 +154,14 @@ impl AppState {
 
     pub fn set_master_key_initialized(&self, value: bool) {
         *self.master_key_initialized.write().unwrap() = value;
+        self.shell_bootstrap_snapshot
+            .write()
+            .unwrap()
+            .master_key_initialized = value;
+    }
+
+    pub fn shell_bootstrap_snapshot(&self) -> ShellBootstrapSnapshot {
+        self.shell_bootstrap_snapshot.read().unwrap().clone()
     }
 
     pub fn active_environment(&self) -> Option<String> {
@@ -489,7 +513,17 @@ mod tests {
             Database::new_with_migrations_dir(paths.database_file(), migrations_dir).unwrap();
         let secret_service = SecretService::new(paths.base.clone());
 
-        AppState::new(database, secret_service, paths)
+        AppState::new(
+            database,
+            secret_service,
+            paths,
+            ShellBootstrapSnapshot {
+                app_version: "0.1.0".to_string(),
+                is_first_run: false,
+                degraded_mode: false,
+                master_key_initialized: true,
+            },
+        )
     }
 
     #[test]

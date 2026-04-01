@@ -18,6 +18,8 @@ use testforge::{
     runner_run_detail, runner_run_history, runner_suite_cancel, runner_suite_execute,
     runner_suite_list,
     services::SecretService,
+    shell_metadata_get,
+    state::ShellBootstrapSnapshot,
     AppState,
 };
 
@@ -34,6 +36,7 @@ pub fn bootstrap(app_handle: &tauri::AppHandle) -> AppResult<BootstrapResult> {
     })?;
 
     let paths = AppPaths::new(app_data_dir);
+    let is_first_run = paths.detect_first_run();
     paths.bootstrap()?;
 
     let database = Database::new(paths.database_file())?;
@@ -41,7 +44,19 @@ pub fn bootstrap(app_handle: &tauri::AppHandle) -> AppResult<BootstrapResult> {
     let secret_service = SecretService::new(paths.base.clone());
     let degraded_mode = bootstrap_secret_service(&database, &secret_service, &paths)?;
 
-    let app_state = Arc::new(AppState::new(database, secret_service, paths.clone()));
+    let shell_bootstrap_snapshot = ShellBootstrapSnapshot {
+        app_version: app_handle.package_info().version.to_string(),
+        is_first_run,
+        degraded_mode,
+        master_key_initialized: !degraded_mode,
+    };
+
+    let app_state = Arc::new(AppState::new(
+        database,
+        secret_service,
+        paths.clone(),
+        shell_bootstrap_snapshot,
+    ));
     app_state.set_degraded_mode(degraded_mode);
     app_state.set_master_key_initialized(!degraded_mode);
 
@@ -93,6 +108,7 @@ pub fn run() {
             api_testcase_delete,
             api_execute,
             browser_health_check,
+            shell_metadata_get,
             browser_recording_start,
             browser_recording_stop,
             browser_recording_cancel,

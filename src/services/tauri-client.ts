@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { CommandName, CommandPayloadMap, CommandResponseMap, ErrorPayload } from "../types";
+import type { CommandName, CommandPayloadMap, CommandResponseMap, ErrorPayload, ShellMetadataDto } from "../types";
 
 export interface CommandError extends ErrorPayload {}
 
@@ -66,4 +66,14 @@ export async function invokeCommand<TName extends CommandName>(
       success: false
     };
   }
+}
+
+export async function getShellMetadata(): Promise<ShellMetadataDto> {
+  const result = await invokeCommand("shell.metadata.get", {});
+
+  if (!result.success || result.data === null) {
+    throw result.error ?? new Error("Không thể tải shell metadata.");
+  }
+
+  return result.data;
 }

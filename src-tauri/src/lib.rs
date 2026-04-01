@@ -219,6 +219,29 @@ fn ensure_valid_import_format(format: &str) -> Result<String> {
     }
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShellMetadataDto {
+    pub app_version: String,
+    pub is_first_run: bool,
+    pub degraded_mode: bool,
+    pub master_key_initialized: bool,
+    pub browser_runtime: BrowserHealthDto,
+}
+
+fn build_shell_metadata(state: &AppState) -> ShellMetadataDto {
+    let browser_runtime = services::BrowserAutomationService::new(state.paths().clone()).check_runtime_health();
+    let bootstrap = state.shell_bootstrap_snapshot();
+
+    ShellMetadataDto {
+        app_version: bootstrap.app_version,
+        is_first_run: bootstrap.is_first_run,
+        degraded_mode: bootstrap.degraded_mode,
+        master_key_initialized: bootstrap.master_key_initialized,
+        browser_runtime,
+    }
+}
+
 fn parse_csv_import(content: &str) -> Result<(Vec<ColumnDefinition>, Vec<(Vec<String>, bool)>)> {
     let trimmed = content.trim();
     if trimmed.is_empty() {
@@ -680,6 +703,15 @@ pub fn browser_health_check(
     let health = service.check_runtime_health();
     service.emit_health_changed(&app, &health)?;
     Ok(health)
+}
+
+#[tauri::command]
+pub fn shell_metadata_get(
+    payload: EmptyCommandPayload,
+    state: State<'_, std::sync::Arc<AppState>>,
+) -> std::result::Result<ShellMetadataDto, AppError> {
+    let _ = payload;
+    Ok(build_shell_metadata(state.inner().as_ref()))
 }
 
 #[tauri::command]

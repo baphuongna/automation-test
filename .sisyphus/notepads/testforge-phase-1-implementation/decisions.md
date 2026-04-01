@@ -230,7 +230,22 @@
 - Chosen smoke target: HTML tĩnh deterministic nội bộ thay vì external website để tránh flakiness mạng và giữ kiểm chứng interaction rõ ràng.
 - Chosen status model: `SMOKE_PASS | SMOKE_BLOCKED | SMOKE_FAIL` với diagnostics JSON in stdout; chỉ PASS khi interaction path thực sự chạy và DOM transitions đúng.
 
+## T17 exploration decisions (2026-04-01)
+- Chosen confirmed packaging seam set for T17: treat `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, `src-tauri/build.rs`, `src-tauri/src/main.rs`, `src-tauri/src/utils/paths.rs`, `src-tauri/src/services/browser_automation_service.rs`, `src-tauri/src/services/artifact_service.rs`, and `src/components/StatusBar.tsx` as the minimal authoritative surface to change or inspect further for Windows packaging/distribution work.
+- Chosen bootstrap interpretation: reuse the existing `AppPaths` app-data-root policy as the manual-update-safe separation boundary, because all persisted runtime state already lives outside the app bundle under app-data and no competing path policy exists in the repo.
+- Chosen metadata interpretation: current app identity/version source of truth is duplicated across `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml`, while the frontend status bar is only a hardcoded placeholder; any future T17 implementation should treat runtime-exposed metadata as canonical instead of the current literal UI string.
+
 ## T16 decisions (2026-04-01)
 - Chosen read-side seam: add only unner.suite.list, unner.run.history, and unner.run.detail through the existing typed command boundary; rerun-failed continues to flow through unner.suite.execute({ rerunFailedFromRunId }) with no separate rerun command.
 - Chosen detail contract: RunDetailDto returns run summary + per-case/per-row results + artifact manifests, while each row carries explicit ailureCategory, equestPreview, esponsePreview, and ssertionPreview so the route can render rich diagnostics without re-parsing backend storage shapes.
 - Chosen UI structure: keep reporting embedded inside /test-runner as a route-level three-panel view instead of adding a separate reporting route, matching the locked Phase 1 scope and the existing pi-tester/web-recorder screen style.
+## T17: Packaging, first-run bootstrap, and Windows distribution flow (2026-04-01)
+
+### Read-only seam assessment
+- Treat `src-tauri/src/main.rs::bootstrap(...)` + `src-tauri/src/utils/paths.rs::AppPaths` as the canonical first-run/bootstrap seam for T17 follow-up work; that path already owns app-data initialization, settings bootstrap, DB open/migrations, and secret-store degraded detection.
+- Treat `src-tauri/src/services/browser_automation_service.rs::{check_runtime_health,detect_chromium_runtime,chromium_candidates}` plus `src-tauri/src/lib.rs::browser_health_check(...)` as the canonical runtime-guidance seam; it already encapsulates discovery semantics and emits the stable `browser.health.changed` event.
+- Treat `src/components/StatusBar.tsx` as the smallest existing shell-level UI surface for version display because it is already rendered on every route via `src/App.tsx`.
+## T17 decisions (2026-04-01)
+- Chosen frontend boundary: keep all shell metadata reads behind `src/services/tauri-client.ts` via `getShellMetadata()`; `App.tsx` only consumes the typed helper and subscribes to the existing `browser.health.changed` event to refresh runtime status.
+- Chosen backend boundary: store a minimal `ShellBootstrapSnapshot` inside `AppState` during `main.rs::bootstrap(...)` so first-run/degraded/master-key bootstrap facts stay anchored to the canonical startup seam and can be read later without re-running bootstrap side effects.
+- Chosen UI surface: use `StatusBar` as the only always-visible shell surface for runtime version + bootstrap/runtime guidance, avoiding any new route, wizard, or onboarding/reporting scope.
