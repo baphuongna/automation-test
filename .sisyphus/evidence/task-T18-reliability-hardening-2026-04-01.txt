@@ -1,0 +1,28 @@
+T18 Reliability hardening, stop/cancel, degraded mode, and edge-case handling verification
+Date: 2026-04-01
+
+Scope verified:
+- Idempotent stop/cancel seams for recording, replay, and suite running
+- Runner persistence guards against duplicate terminal/result writes
+- API preview truncation, missing-variable error surfacing, degraded browser isolation, and runner UI terminal messaging seams
+
+Commands run:
+
+1) node --import tsx tests/frontend/reliability-hardening-t18.test.ts
+Result: PASS
+Output: Reliability hardening T18 regression/source test passed.
+
+2) npm run typecheck
+Result: PASS
+Output: tsc --noEmit completed successfully.
+
+3) npm run build
+Result: PASS
+Output summary:
+- vite v8.0.3 built production bundle successfully
+- dist/assets/index-BNkNwo0G.css 26.21 kB
+- dist/assets/index-zDH0vqsM.js 366.76 kB
+
+Notes:
+- Browser degraded semantics remain isolated from API/data usability in the verified source seam.
+- This file records fresh verification only and does not broaden into T19 summary or final review prose.

@@ -1,5 +1,5 @@
 //! Secret Encryption Service
-//! 
+//!
 //! Provides AES-256-GCM encryption for secret values with:
 //! - Random nonce per secret
 //! - Master key management from file
@@ -112,24 +112,30 @@ impl SecretService {
     }
 
     /// Encrypt a secret value
-    /// 
+    ///
     /// Returns a base64-encoded string containing: base64(nonce || ciphertext)
     pub fn encrypt(&self, plaintext: &str) -> Result<String> {
         if self.is_degraded() {
             return Err(TestForgeError::DegradedMode(
-                "Cannot encrypt secrets in degraded mode. Master key is corrupted or missing.".to_string()
+                "Cannot encrypt secrets in degraded mode. Master key is corrupted or missing."
+                    .to_string(),
             ));
         }
 
-        let master_key = self.master_key.read()
-            .map_err(|_| TestForgeError::SecretEncryption("Failed to acquire read lock on master key".to_string()))?;
-        
-        let key = master_key.as_ref()
+        let master_key = self.master_key.read().map_err(|_| {
+            TestForgeError::SecretEncryption(
+                "Failed to acquire read lock on master key".to_string(),
+            )
+        })?;
+
+        let key = master_key
+            .as_ref()
             .ok_or_else(|| TestForgeError::MasterKey("Master key not initialized".to_string()))?;
 
         // Create cipher
-        let cipher = Aes256Gcm::new_from_slice(key)
-            .map_err(|e| TestForgeError::SecretEncryption(format!("Failed to create cipher: {}", e)))?;
+        let cipher = Aes256Gcm::new_from_slice(key.as_slice()).map_err(|e| {
+            TestForgeError::SecretEncryption(format!("Failed to create cipher: {}", e))
+        })?;
 
         // Generate random nonce
         let mut nonce_bytes = [0u8; NONCE_SIZE];
@@ -137,7 +143,8 @@ impl SecretService {
         let nonce = Nonce::from_slice(&nonce_bytes);
 
         // Encrypt
-        let ciphertext = cipher.encrypt(nonce, plaintext.as_bytes())
+        let ciphertext = cipher
+            .encrypt(nonce, plaintext.as_bytes())
             .map_err(|e| TestForgeError::SecretEncryption(format!("Encryption failed: {}", e)))?;
 
         // Combine nonce + ciphertext and encode as base64
@@ -149,28 +156,34 @@ impl SecretService {
     }
 
     /// Decrypt a secret value
-    /// 
+    ///
     /// Expects a base64-encoded string containing: base64(nonce || ciphertext)
     pub fn decrypt(&self, encrypted: &str) -> Result<String> {
         if self.is_degraded() {
             return Err(TestForgeError::DegradedMode(
-                "Cannot decrypt secrets in degraded mode. Master key is corrupted or missing.".to_string()
+                "Cannot decrypt secrets in degraded mode. Master key is corrupted or missing."
+                    .to_string(),
             ));
         }
 
-        let master_key = self.master_key.read()
-            .map_err(|_| TestForgeError::SecretDecryption("Failed to acquire read lock on master key".to_string()))?;
-        
-        let key = master_key.as_ref()
+        let master_key = self.master_key.read().map_err(|_| {
+            TestForgeError::SecretDecryption(
+                "Failed to acquire read lock on master key".to_string(),
+            )
+        })?;
+
+        let key = master_key
+            .as_ref()
             .ok_or_else(|| TestForgeError::MasterKey("Master key not initialized".to_string()))?;
 
         // Decode base64
-        let combined = BASE64.decode(encrypted)
+        let combined = BASE64
+            .decode(encrypted)
             .map_err(|e| TestForgeError::Base64Decode(format!("Failed to decode base64: {}", e)))?;
 
         if combined.len() < NONCE_SIZE + 1 {
             return Err(TestForgeError::SecretDecryption(
-                "Encrypted data too short".to_string()
+                "Encrypted data too short".to_string(),
             ));
         }
 
@@ -179,20 +192,23 @@ impl SecretService {
         let ciphertext = &combined[NONCE_SIZE..];
 
         // Create cipher
-        let cipher = Aes256Gcm::new_from_slice(key)
-            .map_err(|e| TestForgeError::SecretDecryption(format!("Failed to create cipher: {}", e)))?;
+        let cipher = Aes256Gcm::new_from_slice(key.as_slice()).map_err(|e| {
+            TestForgeError::SecretDecryption(format!("Failed to create cipher: {}", e))
+        })?;
 
         // Decrypt
-        let plaintext = cipher.decrypt(nonce, ciphertext)
+        let plaintext = cipher
+            .decrypt(nonce, ciphertext)
             .map_err(|e| TestForgeError::SecretDecryption(format!("Decryption failed: {}", e)))?;
 
         // Convert to string
-        String::from_utf8(plaintext)
-            .map_err(|e| TestForgeError::SecretDecryption(format!("Invalid UTF-8 in decrypted data: {}", e)))
+        String::from_utf8(plaintext).map_err(|e| {
+            TestForgeError::SecretDecryption(format!("Invalid UTF-8 in decrypted data: {}", e))
+        })
     }
 
     /// Generate a masked preview for a secret value
-    /// 
+    ///
     /// Examples:
     /// - "abcdefghij" -> "ab***ij"
     /// - "abc" -> "a*c"
@@ -200,7 +216,7 @@ impl SecretService {
     /// - "a" -> "*"
     pub fn generate_masked_preview(&self, value: &str) -> String {
         let len = value.chars().count();
-        
+
         match len {
             0 => String::new(),
             1 => "*".to_string(),
@@ -211,9 +227,10 @@ impl SecretService {
             }
             _ => {
                 let chars: Vec<char> = value.chars().collect();
-                format!("{}***{}", 
+                format!(
+                    "{}***{}",
                     chars[0..2].iter().collect::<String>(),
-                    chars[len-2..].iter().collect::<String>()
+                    chars[len - 2..].iter().collect::<String>()
                 )
             }
         }
@@ -228,7 +245,7 @@ impl SecretService {
     /// Load the master key from file
     fn load_master_key(&self) -> Result<()> {
         let key_data = std::fs::read(&self.key_file_path)?;
-        
+
         if key_data.len() != KEY_SIZE {
             return Err(TestForgeError::MasterKey(format!(
                 "Invalid key file size: expected {}, got {}",
@@ -240,7 +257,9 @@ impl SecretService {
         let mut key = Zeroizing::new([0u8; KEY_SIZE]);
         key.copy_from_slice(&key_data);
 
-        let mut master_key = self.master_key.write()
+        let mut master_key = self
+            .master_key
+            .write()
             .map_err(|_| TestForgeError::MasterKey("Failed to acquire write lock".to_string()))?;
         *master_key = Some(key);
 
@@ -272,7 +291,9 @@ impl SecretService {
         }
 
         // Store in memory
-        let mut master_key = self.master_key.write()
+        let mut master_key = self
+            .master_key
+            .write()
             .map_err(|_| TestForgeError::MasterKey("Failed to acquire write lock".to_string()))?;
         *master_key = Some(key);
 
@@ -284,17 +305,19 @@ impl SecretService {
     pub fn rotate_key(&self) -> Result<()> {
         if self.is_degraded() {
             return Err(TestForgeError::DegradedMode(
-                "Cannot rotate key in degraded mode".to_string()
+                "Cannot rotate key in degraded mode".to_string(),
             ));
         }
-        
+
         // TODO: Implement key rotation
         // 1. Generate new key
         // 2. Decrypt all secrets with old key
         // 3. Re-encrypt with new key
         // 4. Save new key
-        
-        Err(TestForgeError::InvalidOperation("Key rotation not yet implemented".to_string()))
+
+        Err(TestForgeError::InvalidOperation(
+            "Key rotation not yet implemented".to_string(),
+        ))
     }
 
     /// Derive a key from a password (for future use with OS keychain)
@@ -303,7 +326,7 @@ impl SecretService {
         let mut hasher = Sha256::new();
         hasher.update(password.as_bytes());
         hasher.update(salt);
-        
+
         let mut key = [0u8; KEY_SIZE];
         key.copy_from_slice(&hasher.finalize());
         key
@@ -352,7 +375,7 @@ mod tests {
 
         // Same plaintext should produce different ciphertext (due to random nonce)
         assert_ne!(encrypted1, encrypted2);
-        
+
         // But both should decrypt to the same value
         assert_eq!(plaintext, service.decrypt(&encrypted1).unwrap());
         assert_eq!(plaintext, service.decrypt(&encrypted2).unwrap());
@@ -368,7 +391,10 @@ mod tests {
         assert_eq!(service.generate_masked_preview("abc"), "a*c");
         assert_eq!(service.generate_masked_preview("abcd"), "ab**");
         assert_eq!(service.generate_masked_preview("abcdefghij"), "ab***ij");
-        assert_eq!(service.generate_masked_preview("verylongpassword"), "ve***rd");
+        assert_eq!(
+            service.generate_masked_preview("verylongpassword"),
+            "ve***rd"
+        );
     }
 
     #[test]
@@ -384,7 +410,7 @@ mod tests {
     fn test_degraded_mode_on_corrupted_key() {
         let temp_dir = TempDir::new().unwrap();
         let key_path = temp_dir.path().join(MASTER_KEY_FILE);
-        
+
         // Write invalid key file
         std::fs::write(&key_path, b"invalid_key_data").unwrap();
 
@@ -400,7 +426,7 @@ mod tests {
     fn test_encrypt_fails_in_degraded_mode() {
         let temp_dir = TempDir::new().unwrap();
         let key_path = temp_dir.path().join(MASTER_KEY_FILE);
-        
+
         // Write invalid key file
         std::fs::write(&key_path, b"invalid").unwrap();
 
@@ -416,7 +442,7 @@ mod tests {
     fn test_decrypt_fails_in_degraded_mode() {
         let temp_dir = TempDir::new().unwrap();
         let key_path = temp_dir.path().join(MASTER_KEY_FILE);
-        
+
         // Write invalid key file
         std::fs::write(&key_path, b"invalid").unwrap();
 
@@ -451,14 +477,14 @@ mod tests {
     fn test_key_file_created_on_init() {
         let temp_dir = TempDir::new().unwrap();
         let key_path = temp_dir.path().join(MASTER_KEY_FILE);
-        
+
         assert!(!key_path.exists());
 
         let service = SecretService::new(temp_dir.path().to_path_buf());
         service.initialize().unwrap();
 
         assert!(key_path.exists());
-        
+
         // Key file should be exactly 32 bytes
         let key_data = std::fs::read(&key_path).unwrap();
         assert_eq!(key_data.len(), KEY_SIZE);
@@ -467,7 +493,7 @@ mod tests {
     #[test]
     fn test_persists_across_reinitialization() {
         let temp_dir = TempDir::new().unwrap();
-        
+
         // First service
         let service1 = SecretService::new(temp_dir.path().to_path_buf());
         service1.initialize().unwrap();
@@ -484,7 +510,7 @@ mod tests {
     #[test]
     fn test_state_enum() {
         let (service, _temp_dir) = create_test_service();
-        
+
         // Before initialization
         // State is determined by atomic bool, default is false (degraded)
         assert_eq!(service.state(), SecretServiceState::Degraded);

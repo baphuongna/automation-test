@@ -256,16 +256,20 @@
 - Chosen degraded-mode messaging reuse: standardize on existing browser-unavailable wording from `App.tsx`/`StatusBar.tsx` and recoverable-warning pattern from `web-recorder.tsx` instead of inventing new error taxonomies in frontend routes.
 
 ## T18 decisions (2026-04-01)
-- Chosen idempotency seam: thay d?i AppState d? cancel_recording, cancel_replay, và stop_recording ph?n ánh terminal/idle state an toàn (ool/Option) thay vì ném l?i generic ? l?n g?i l?p.
-- Chosen runner hardening seam: gi? command surface hi?n có, ch? thêm repository/orchestration guards (update_run_summary_if_active, insert_case_result_if_absent) d? ngan duplicate completion/cancel records.
-- Chosen browser failure surfacing: báo rõ deleted/invalid UI script reference và selector/session-loss t?i BrowserAutomationService, d?ng th?i gi? degraded message nh?n m?nh browser flows b? block nhung API-only features v?n usable.
-- Chosen frontend reflection seam: m? r?ng un-store v?i 	erminalMessage thay vì thêm route/store m?i ho?c t?o transport live state khác ngoài seam T15/T16 hi?n có.
+- Chosen idempotency seam: thay d?i AppState d? cancel_recording, cancel_replay, vï¿½ stop_recording ph?n ï¿½nh terminal/idle state an toï¿½n (ool/Option) thay vï¿½ nï¿½m l?i generic ? l?n g?i l?p.
+- Chosen runner hardening seam: gi? command surface hi?n cï¿½, ch? thï¿½m repository/orchestration guards (update_run_summary_if_active, insert_case_result_if_absent) d? ngan duplicate completion/cancel records.
+- Chosen browser failure surfacing: bï¿½o rï¿½ deleted/invalid UI script reference vï¿½ selector/session-loss t?i BrowserAutomationService, d?ng th?i gi? degraded message nh?n m?nh browser flows b? block nhung API-only features v?n usable.
+- Chosen frontend reflection seam: m? r?ng un-store v?i 	erminalMessage thay vï¿½ thï¿½m route/store m?i ho?c t?o transport live state khï¿½c ngoï¿½i seam T15/T16 hi?n cï¿½.
 - Chosen API preview policy: m? r?ng seam 
-ormalize_body_preview hi?n h?u thay vì t?o policy preview th? hai, gi? T18 hardening t?p trung t?i pi_execution_service.rs.
+ormalize_body_preview hi?n h?u thay vï¿½ t?o policy preview th? hai, gi? T18 hardening t?p trung t?i pi_execution_service.rs.
 
 
 ## T19 decisions (2026-04-01)
-- Chosen orchestration seam: thêm duy nh?t tests/frontend/task-t19-smoke-report.ts + npm script test:t19:smoke nhu m?t wrapper m?ng ch?y l?i các regression/smoke dã t?n t?i, thay vì m? subsystem reporting m?i.
-- Chosen evidence policy: dùng hai file task-T19-smoke-summary.txt và task-T19-browser-gate.txt du?i .sisyphus/evidence d? tách MVP exit evaluation kh?i Week-6 browser gate verdict nhung v?n gi? reviewer flow ng?n g?n.
-- Chosen browser gate policy: gi? nguyên semantics trung th?c t? T14 smoke (SMOKE_PASS | SMOKE_BLOCKED | SMOKE_FAIL) và map sang PASS | BLOCKED | FAIL cho gate verdict; thi?u runtime prerequisite ph?i ra BLOCKED ch? không coi là failure s?n ph?m hay pass gi?.
-- Chosen MVP evaluation rule: các tiêu chí environment/API/runner/packaging du?c dánh giá t? existing seam evidence, còn replay UI b?t bu?c ph? thu?c smoke runtime th?t tru?c khi du?c dánh d?u satisfied.
+- Chosen orchestration seam: thï¿½m duy nh?t tests/frontend/task-t19-smoke-report.ts + npm script test:t19:smoke nhu m?t wrapper m?ng ch?y l?i cï¿½c regression/smoke dï¿½ t?n t?i, thay vï¿½ m? subsystem reporting m?i.
+- Chosen evidence policy: dï¿½ng hai file task-T19-smoke-summary.txt vï¿½ task-T19-browser-gate.txt du?i .sisyphus/evidence d? tï¿½ch MVP exit evaluation kh?i Week-6 browser gate verdict nhung v?n gi? reviewer flow ng?n g?n.
+- Chosen browser gate policy: gi? nguyï¿½n semantics trung th?c t? T14 smoke (SMOKE_PASS | SMOKE_BLOCKED | SMOKE_FAIL) vï¿½ map sang PASS | BLOCKED | FAIL cho gate verdict; thi?u runtime prerequisite ph?i ra BLOCKED ch? khï¿½ng coi lï¿½ failure s?n ph?m hay pass gi?.
+- Chosen MVP evaluation rule: cï¿½c tiï¿½u chï¿½ environment/API/runner/packaging du?c dï¿½nh giï¿½ t? existing seam evidence, cï¿½n replay UI b?t bu?c ph? thu?c smoke runtime th?t tru?c khi du?c dï¿½nh d?u satisfied.
+
+## F1 packaging compliance fix (2026-04-01)
+- Removed the stale `bundle.icon` list from `src-tauri/tauri.conf.json` because every referenced path under `src-tauri/icons/` is absent in the current workspace and Tauri v2 allows `bundle.icon` to be omitted (default `[]`).
+- Chose config-only remediation instead of adding new icon assets because this is the smallest honest fix for the current repo state and avoids introducing synthetic branding files outside the narrow compliance scope.

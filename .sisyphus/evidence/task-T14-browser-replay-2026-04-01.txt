@@ -1,0 +1,37 @@
+T14 UI replay executor + screenshot-on-fail verification
+Date: 2026-04-01
+
+Scope verified:
+- browser.replay.start typed result contract and progress event seam
+- Replay executor runtime/source regression coverage, screenshot-on-fail artifact path usage, and healthy-only runtime gate
+- Honest runtime smoke gate behavior for Chromium availability
+
+Commands run:
+
+1) node --import tsx tests/frontend/browser-replay-t14.test.ts
+Result: PASS
+Output: Browser replay T14 regression/source test passed.
+
+2) npm run test:t14:smoke
+Result: BLOCKED
+Output:
+- [BROWSER_REPLAY_T14_SMOKE] SMOKE_BLOCKED :: Chromium executable is missing; set PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH or install browser runtime.
+- Missing: chromium executable
+- Candidate paths checked:
+  - D:\my\research\ms-playwright\chromium\chrome-win\chrome.exe
+  - D:\my\research\src-tauri\ms-playwright\chromium\chrome-win\chrome.exe
+
+3) npm run typecheck
+Result: PASS
+Output: tsc --noEmit completed successfully.
+
+4) npm run build
+Result: PASS
+Output summary:
+- vite v8.0.3 built production bundle successfully
+- dist/assets/index-BNkNwo0G.css 26.21 kB
+- dist/assets/index-zDH0vqsM.js 366.76 kB
+
+Environment notes:
+- Browser runtime smoke remains honestly BLOCKED in this environment because Chromium was not found at the tested candidate paths.
+- This evidence does not upgrade any browser-runtime verdict from BLOCKED to PASS.

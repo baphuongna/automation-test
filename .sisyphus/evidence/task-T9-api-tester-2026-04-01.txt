@@ -1,0 +1,28 @@
+T9 API Tester UI + result viewer verification
+Date: 2026-04-01
+
+Scope verified:
+- API Tester route/result viewer evidence backfill
+- Collection tree, assertion builder, response viewer, and actual-vs-expected rendering seams
+- Typed IPC client boundary and preview fallback redaction behavior
+
+Commands run:
+
+1) node --import tsx tests/frontend/api-tester-t9.test.ts
+Result: PASS
+Output: API Tester T9 regression test passed.
+
+2) npm run typecheck
+Result: PASS
+Output: tsc --noEmit completed successfully.
+
+3) npm run build
+Result: PASS
+Output summary:
+- vite v8.0.3 built production bundle successfully
+- dist/assets/index-BNkNwo0G.css 26.21 kB
+- dist/assets/index-zDH0vqsM.js 366.76 kB
+
+Notes:
+- This evidence is grounded in fresh command output collected on 2026-04-01.
+- Verification stayed at the existing source-regression + compile/build seam for T9; no product files were changed during this backfill.

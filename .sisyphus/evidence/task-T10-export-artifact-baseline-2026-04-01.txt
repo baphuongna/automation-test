@@ -1,0 +1,28 @@
+T10 Export + artifact path baseline verification
+Date: 2026-04-01
+
+Scope verified:
+- ArtifactService baseline for export/report persistence
+- AppPaths ownership of exports/screenshots directories
+- Shared DTO contract presence for artifact manifests and report exports
+
+Commands run:
+
+1) node --import tsx tests/frontend/export-artifact-t10.test.ts
+Result: PASS
+Output: Export + artifact path T10 regression test passed.
+
+2) npm run typecheck
+Result: PASS
+Output: tsc --noEmit completed successfully.
+
+3) npm run build
+Result: PASS
+Output summary:
+- vite v8.0.3 built production bundle successfully
+- dist/assets/index-BNkNwo0G.css 26.21 kB
+- dist/assets/index-zDH0vqsM.js 366.76 kB
+
+Notes:
+- This backfill records fresh verification only; it does not claim any new Rust compile/test run.
+- The T10 regression test specifically confirms filesystem-first artifact persistence seams rather than in-memory-only export behavior.

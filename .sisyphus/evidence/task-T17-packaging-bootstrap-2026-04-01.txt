@@ -1,0 +1,28 @@
+T17 Packaging, first-run bootstrap, and Windows distribution flow verification
+Date: 2026-04-01
+
+Scope verified:
+- shell.metadata.get typed seam and ShellMetadataDto contract presence
+- Shell-level version/runtime guidance surfacing through App/StatusBar seams
+- Tauri config regression that removes beforeDevCommand npm run dev from the packaging/dev baseline
+
+Commands run:
+
+1) node --import tsx tests/frontend/packaging-bootstrap-t17.test.ts
+Result: PASS
+Output: Packaging/bootstrap T17 regression/source test passed.
+
+2) npm run typecheck
+Result: PASS
+Output: tsc --noEmit completed successfully.
+
+3) npm run build
+Result: PASS
+Output summary:
+- vite v8.0.3 built production bundle successfully
+- dist/assets/index-BNkNwo0G.css 26.21 kB
+- dist/assets/index-zDH0vqsM.js 366.76 kB
+
+Environment notes:
+- This backfill confirms the existing packaging/bootstrap seams through source-regression plus frontend compile/build verification.
+- No Rust packaging command such as `tauri build` was run during this evidence collection, so no Windows bundle artifact is claimed here.

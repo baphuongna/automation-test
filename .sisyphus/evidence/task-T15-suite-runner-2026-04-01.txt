@@ -1,0 +1,28 @@
+T15 Test case + suite runner orchestration verification
+Date: 2026-04-01
+
+Scope verified:
+- runner.suite.execute / runner.suite.cancel typed command seams
+- Runner orchestration/repository boundaries, run-state cancel semantics, and mixed-suite progress event contracts
+- Persistence reuse of existing test_runs / test_run_results schema
+
+Commands run:
+
+1) node --import tsx tests/frontend/suite-runner-t15.test.ts
+Result: PASS
+Output: Suite runner T15 regression/source test passed.
+
+2) npm run typecheck
+Result: PASS
+Output: tsc --noEmit completed successfully.
+
+3) npm run build
+Result: PASS
+Output summary:
+- vite v8.0.3 built production bundle successfully
+- dist/assets/index-BNkNwo0G.css 26.21 kB
+- dist/assets/index-zDH0vqsM.js 366.76 kB
+
+Notes:
+- Evidence stays within the existing typed-source regression and compile/build acceptance seams.
+- No product behavior was changed during this compliance backfill.

@@ -1,0 +1,28 @@
+T16 Runner / History UI + detail panel + rerun-failed verification
+Date: 2026-04-01
+
+Scope verified:
+- Test Runner route surface for control, history, detail, rerun-failed, artifact links, and failure-category rendering
+- Thin runner client read-side commands through the typed Tauri client seam
+- Run history/detail DTO and repository read-path contracts
+
+Commands run:
+
+1) node --import tsx tests/frontend/test-runner-t16.test.ts
+Result: PASS
+Output: Test Runner T16 regression/source test passed.
+
+2) npm run typecheck
+Result: PASS
+Output: tsc --noEmit completed successfully.
+
+3) npm run build
+Result: PASS
+Output summary:
+- vite v8.0.3 built production bundle successfully
+- dist/assets/index-BNkNwo0G.css 26.21 kB
+- dist/assets/index-zDH0vqsM.js 366.76 kB
+
+Notes:
+- This evidence file backfills T16 task compliance only.
+- The verification recorded here is fresh and specific to the current environment.

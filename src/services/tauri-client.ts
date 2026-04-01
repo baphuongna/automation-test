@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { CommandName, CommandPayloadMap, CommandResponseMap, ErrorPayload, ShellMetadataDto } from "../types";
 
-export interface CommandError extends ErrorPayload {}
+export type CommandError = ErrorPayload;
 
 const FALLBACK_COMMAND_ERROR_CODE: ErrorPayload['code'] = 'RUNNER_EXECUTION_FAILED';
 

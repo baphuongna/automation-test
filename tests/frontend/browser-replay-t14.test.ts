@@ -21,7 +21,6 @@ const rustEventContractSource = readProjectFile("src-tauri/src/contracts/events.
 const rustDtoContractSource = readProjectFile("src-tauri/src/contracts/dto.rs");
 const rustStateSource = readProjectFile("src-tauri/src/state.rs");
 const rustBrowserServiceSource = readProjectFile("src-tauri/src/services/browser_automation_service.rs");
-const rustArtifactServiceSource = readProjectFile("src-tauri/src/services/artifact_service.rs");
 const rustLibSource = readProjectFile("src-tauri/src/lib.rs");
 const rustMainSource = readProjectFile("src-tauri/src/main.rs");
 const migrationSource = readProjectFile("src-tauri/migrations/003_add_artifact_manifests.sql");

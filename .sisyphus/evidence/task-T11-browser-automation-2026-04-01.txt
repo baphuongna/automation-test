@@ -1,0 +1,28 @@
+T11 BrowserAutomationService + runtime health scaffolding verification
+Date: 2026-04-01
+
+Scope verified:
+- browser.health.check typed command/event contracts
+- BrowserAutomationService runtime health service boundary
+- healthy/degraded/unavailable Chromium runtime semantics at source-contract level
+
+Commands run:
+
+1) node --import tsx tests/frontend/browser-automation-t11.test.ts
+Result: PASS
+Output: Browser automation T11 regression/source test passed.
+
+2) npm run typecheck
+Result: PASS
+Output: tsc --noEmit completed successfully.
+
+3) npm run build
+Result: PASS
+Output summary:
+- vite v8.0.3 built production bundle successfully
+- dist/assets/index-BNkNwo0G.css 26.21 kB
+- dist/assets/index-zDH0vqsM.js 366.76 kB
+
+Environment notes:
+- No standalone browser runtime health invocation was executed during this evidence backfill.
+- Rust toolchain presence was observed via `cargo --version`, but no Rust compile/test command was run here, so no Rust compile/test pass is claimed.

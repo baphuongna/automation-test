@@ -1418,12 +1418,12 @@ Wave FINAL (parallel verification)
 
 ## Final Verification Wave
 
-- [ ] F1. **Plan Compliance Audit** — `oracle`
+- [x] F1. **Plan Compliance Audit** — `oracle`
   - Verify each locked MVP decision from the spec is preserved.
   - Verify no forbidden Phase-1 features appear in final code paths.
   - Confirm artifacts/evidence exist for all required QA scenarios.
 
-- [ ] F2. **Code Quality Review** — `unspecified-high`
+- [x] F2. **Code Quality Review** — `unspecified-high`
   - Run full type/lint/test/build verification.
   - Review for direct IPC leakage, secret logging, unstable abstractions, and over-scoped features.
 
