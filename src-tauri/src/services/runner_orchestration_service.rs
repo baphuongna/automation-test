@@ -339,7 +339,7 @@ impl<'a> RunnerOrchestrationService<'a> {
         };
 
         self.runner_repository
-            .insert_case_result(
+            .insert_case_result_if_absent(
                 run_id,
                 &target.test_case_id,
                 None,
@@ -402,7 +402,7 @@ impl<'a> RunnerOrchestrationService<'a> {
         failed_count: u32,
         skipped_count: u32,
     ) -> Result<RunResultDto, TestForgeError> {
-        self.runner_repository.update_run_summary(
+        let updated = self.runner_repository.update_run_summary_if_active(
             run_id,
             status,
             passed_count,
@@ -410,6 +410,10 @@ impl<'a> RunnerOrchestrationService<'a> {
             skipped_count,
             Some(&Utc::now().to_rfc3339()),
         )?;
+
+        if !updated {
+            return self.runner_repository.load_run_result(run_id);
+        }
 
         let result = self.runner_repository.load_run_result(run_id)?;
         app.emit("runner.execution.completed", result.clone())

@@ -110,7 +110,12 @@ impl BrowserAutomationService {
         app: &tauri::AppHandle,
         test_case_id: &str,
     ) -> AppResult<UiTestCaseDto> {
-        let snapshot = state.stop_recording(test_case_id)?;
+        let Some(snapshot) = state.stop_recording(test_case_id)? else {
+            return Err(AppError::validation(
+                "Recording session is no longer active. Không có phiên recording hoạt động để dừng.",
+            )
+            .with_context("testCaseId", test_case_id));
+        };
         if snapshot.last_error.is_some() {
             self.emit_recording_status(app, test_case_id, RecordingStatus::Failed)?;
         }
@@ -128,9 +133,12 @@ impl BrowserAutomationService {
         state: &AppState,
         app: &tauri::AppHandle,
         test_case_id: &str,
-    ) -> AppResult<()> {
-        state.cancel_recording(test_case_id)?;
-        self.emit_recording_status(app, test_case_id, RecordingStatus::Stopped)
+    ) -> AppResult<bool> {
+        let changed = state.cancel_recording(test_case_id)?;
+        if changed {
+            self.emit_recording_status(app, test_case_id, RecordingStatus::Stopped)?;
+        }
+        Ok(changed)
     }
 
     /// Start Chromium-only replay from persisted ui_script_steps and execute sequentially.
@@ -193,6 +201,9 @@ impl BrowserAutomationService {
         run_id: &str,
     ) -> AppResult<bool> {
         let changed = state.request_replay_cancel(run_id)?;
+        if changed {
+            state.finish_replay(run_id);
+        }
         if changed {
             self.emit_replay_progress(app, run_id, ReplayStatus::Cancelled, None)?;
         }
@@ -508,6 +519,27 @@ impl BrowserAutomationService {
             .flatten()
             .unwrap_or_default();
 
+        let test_case_exists = connection
+            .query_row(
+                "SELECT ui_script_id FROM test_cases WHERE id = ?1",
+                params![test_case_id],
+                |row| row.get::<_, Option<String>>(0),
+            )
+            .optional()
+            .map_err(AppError::from)?;
+
+        let Some(linked_script_id) = test_case_exists else {
+            return Err(AppError::not_found("ui test case", test_case_id)
+                .with_context("testCaseId", test_case_id));
+        };
+
+        if linked_script_id.as_deref() != Some(test_case_id) {
+            return Err(AppError::validation(
+                "Ui test case không còn script replay hợp lệ. Có thể script tham chiếu đã bị xóa hoặc không còn đồng bộ.",
+            )
+            .with_context("testCaseId", test_case_id));
+        }
+
         let mut statement = connection.prepare(
             "SELECT id, step_type, selector, value, timeout_ms FROM ui_script_steps WHERE script_id = ?1 ORDER BY step_order ASC",
         )?;
@@ -534,6 +566,13 @@ impl BrowserAutomationService {
                 value: row.get(3)?,
                 timeout_ms,
             });
+        }
+
+        if steps.is_empty() {
+            return Err(AppError::validation(
+                "Ui test case không còn step replay khả dụng. Có thể script tham chiếu đã bị xóa hoặc rỗng.",
+            )
+            .with_context("testCaseId", test_case_id));
         }
 
         Ok(ReplayScript { start_url, steps })
@@ -1198,15 +1237,24 @@ impl ChromiumCliReplayRuntimeAdapter {
         })?;
 
         if !output.status.success() || !parsed.ok {
+            let raw_error = parsed.error.unwrap_or_else(|| {
+                format!(
+                    "Node CDP interaction exited with status {:?}",
+                    output.status.code()
+                )
+            });
+            let detailed_error = if raw_error.contains("Selector not found") {
+                format!(
+                    "Selector not found for '{}' during browser interaction.",
+                    selector
+                )
+            } else {
+                raw_error
+            };
             return Err(AppError::new(
                 crate::error::ErrorCode::StepExecution,
                 "Interaction step thất bại trong browser runtime.",
-                parsed.error.unwrap_or_else(|| {
-                    format!(
-                        "Node CDP interaction exited with status {:?}",
-                        output.status.code()
-                    )
-                }),
+                detailed_error,
             ));
         }
 

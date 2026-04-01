@@ -82,6 +82,7 @@ export default function TestRunner(): ReactElement {
   const activeRunId = useRunStore((state) => state.activeRunId);
   const progress = useRunStore((state) => state.progress);
   const runStatus = useRunStore((state) => state.status);
+  const terminalMessage = useRunStore((state) => state.terminalMessage);
 
   const selectedSuite = useMemo(
     () => suites.find((suite) => suite.id === selectedSuiteId) ?? null,
@@ -261,14 +262,25 @@ export default function TestRunner(): ReactElement {
 
   async function handleCancelSuite(): Promise<void> {
     if (!activeRunId) {
+      setFeedbackMessage("No active run right now.");
+      return;
+    }
+
+    if (isCancelling) {
+      setFeedbackMessage("Already cancelling the active run. Waiting for terminal update.");
       return;
     }
 
     try {
       setErrorMessage(null);
       setIsCancelling(true);
-      await runnerClient.cancelSuite({ runId: activeRunId });
-      setFeedbackMessage(`Cancel requested for active run ${activeRunId}.`);
+      const result = await runnerClient.cancelSuite({ runId: activeRunId });
+      if (result.cancelled) {
+        setFeedbackMessage(`Cancel requested for active run ${activeRunId}.`);
+      } else {
+        setFeedbackMessage("No active run right now.");
+        setIsCancelling(false);
+      }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Không thể cancel suite run.");
       setIsCancelling(false);
@@ -346,6 +358,7 @@ export default function TestRunner(): ReactElement {
       </header>
 
       {feedbackMessage ? <div className="test-runner__feedback">{feedbackMessage}</div> : null}
+      {!feedbackMessage && terminalMessage ? <div className="test-runner__feedback">{terminalMessage}</div> : null}
       {errorMessage ? <div className="test-runner__feedback test-runner__feedback--error">{errorMessage}</div> : null}
 
       <div className="test-runner__layout">

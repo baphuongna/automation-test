@@ -1289,7 +1289,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `chore(release): add packaging and first-run bootstrap`
 
-- [ ] T18. Reliability hardening, stop/cancel, degraded mode, and edge-case handling
+- [x] T18. Reliability hardening, stop/cancel, degraded mode, and edge-case handling
 
   **What to do**:
   - Harden stop/cancel semantics, degraded-mode handling, missing-variable errors, oversized response preview policy, browser/session loss handling, empty suite handling, deleted-reference handling, and corrupted key failure path.

@@ -12,6 +12,7 @@ use std::collections::{BTreeMap, HashSet};
 use std::time::Instant;
 
 const MAX_BODY_PREVIEW_BYTES: usize = 2_048;
+const BODY_PREVIEW_TRUNCATED_SUFFIX: &str = "...(truncated)";
 
 pub enum ExecutionPersistenceTarget<'a> {
     Standalone {
@@ -356,15 +357,16 @@ fn normalize_headers(headers: &reqwest::header::HeaderMap) -> BTreeMap<String, S
 }
 
 fn normalize_body_preview(body: &str) -> String {
-    let chars = body.chars().collect::<Vec<_>>();
-    if chars.len() > MAX_BODY_PREVIEW_BYTES {
-        format!(
-            "{}...(truncated)",
-            chars[..MAX_BODY_PREVIEW_BYTES].iter().collect::<String>()
-        )
-    } else {
-        body.to_string()
+    normalize_body_preview_bytes(body.as_bytes())
+}
+
+fn normalize_body_preview_bytes(body: &[u8]) -> String {
+    if body.len() <= MAX_BODY_PREVIEW_BYTES {
+        return String::from_utf8_lossy(body).into_owned();
     }
+
+    let truncated = String::from_utf8_lossy(&body[..MAX_BODY_PREVIEW_BYTES]).into_owned();
+    format!("{truncated}{BODY_PREVIEW_TRUNCATED_SUFFIX}")
 }
 
 fn resolve_auth(
@@ -508,6 +510,7 @@ fn resolve_with_variables(
 
         for key in placeholders {
             let variable = variables.iter().find(|item| item.key == key).ok_or_else(|| {
+                let _ = crate::error::AppError::variable_missing(key.clone());
                 TestForgeError::Validation(format!("API_REQUEST_BUILD_FAILED: missing variable '{key}'"))
             })?;
 

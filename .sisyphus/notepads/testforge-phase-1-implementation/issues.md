@@ -219,3 +219,12 @@
 ## T17 issues (2026-04-01)
 - Rust end-to-end compile/package verification remains partially blocked in this environment because cargo is unavailable; confidence comes from source regression tests, TypeScript typecheck, and production build evidence.
 - Existing shell smoke assertions were still pinned to placeholder status-bar text/signature and had to be updated to the new shell metadata/status-bar contract introduced by T17.
+
+## T18 issues (2026-04-01)
+- lsp_diagnostics hi?n tr? s?ch cho toàn b? file T18 dã s?a, nhung file test ngu?n 	ests/frontend/reliability-hardening-t18.test.ts v?n có th? hi?n l?i Node ambient types trong m?t s? ng? c?nh LSP c?a workspace; verification th?c t? du?c xác nh?n qua 
+ode --import tsx, 
+pm test, 
+pm run typecheck, và 
+pm run build.
+- Rust end-to-end compile/runtime verification ngoài b? m?t source diagnostics v?n ti?p t?c ph? thu?c môi tru?ng có cargo; trong container hi?n t?i T18 du?c khóa b?ng source regression test + diagnostics + TypeScript verification/build.
+

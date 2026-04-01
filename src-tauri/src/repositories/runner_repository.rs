@@ -310,6 +310,34 @@ impl<'a> RunnerRepository<'a> {
         Ok(())
     }
 
+    pub fn update_run_summary_if_active(
+        &self,
+        run_id: &str,
+        status: RunStatus,
+        passed: u32,
+        failed: u32,
+        skipped: u32,
+        completed_at: Option<&str>,
+    ) -> Result<bool> {
+        let status_text = match status {
+            RunStatus::Queued => "queued",
+            RunStatus::Running => "running",
+            RunStatus::Skipped => "skipped",
+            RunStatus::Passed => "passed",
+            RunStatus::Failed => "failed",
+            RunStatus::Cancelled => "cancelled",
+            RunStatus::Idle => "idle",
+        };
+
+        let changed = self.conn.execute(
+            "UPDATE test_runs
+             SET status = ?2, passed = ?3, failed = ?4, skipped = ?5, completed_at = COALESCE(?6, completed_at)
+             WHERE id = ?1 AND completed_at IS NULL",
+            params![run_id, status_text, passed, failed, skipped, completed_at],
+        )?;
+        Ok(changed > 0)
+    }
+
     pub fn insert_case_result(
         &self,
         run_id: &str,
@@ -345,6 +373,49 @@ impl<'a> RunnerRepository<'a> {
             ],
         )?;
         Ok(())
+    }
+
+    pub fn insert_case_result_if_absent(
+        &self,
+        run_id: &str,
+        case_id: &str,
+        data_row_id: Option<&str>,
+        status: &str,
+        request_log_json: &str,
+        response_log_json: &str,
+        assertion_results_json: &str,
+        screenshots_json: &str,
+        error_message: Option<&str>,
+        error_code: Option<&str>,
+        duration_ms: u64,
+    ) -> Result<bool> {
+        let now = Utc::now().to_rfc3339();
+        let changed = self.conn.execute(
+            "INSERT INTO test_run_results (id, run_id, case_id, data_row_id, status, duration_ms, request_log_json, response_log_json, assertion_results_json, screenshots_json, error_message, error_code, started_at, completed_at, created_at)
+             SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13, ?13
+             WHERE NOT EXISTS (
+               SELECT 1 FROM test_run_results
+               WHERE run_id = ?2 AND case_id = ?3 AND (
+                 (data_row_id IS NULL AND ?4 IS NULL) OR data_row_id = ?4
+               )
+             )",
+            params![
+                format!("run-result-{}", Uuid::new_v4()),
+                run_id,
+                case_id,
+                data_row_id,
+                status,
+                duration_ms as i64,
+                request_log_json,
+                response_log_json,
+                assertion_results_json,
+                screenshots_json,
+                error_message,
+                error_code,
+                now,
+            ],
+        )?;
+        Ok(changed > 0)
     }
 
     pub fn load_failed_targets(

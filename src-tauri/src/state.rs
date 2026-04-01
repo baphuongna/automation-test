@@ -242,7 +242,10 @@ impl AppState {
         }
     }
 
-    pub fn stop_recording(&self, expected_test_case_id: &str) -> AppResult<RecordingSnapshot> {
+    pub fn stop_recording(
+        &self,
+        expected_test_case_id: &str,
+    ) -> AppResult<Option<RecordingSnapshot>> {
         let mut state = self.recording_state.write().unwrap();
         let snapshot = match &*state {
             RecordingState::Recording {
@@ -256,13 +259,13 @@ impl AppState {
                         "Yêu cầu stop recording không khớp testCaseId đang hoạt động.",
                     ));
                 }
-                RecordingSnapshot {
+                Some(RecordingSnapshot {
                     test_case_id: test_case_id.clone(),
                     start_url: start_url.clone(),
                     captured_steps: captured_steps.clone(),
                     last_error: None,
                     recoverable: true,
-                }
+                })
             }
             RecordingState::Failed {
                 test_case_id,
@@ -277,26 +280,22 @@ impl AppState {
                         "Yêu cầu stop recording không khớp testCaseId đang failed.",
                     ));
                 }
-                RecordingSnapshot {
+                Some(RecordingSnapshot {
                     test_case_id: test_case_id.clone(),
                     start_url: start_url.clone(),
                     captured_steps: captured_steps.clone(),
                     last_error: Some(last_error.clone()),
                     recoverable: *recoverable,
-                }
+                })
             }
-            RecordingState::Idle => {
-                return Err(AppError::validation(
-                    "Không có phiên recording hoạt động để dừng.",
-                ));
-            }
+            RecordingState::Idle => None,
         };
 
         *state = RecordingState::Idle;
         Ok(snapshot)
     }
 
-    pub fn cancel_recording(&self, expected_test_case_id: &str) -> AppResult<()> {
+    pub fn cancel_recording(&self, expected_test_case_id: &str) -> AppResult<bool> {
         let mut state = self.recording_state.write().unwrap();
         match &*state {
             RecordingState::Recording { test_case_id, .. }
@@ -307,11 +306,9 @@ impl AppState {
                     ));
                 }
                 *state = RecordingState::Idle;
-                Ok(())
+                Ok(true)
             }
-            RecordingState::Idle => Err(AppError::validation(
-                "Không có phiên recording hoạt động để hủy.",
-            )),
+            RecordingState::Idle => Ok(false),
         }
     }
 
@@ -396,10 +393,10 @@ impl AppState {
         }
     }
 
-    pub fn cancel_replay(&self, expected_run_id: &str) -> AppResult<()> {
-        let _ = self.request_replay_cancel(expected_run_id)?;
+    pub fn cancel_replay(&self, expected_run_id: &str) -> AppResult<bool> {
+        let changed = self.request_replay_cancel(expected_run_id)?;
         self.finish_replay(expected_run_id);
-        Ok(())
+        Ok(changed)
     }
 
     pub fn start_run(&self, run_id: String, suite_id: String) -> AppResult<()> {
@@ -546,7 +543,7 @@ mod tests {
             state.recording_state(),
             RecordingState::Recording { .. }
         ));
-        let snapshot = state.stop_recording("script-1").unwrap();
+        let snapshot = state.stop_recording("script-1").unwrap().unwrap();
         assert_eq!(snapshot.test_case_id, "script-1");
         assert_eq!(state.recording_state(), RecordingState::Idle);
     }
@@ -626,5 +623,19 @@ mod tests {
         assert_eq!(state.replay_state(), ReplayState::Idle);
 
         assert!(!state.request_replay_cancel("run-1").unwrap());
+    }
+
+    #[test]
+    fn recording_cancel_and_stop_are_idempotent_after_cleanup() {
+        let state = create_state();
+
+        state
+            .start_recording_session("script-1".to_string(), "https://example.com".to_string())
+            .unwrap();
+
+        assert!(state.cancel_recording("script-1").unwrap());
+        assert!(!state.cancel_recording("script-1").unwrap());
+        assert!(state.stop_recording("script-1").unwrap().is_none());
+        assert_eq!(state.recording_state(), RecordingState::Idle);
     }
 }

@@ -12,11 +12,13 @@ export interface RunProgressSnapshot {
 interface RunState {
   activeRunId: string | null;
   isStopping: boolean;
+  terminalMessage: string | null;
   progress: RunProgressSnapshot | null;
   status: RunStatus;
   setRunState: (payload: {
     activeRunId: string | null;
     isStopping: boolean;
+    terminalMessage: string | null;
     progress: RunProgressSnapshot | null;
     status: RunStatus;
   }) => void;
@@ -26,14 +28,15 @@ interface RunState {
 const initialRunState = {
   activeRunId: null,
   isStopping: false,
+  terminalMessage: null,
   progress: null as RunProgressSnapshot | null,
   status: "idle" as RunStatus
 };
 
 export const useRunStore = create<RunState>((set) => ({
   ...initialRunState,
-  setRunState: ({ activeRunId, isStopping, progress, status }) => {
-    set({ activeRunId, isStopping, progress, status });
+  setRunState: ({ activeRunId, isStopping, terminalMessage, progress, status }) => {
+    set({ activeRunId, isStopping, terminalMessage, progress, status });
   },
   reset: () => {
     set(initialRunState);
@@ -50,6 +53,7 @@ export function subscribeRunnerEvents(handlers: {
     useRunStore.getState().setRunState({
       activeRunId: payload.runId,
       isStopping: false,
+      terminalMessage: null,
       progress: null,
       status: "queued"
     });
@@ -60,7 +64,8 @@ export function subscribeRunnerEvents(handlers: {
     const payload = (event as CustomEvent<EventPayloadMap["runner.execution.progress"]>).detail;
     useRunStore.getState().setRunState({
       activeRunId: payload.runId,
-      isStopping: payload.status === "cancelled",
+      isStopping: false,
+      terminalMessage: null,
       progress: {
         completed: payload.completedCount,
         failed: payload.failedCount,
@@ -78,6 +83,10 @@ export function subscribeRunnerEvents(handlers: {
     useRunStore.getState().setRunState({
       activeRunId: null,
       isStopping: false,
+      terminalMessage:
+        payload.status === "cancelled"
+          ? "Run cancelled safely. No active run remains."
+          : `Run completed as ${payload.status}.`,
       progress: {
         completed: payload.totalCount,
         failed: payload.failedCount,

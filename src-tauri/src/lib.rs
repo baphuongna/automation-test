@@ -752,12 +752,12 @@ pub fn browser_recording_cancel(
     app: tauri::AppHandle,
 ) -> std::result::Result<contracts::commands::AckResponse, AppError> {
     let service = services::BrowserAutomationService::new(state.paths().clone());
-    service.cancel_recording(state.inner().as_ref(), &app, &payload.test_case_id)?;
+    let cancelled = service.cancel_recording(state.inner().as_ref(), &app, &payload.test_case_id)?;
 
     Ok(contracts::commands::AckResponse {
         deleted: None,
         started: None,
-        cancelled: Some(true),
+        cancelled: Some(cancelled),
     })
 }
 
