@@ -1,0 +1,103 @@
+T19 smoke acceptance summary
+
+Overall MVP exit criteria verdict: BLOCKED
+
+MVP exit criteria:
+1. App can bootstrap from empty local data directory without manual dev tooling
+   - SATISFIED
+   - Packaging/bootstrap regression passed, so shell bootstrap/first-run seams are implemented. Evidence: Packaging/bootstrap T17 regression/source test passed.
+2. QA can create environment + secret variables safely
+   - SATISFIED
+   - Environment preview seam passed, covering environment creation and masked/degraded secret handling. Evidence: Environment Manager preview fallback regression test passed.
+3. QA can create/run API test and inspect pass/fail details
+   - SATISFIED
+   - API tester seam passed, covering authoring plus pass/fail detail rendering for API runs. Evidence: API Tester T9 regression test passed.
+4. QA can record, edit, save, and replay a simple UI flow in Chromium
+   - BLOCKED
+   - Recorder UI seam is present, but real Chromium replay smoke is blocked in this environment, so successful simple UI replay cannot be claimed. Blocker: [BROWSER_REPLAY_T14_SMOKE] SMOKE_BLOCKED :: Chromium executable is missing; set PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH or install browser runtime.
+5. QA can run a mixed suite and inspect progress/history
+   - SATISFIED
+   - Suite orchestration and runner/history seams both passed, so mixed suite execution and progress/history inspection are evidenced at seam level.
+6. Browser failure paths do not crash API-only features
+   - SATISFIED
+   - Reliability hardening seam passed, explicitly preserving degraded browser isolation from API-only features. Evidence: Reliability hardening T18 regression/source test passed.
+7. Packaging and first-run flow work on target Windows environment
+   - SATISFIED
+   - Packaging/bootstrap seam passed, but only source/seam evidence exists in this environment. Evidence: Packaging/bootstrap T17 regression/source test passed.
+
+Minimum smoke scenarios:
+1. environment preview seam
+   - command: node --import tsx tests/frontend/environment-manager.test.ts
+   - status: passed
+   - exitCode: 0
+   - details: Environment Manager preview fallback regression test passed.
+   - stdout: Environment Manager preview fallback regression test passed.
+   - stderr: (empty)
+2. API tester seam
+   - command: node --import tsx tests/frontend/api-tester-t9.test.ts
+   - status: passed
+   - exitCode: 0
+   - details: API Tester T9 regression test passed.
+   - stdout: API Tester T9 regression test passed.
+   - stderr: (empty)
+3. web recorder seam
+   - command: node --import tsx tests/frontend/web-recorder-t13.test.ts
+   - status: passed
+   - exitCode: 0
+   - details: Web Recorder T13 regression test passed.
+   - stdout: Web Recorder T13 regression test passed.
+   - stderr: (empty)
+4. runner/history seam
+   - command: node --import tsx tests/frontend/test-runner-t16.test.ts
+   - status: passed
+   - exitCode: 0
+   - details: Test Runner T16 regression/source test passed.
+   - stdout: Test Runner T16 regression/source test passed.
+   - stderr: (empty)
+5. suite orchestration seam
+   - command: node --import tsx tests/frontend/suite-runner-t15.test.ts
+   - status: passed
+   - exitCode: 0
+   - details: Suite runner T15 regression/source test passed.
+   - stdout: Suite runner T15 regression/source test passed.
+   - stderr: (empty)
+6. reliability hardening seam
+   - command: node --import tsx tests/frontend/reliability-hardening-t18.test.ts
+   - status: passed
+   - exitCode: 0
+   - details: Reliability hardening T18 regression/source test passed.
+   - stdout: Reliability hardening T18 regression/source test passed.
+   - stderr: (empty)
+7. packaging/bootstrap seam
+   - command: node --import tsx tests/frontend/packaging-bootstrap-t17.test.ts
+   - status: passed
+   - exitCode: 0
+   - details: Packaging/bootstrap T17 regression/source test passed.
+   - stdout: Packaging/bootstrap T17 regression/source test passed.
+   - stderr: (empty)
+8. browser replay contract seam
+   - command: node --import tsx tests/frontend/browser-replay-t14.test.ts
+   - status: passed
+   - exitCode: 0
+   - details: Browser replay T14 regression/source test passed.
+   - stdout: Browser replay T14 regression/source test passed.
+   - stderr: (empty)
+9. browser-replay-t14-smoke.ts
+   - command: node --import tsx tests/frontend/browser-replay-t14-smoke.ts
+   - status: blocked
+   - exitCode: 1
+   - details: [BROWSER_REPLAY_T14_SMOKE] SMOKE_BLOCKED :: Chromium executable is missing; set PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH or install browser runtime.
+   - stdout: [BROWSER_REPLAY_T14_SMOKE] SMOKE_BLOCKED :: Chromium executable is missing; set PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH or install browser runtime.
+{
+  "missing": "chromium executable",
+  "candidates": [
+    "D:\\my\\research\\ms-playwright\\chromium\\chrome-win\\chrome.exe",
+    "D:\\my\\research\\src-tauri\\ms-playwright\\chromium\\chrome-win\\chrome.exe"
+  ]
+}
+   - stderr: (empty)
+
+Notes:
+- This report evaluates MVP exit criteria against the real product seams available in the current repository.
+- browser viability gate is reported separately in task-T19-browser-gate.txt.
+- If runtime prerequisites are missing, blocked evidence is preserved as BLOCKED rather than treated as PASS.

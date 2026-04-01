@@ -263,3 +263,9 @@
 - Chosen API preview policy: m? r?ng seam 
 ormalize_body_preview hi?n h?u thay vì t?o policy preview th? hai, gi? T18 hardening t?p trung t?i pi_execution_service.rs.
 
+
+## T19 decisions (2026-04-01)
+- Chosen orchestration seam: thêm duy nh?t tests/frontend/task-t19-smoke-report.ts + npm script test:t19:smoke nhu m?t wrapper m?ng ch?y l?i các regression/smoke dã t?n t?i, thay vì m? subsystem reporting m?i.
+- Chosen evidence policy: dùng hai file task-T19-smoke-summary.txt và task-T19-browser-gate.txt du?i .sisyphus/evidence d? tách MVP exit evaluation kh?i Week-6 browser gate verdict nhung v?n gi? reviewer flow ng?n g?n.
+- Chosen browser gate policy: gi? nguyên semantics trung th?c t? T14 smoke (SMOKE_PASS | SMOKE_BLOCKED | SMOKE_FAIL) và map sang PASS | BLOCKED | FAIL cho gate verdict; thi?u runtime prerequisite ph?i ra BLOCKED ch? không coi là failure s?n ph?m hay pass gi?.
+- Chosen MVP evaluation rule: các tiêu chí environment/API/runner/packaging du?c dánh giá t? existing seam evidence, còn replay UI b?t bu?c ph? thu?c smoke runtime th?t tru?c khi du?c dánh d?u satisfied.

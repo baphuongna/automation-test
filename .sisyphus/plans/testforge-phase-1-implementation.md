@@ -1349,7 +1349,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `fix(core): harden degraded mode and stop cancel flows`
 
-- [ ] T19. Smoke flows, MVP acceptance pass, and Week-6 browser viability gate report
+- [x] T19. Smoke flows, MVP acceptance pass, and Week-6 browser viability gate report
 
   **What to do**:
   - Execute the approved smoke set end-to-end, capture evidence, and produce a browser viability checkpoint report based on implemented flows.

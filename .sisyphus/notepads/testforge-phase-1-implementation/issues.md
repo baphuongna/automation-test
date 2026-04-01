@@ -228,3 +228,8 @@ pm run typecheck, và
 pm run build.
 - Rust end-to-end compile/runtime verification ngoài b? m?t source diagnostics v?n ti?p t?c ph? thu?c môi tru?ng có cargo; trong container hi?n t?i T18 du?c khóa b?ng source regression test + diagnostics + TypeScript verification/build.
 
+
+## T19 issues (2026-04-01)
+- Browser viability evidence hi?n v?n b? blocked ? bu?c runtime smoke th?t vì máy này không có Chromium executable t?i các candidate path mà tests/frontend/browser-replay-t14-smoke.ts ki?m tra; vì v?y browser gate ch? có th? ghi BLOCKED ch? không du?c nâng lên PASS.
+- lsp_diagnostics cho package.json v?n b? ch?n vì workspace chua cài biome; verification th?c t? cho T19 du?c xác nh?n qua diagnostics s?ch trên hai file TS m?i, npm test, npm run typecheck và npm run build.
+- Cargo v?n không kh? d?ng trong môi tru?ng hi?n t?i, nên T19 ch? có th? d?a trên seam/regression evidence phía frontend + smoke runtime T14 thay vì compile/package verification Rust end-to-end.

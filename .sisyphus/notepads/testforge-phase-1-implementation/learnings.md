@@ -279,3 +279,8 @@ pm run build.
 - Browser degraded/session-loss/deleted-reference messaging nên gi? nguyên ? BrowserAutomationService d? browser failures v?n rõ nguyên nhân nhung không lan logic ch?n sang API-only flows.
 - ? frontend runner seam, cancelled không nên b? suy di?n là v?n dang stopping; tách 	erminalMessage kh?i isStopping giúp UI ph?n ánh trung th?c backend terminal semantics hon.
 
+
+## T19: Smoke flows, MVP acceptance pass, and Week-6 browser viability gate report (2026-04-01)
+- T19 gi? du?c scope nh? khi ch? orchestration l?i các seam dã có: regression/source tests cho environment, API tester, recorder, runner, reliability, packaging và m?t runtime smoke th?t cho browser replay.
+- Ðánh giá MVP exit criteria c?n tách rõ m?c b?ng ch?ng: seam-level proof d? cho các flow API/environment/runner, nhung tiêu chí replay UI ch? du?c coi là satisfied khi browser-replay-t14-smoke.ts tr? SMOKE_PASS.
+- Vi?c tách task-T19-smoke-summary.txt kh?i task-T19-browser-gate.txt giúp reviewer d?c nhanh verdict t?ng th? MVP và quy?t d?nh Week-6 browser viability/fallback mà không ph?i suy lu?n t? log thô.
