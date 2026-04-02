@@ -53,6 +53,16 @@ assert(
 );
 
 assert(
+  rustBrowserServiceSource.includes("resolved runtime candidate") &&
+    rustBrowserServiceSource.includes("checked candidates") &&
+    rustBrowserServiceSource.includes("node runtime") &&
+    rustBrowserServiceSource.includes("cdp runtime") &&
+    rustBrowserServiceSource.includes("source=") &&
+    rustBrowserServiceSource.includes("reason="),
+  "P2-T1 health diagnostics phải nêu rõ runtime source/path, candidate checks và prerequisite node/cdp để tránh healthy giả."
+);
+
+assert(
   rustBrowserServiceSource.includes("app.emit(\"browser.health.changed\"") ||
     rustBrowserServiceSource.includes("emit(\"browser.health.changed\""),
   "T11 phải có foundation phát event browser.health.changed từ browser service."
