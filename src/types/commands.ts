@@ -86,6 +86,9 @@ export interface CommandPayloadMap {
     assertions: ApiAssertionDto[];
   };
   "ui.testcase.upsert": UiTestCaseDto;
+  "ui.testcase.get": {
+    id: EntityId;
+  };
   "ui.testcase.delete": {
     id: EntityId;
   };
@@ -144,6 +147,7 @@ export interface CommandResponseMap {
   "api.testcase.delete": { deleted: true };
   "api.execute": ApiExecutionResultDto;
   "ui.testcase.upsert": UiTestCaseDto;
+  "ui.testcase.get": UiTestCaseDto;
   "ui.testcase.delete": { deleted: true };
   "browser.recording.start": { started: true };
   "shell.metadata.get": ShellMetadataDto;

@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -67,9 +69,23 @@ assert(
     webRecorderClientSource.includes('"browser.recording.stop"') &&
     webRecorderClientSource.includes('"browser.recording.cancel"') &&
     webRecorderClientSource.includes('"ui.testcase.upsert"') &&
+    webRecorderClientSource.includes('"ui.testcase.get"') &&
     webRecorderClientSource.includes('"ui.testcase.delete"') &&
     webRecorderClientSource.includes('"__TAURI_INTERNALS__" in window'),
-  "Web Recorder client must stay on the typed IPC surface and reuse the established preview detection pattern."
+  "Web Recorder client must stay on the typed IPC surface, including persisted ui.testcase.get hydration, and reuse the established preview detection pattern."
+);
+
+assert(
+  webRecorderClientSource.includes("Recorder draft prefers persisted desktop storage when available") &&
+    webRecorderClientSource.includes("async function hydratePersistedWorkspace") &&
+    webRecorderClientSource.includes("const persistedDraft = await getById(cachedDraft.id);") &&
+    webRecorderClientSource.includes("writeWorkspaceCache(persistedDraft);") &&
+    webRecorderClientSource.includes("return persistedDraft;") &&
+    webRecorderClientSource.includes("} catch {") &&
+    webRecorderClientSource.includes("return cachedDraft;") &&
+    webRecorderClientSource.includes("const cachedDraft = readWorkspaceCache();") &&
+    webRecorderClientSource.includes("return hydratePersistedWorkspace(cachedDraft);"),
+  "Web Recorder workspace hydration must prefer persisted desktop storage in Tauri mode and fall back safely to the cached draft when persisted loading fails."
 );
 
 assert(

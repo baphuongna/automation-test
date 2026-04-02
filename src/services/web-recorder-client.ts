@@ -11,9 +11,9 @@ import type {
 } from "../types";
 
 export const WEB_RECORDER_PREVIEW_FALLBACK_BANNER =
-  "Preview fallback active - browser-only T13 verification path.";
+  "Preview fallback active. Desktop runtime capability checks are unavailable in this browser-only mode.";
 export const WEB_RECORDER_WORKSPACE_BANNER =
-  "Recorder draft uses a local workspace cache because the current seam exposes save/delete and record start/stop/cancel only.";
+  "Recorder draft prefers persisted desktop storage when available and falls back to the local workspace cache. Replay is a desktop runtime capability and stays gated by preflight health.";
 
 function isTauriRuntimeAvailable(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -51,10 +51,11 @@ function canUseBrowserStorage(): boolean {
 }
 
 const WORKSPACE_STORAGE_KEY = "testforge.webRecorder.workspace.v1";
+const DEFAULT_DRAFT_ID = "ui-recorder-draft";
 
 function createDefaultDraft(): UiTestCaseDto {
   return {
-    id: "ui-recorder-draft",
+    id: DEFAULT_DRAFT_ID,
     type: "ui",
     name: "Untitled recorder draft",
     startUrl: "",
@@ -87,6 +88,28 @@ function writeWorkspaceCache(testCase: UiTestCaseDto): void {
   window.localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(testCase));
 }
 
+function isPersistedDraftId(id: string): boolean {
+  return id.trim().length > 0 && id !== DEFAULT_DRAFT_ID;
+}
+
+async function getById(id: string): Promise<UiTestCaseDto> {
+  return unwrapCommand("ui.testcase.get", { id });
+}
+
+async function hydratePersistedWorkspace(cachedDraft: UiTestCaseDto): Promise<UiTestCaseDto> {
+  if (!isPersistedDraftId(cachedDraft.id)) {
+    return cachedDraft;
+  }
+
+  try {
+    const persistedDraft = await getById(cachedDraft.id);
+    writeWorkspaceCache(persistedDraft);
+    return persistedDraft;
+  } catch {
+    return cachedDraft;
+  }
+}
+
 function nextStepId(): string {
   return `ui-step-${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -117,12 +140,13 @@ function normalizeDraft(testCase: UiTestCaseDto): UiTestCaseDto {
 }
 
 export const webRecorderClient = {
-  loadWorkspace(): Promise<UiTestCaseDto> {
+  async loadWorkspace(): Promise<UiTestCaseDto> {
     if (shouldUsePreviewFallback()) {
       return webRecorderPreviewClient.loadWorkspace();
     }
 
-    return Promise.resolve(readWorkspaceCache());
+    const cachedDraft = readWorkspaceCache();
+    return hydratePersistedWorkspace(cachedDraft);
   },
 
   checkHealth(): Promise<BrowserHealthDto> {

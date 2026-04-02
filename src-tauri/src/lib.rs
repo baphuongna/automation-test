@@ -68,7 +68,7 @@ use contracts::commands::{
     RunnerSuiteCancelCommand, RunnerSuiteExecuteCommand,
     DataTableCreateCommand, DataTableExportCommand, DataTableImportCommand, DataTableRowUpsertCommand,
     DataTableUpdateCommand, DeleteByIdCommand, EmptyCommandPayload, EnvironmentCreateCommand,
-    EnvironmentUpdateCommand, EnvironmentVariableUpsertCommand,
+    EnvironmentUpdateCommand, EnvironmentVariableUpsertCommand, UiTestCaseGetCommand,
 };
 use contracts::dto::{
     ApiExecutionResultDto, BrowserHealthDto,
@@ -77,7 +77,7 @@ use contracts::dto::{
     RunDetailDto, RunHistoryEntryDto, UiReplayResultDto, UiTestCaseDto,
 };
 use models::{ColumnDefinition, DataTable, DataTableRow, Environment, EnvironmentType as ModelEnvironmentType, VariableType};
-use repositories::{ApiRepository, DataTableRepository, EnvironmentRepository, RunnerRepository};
+use repositories::{ApiRepository, DataTableRepository, EnvironmentRepository, RunnerRepository, UiScriptRepository};
 use services::artifact_service::ArtifactKind;
 
 // Re-export main types for convenience
@@ -439,6 +439,15 @@ fn with_api_execution_service<T>(
     ))
 }
 
+fn with_ui_script_repository<T>(state: &AppState, run: impl FnOnce(UiScriptRepository<'_>) -> Result<T>) -> Result<T> {
+    let db = state.db();
+    let db_guard = db
+        .lock()
+        .map_err(|_| TestForgeError::InvalidOperation("Database lock poisoned".to_string()))?;
+
+    run(UiScriptRepository::new(db_guard.connection()))
+}
+
 fn normalize_variable_id(id: &str) -> Option<&str> {
     let trimmed = id.trim();
     if trimmed.is_empty() {
@@ -795,6 +804,55 @@ fn runner_suite_execute(
 }
 
 #[tauri::command]
+fn ui_testcase_upsert(
+    payload: UiTestCaseDto,
+    state: State<'_, std::sync::Arc<AppState>>,
+) -> std::result::Result<UiTestCaseDto, AppError> {
+    if !payload.validate_type() {
+        return Err(map_command_error(TestForgeError::Validation(
+            "ui.testcase.upsert requires test case type 'ui'".to_string(),
+        )));
+    }
+
+    with_ui_script_repository(state.inner().as_ref(), |repository| {
+        repository.upsert_ui_test_case(
+            &payload,
+            state.config().viewport_width,
+            state.config().viewport_height,
+            state.config().default_timeout_ms,
+        )
+    })
+    .map_err(map_command_error)
+}
+
+#[tauri::command]
+fn ui_testcase_delete(
+    payload: DeleteByIdCommand,
+    state: State<'_, std::sync::Arc<AppState>>,
+) -> std::result::Result<contracts::commands::AckResponse, AppError> {
+    with_ui_script_repository(state.inner().as_ref(), |repository| {
+        repository.delete_test_case_and_script(&payload.id)?;
+        Ok(contracts::commands::AckResponse {
+            deleted: Some(true),
+            started: None,
+            cancelled: None,
+        })
+    })
+    .map_err(map_command_error)
+}
+
+#[tauri::command]
+fn ui_testcase_get(
+    payload: UiTestCaseGetCommand,
+    state: State<'_, std::sync::Arc<AppState>>,
+) -> std::result::Result<UiTestCaseDto, AppError> {
+    with_ui_script_repository(state.inner().as_ref(), |repository| {
+        repository.find_ui_test_case_by_id(&payload.id)
+    })
+    .map_err(map_command_error)
+}
+
+#[tauri::command]
 fn runner_suite_list(
     _payload: EmptyCommandPayload,
     state: State<'_, std::sync::Arc<AppState>>,
@@ -1132,6 +1190,9 @@ pub fn run() {
             api_testcase_upsert,
             api_testcase_delete,
             api_execute,
+            ui_testcase_upsert,
+            ui_testcase_get,
+            ui_testcase_delete,
             browser_health_check,
             shell_metadata_get,
             browser_recording_start,

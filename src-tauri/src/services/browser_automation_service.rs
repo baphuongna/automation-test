@@ -10,7 +10,6 @@ use std::process::Command;
 use std::sync::Mutex;
 
 use chrono::Utc;
-use rusqlite::{params, OptionalExtension};
 use serde_json::json;
 use tauri::Emitter;
 use uuid::Uuid;
@@ -23,7 +22,9 @@ use crate::contracts::events::{
     BrowserRecordingStatusChangedEvent, BrowserRecordingStepCapturedEvent,
     BrowserReplayProgressEvent,
 };
-use crate::error::{AppError, AppResult};
+use crate::error::{AppError, AppResult, TestForgeError};
+use crate::repositories::ui_script_repository::PersistedUiScriptStepInput;
+use crate::repositories::UiScriptRepository;
 use crate::services::artifact_service::{ArtifactKind, ArtifactService};
 use crate::state::{AppState, RecordingSnapshot};
 use crate::utils::paths::AppPaths;
@@ -34,6 +35,20 @@ pub struct BrowserAutomationService {
 }
 
 impl BrowserAutomationService {
+    fn map_ui_repository_error(&self, error: TestForgeError, test_case_id: &str) -> AppError {
+        match error {
+            TestForgeError::Validation(message) => {
+                if message.starts_with("UI test case not found:") {
+                    AppError::not_found("ui test case", test_case_id)
+                        .with_context("testCaseId", test_case_id)
+                } else {
+                    AppError::validation(message).with_context("testCaseId", test_case_id)
+                }
+            }
+            other => AppError::internal(other.to_string()).with_context("testCaseId", test_case_id),
+        }
+    }
+
     /// Create a new browser automation service.
     pub fn new(paths: AppPaths) -> Self {
         Self { paths }
@@ -214,38 +229,89 @@ impl BrowserAutomationService {
         if is_chromium_runtime_explicitly_disabled() {
             return BrowserRuntimeCheckResult {
                 status: BrowserRuntimeStatus::Unavailable,
-                message: "Chromium runtime is explicitly unavailable by configuration. Browser automation is disabled for this runtime.".to_string(),
+                message: "Chromium runtime is explicitly unavailable by configuration. Browser automation is disabled for this runtime. reason=automation_disabled".to_string(),
             };
         }
 
         let expected = self.chromium_candidates();
-        let discovered = expected.iter().find(|path| path.exists());
-
-        if let Some(path) = discovered {
-            return BrowserRuntimeCheckResult {
-                status: BrowserRuntimeStatus::Healthy,
-                message: format!(
-                    "Chromium runtime is ready at {} (phase-1 chromium-only).",
-                    path.to_string_lossy()
-                ),
-            };
-        }
-
         if expected.is_empty() {
             return BrowserRuntimeCheckResult {
                 status: BrowserRuntimeStatus::Unavailable,
-                message: "Chromium runtime is unavailable: no discovery candidates were resolved."
-                    .to_string(),
+                message: "Chromium runtime is unavailable: no discovery candidates were resolved. checked candidates=[] reason=no_candidates".to_string(),
+            };
+        }
+
+        let checked_candidates = expected
+            .iter()
+            .map(|candidate| {
+                format!(
+                    "{}:{}:exists={}",
+                    candidate.source,
+                    candidate.path.to_string_lossy(),
+                    candidate.path.exists()
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        let discovered = expected
+            .iter()
+            .find(|candidate| candidate.path.exists())
+            .cloned();
+
+        let Some(runtime_candidate) = discovered else {
+            return BrowserRuntimeCheckResult {
+                status: BrowserRuntimeStatus::Degraded,
+                message: format!(
+                    "Chromium runtime is not discovered yet. Browser flows are blocked while API-only features remain available. checked candidates=[{}] reason=chromium_not_found",
+                    checked_candidates
+                ),
+            };
+        };
+
+        let chromium_launch_check = self.check_chromium_launchability(&runtime_candidate.path);
+        let node_check = self.check_node_runtime();
+
+        let cdp_check = if node_check.ok {
+            self.check_node_cdp_capability()
+        } else {
+            PrerequisiteCheck {
+                ok: false,
+                detail: "node runtime is unavailable; cdp runtime check skipped".to_string(),
+            }
+        };
+
+        let healthy = chromium_launch_check.ok && node_check.ok && cdp_check.ok;
+
+        if healthy {
+            return BrowserRuntimeCheckResult {
+                status: BrowserRuntimeStatus::Healthy,
+                message: format!(
+                    "Chromium runtime is ready for replay. resolved runtime candidate source={} path={} checked candidates=[{}] node runtime={} cdp runtime={} reason=ready",
+                    runtime_candidate.source,
+                    runtime_candidate.path.to_string_lossy(),
+                    checked_candidates,
+                    node_check.detail,
+                    cdp_check.detail
+                ),
             };
         }
 
         BrowserRuntimeCheckResult {
             status: BrowserRuntimeStatus::Degraded,
-            message: "Chromium runtime is not discovered yet. Browser flows are blocked while API-only features remain available.".to_string(),
+            message: format!(
+                "Chromium runtime is discovered but replay prerequisites are blocked. resolved runtime candidate source={} path={} checked candidates=[{}] chromium launchability={} node runtime={} cdp runtime={} reason=replay_prerequisite_blocked",
+                runtime_candidate.source,
+                runtime_candidate.path.to_string_lossy(),
+                checked_candidates,
+                chromium_launch_check.detail,
+                node_check.detail,
+                cdp_check.detail
+            ),
         }
     }
 
-    fn chromium_candidates(&self) -> Vec<PathBuf> {
+    fn chromium_candidates(&self) -> Vec<ChromiumRuntimeCandidate> {
         let mut candidates = Vec::new();
 
         let bundled = self
@@ -255,18 +321,118 @@ impl BrowserAutomationService {
             .join("chromium")
             .join("chrome-win")
             .join("chrome.exe");
-        candidates.push(bundled);
+        candidates.push(ChromiumRuntimeCandidate {
+            source: "bundled",
+            path: bundled,
+        });
 
         if let Some(from_env) = std::env::var_os("PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH") {
-            candidates.push(PathBuf::from(from_env));
+            candidates.push(ChromiumRuntimeCandidate {
+                source: "PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH",
+                path: PathBuf::from(from_env),
+            });
         }
 
         if let Some(browsers_root) = std::env::var_os("PLAYWRIGHT_BROWSERS_PATH") {
             let root = PathBuf::from(browsers_root);
-            candidates.push(root.join("chromium").join("chrome-win").join("chrome.exe"));
+            candidates.push(ChromiumRuntimeCandidate {
+                source: "PLAYWRIGHT_BROWSERS_PATH",
+                path: root.join("chromium").join("chrome-win").join("chrome.exe"),
+            });
         }
 
         candidates
+    }
+
+    fn check_chromium_launchability(&self, executable_path: &PathBuf) -> PrerequisiteCheck {
+        let output = Command::new(executable_path).arg("--version").output();
+        match output {
+            Ok(result) if result.status.success() => {
+                let version = String::from_utf8_lossy(&result.stdout).trim().to_string();
+                if version.is_empty() {
+                    PrerequisiteCheck {
+                        ok: true,
+                        detail: "chromium launchability=ok".to_string(),
+                    }
+                } else {
+                    PrerequisiteCheck {
+                        ok: true,
+                        detail: format!("chromium launchability=ok ({version})"),
+                    }
+                }
+            }
+            Ok(result) => PrerequisiteCheck {
+                ok: false,
+                detail: format!(
+                    "chromium launchability=failed status={:?} stderr={}",
+                    result.status.code(),
+                    String::from_utf8_lossy(&result.stderr).trim()
+                ),
+            },
+            Err(error) => PrerequisiteCheck {
+                ok: false,
+                detail: format!("chromium launchability=spawn_error {error}"),
+            },
+        }
+    }
+
+    fn check_node_runtime(&self) -> PrerequisiteCheck {
+        let output = Command::new("node").arg("--version").output();
+        match output {
+            Ok(result) if result.status.success() => {
+                let version = String::from_utf8_lossy(&result.stdout).trim().to_string();
+                PrerequisiteCheck {
+                    ok: true,
+                    detail: format!("node runtime=ok ({version})"),
+                }
+            }
+            Ok(result) => PrerequisiteCheck {
+                ok: false,
+                detail: format!(
+                    "node runtime=failed status={:?} stderr={}",
+                    result.status.code(),
+                    String::from_utf8_lossy(&result.stderr).trim()
+                ),
+            },
+            Err(error) => PrerequisiteCheck {
+                ok: false,
+                detail: format!("node runtime=spawn_error {error}"),
+            },
+        }
+    }
+
+    fn check_node_cdp_capability(&self) -> PrerequisiteCheck {
+        let output = Command::new("node")
+            .arg("-e")
+            .arg("process.stdout.write(typeof WebSocket === 'function' ? 'ok' : 'missing')")
+            .output();
+
+        match output {
+            Ok(result) if result.status.success() => {
+                let capability = String::from_utf8_lossy(&result.stdout).trim().to_string();
+                let ok = capability.eq_ignore_ascii_case("ok");
+                PrerequisiteCheck {
+                    ok,
+                    detail: if ok {
+                        "cdp runtime=ok (node WebSocket available)".to_string()
+                    } else {
+                        format!("cdp runtime=failed (node WebSocket capability: {capability})")
+                    },
+                }
+            }
+            Ok(result) => PrerequisiteCheck {
+                ok: false,
+                detail: format!(
+                    "cdp runtime=failed status={:?} stderr={}",
+                    result.status.code(),
+                    String::from_utf8_lossy(&result.stderr).trim()
+                ),
+            },
+            Err(error) => PrerequisiteCheck {
+                ok: false,
+                detail: format!("cdp runtime=spawn_error {error}"),
+            },
+        }
     }
 
     fn execute_replay(
@@ -507,80 +673,31 @@ impl BrowserAutomationService {
         let db_guard = db
             .lock()
             .map_err(|_| AppError::internal("Database lock poisoned"))?;
-        let connection = db_guard.connection();
+        let repository = UiScriptRepository::new(db_guard.connection());
+        let persisted = repository
+            .load_replay_script_by_test_case_id(test_case_id)
+            .map_err(|error| self.map_ui_repository_error(error, test_case_id))?;
 
-        let start_url = connection
-            .query_row(
-                "SELECT start_url FROM ui_scripts WHERE id = ?1",
-                params![test_case_id],
-                |row| row.get::<_, Option<String>>(0),
-            )
-            .ok()
-            .flatten()
-            .unwrap_or_default();
-
-        let test_case_exists = connection
-            .query_row(
-                "SELECT ui_script_id FROM test_cases WHERE id = ?1",
-                params![test_case_id],
-                |row| row.get::<_, Option<String>>(0),
-            )
-            .optional()
-            .map_err(AppError::from)?;
-
-        let Some(linked_script_id) = test_case_exists else {
-            return Err(AppError::not_found("ui test case", test_case_id)
-                .with_context("testCaseId", test_case_id));
-        };
-
-        if linked_script_id.as_deref() != Some(test_case_id) {
-            return Err(AppError::validation(
-                "Ui test case không còn script replay hợp lệ. Có thể script tham chiếu đã bị xóa hoặc không còn đồng bộ.",
-            )
-            .with_context("testCaseId", test_case_id));
-        }
-
-        let mut statement = connection.prepare(
-            "SELECT id, step_type, selector, value, timeout_ms FROM ui_script_steps WHERE script_id = ?1 ORDER BY step_order ASC",
-        )?;
-        let mut rows = statement.query(params![test_case_id])?;
-
-        let mut steps = Vec::new();
-        while let Some(row) = rows.next()? {
-            let step_type: String = row.get(1)?;
-            let action = self.parse_storage_action(&step_type).ok_or_else(|| {
-                AppError::new(
-                    crate::error::ErrorCode::StepExecution,
-                    "Step type không được hỗ trợ trong replay.",
-                    format!("Unsupported replay step_type: {step_type}"),
-                )
-            })?;
-
-            let timeout_ms = row
-                .get::<_, Option<i64>>(4)?
-                .map(|value| value.max(0) as u64);
-            steps.push(ReplayPersistedStep {
-                id: row.get(0)?,
-                action,
-                selector: row.get(2)?,
-                value: row.get(3)?,
-                timeout_ms,
-            });
-        }
-
-        if steps.is_empty() {
-            return Err(AppError::validation(
-                "Ui test case không còn step replay khả dụng. Có thể script tham chiếu đã bị xóa hoặc rỗng.",
-            )
-            .with_context("testCaseId", test_case_id));
-        }
-
-        Ok(ReplayScript { start_url, steps })
+        Ok(ReplayScript {
+            start_url: persisted.start_url,
+            steps: persisted
+                .steps
+                .into_iter()
+                .map(|step| ReplayPersistedStep {
+                    id: step.id,
+                    action: step.action,
+                    selector: step.selector,
+                    value: step.value,
+                    timeout_ms: step.timeout_ms,
+                })
+                .collect(),
+        })
     }
 
     fn resolve_chromium_executable(&self) -> AppResult<PathBuf> {
         self.chromium_candidates()
             .into_iter()
+            .map(|candidate| candidate.path)
             .find(|path| path.exists())
             .ok_or_else(|| {
                 AppError::new(
@@ -590,20 +707,6 @@ impl BrowserAutomationService {
                 )
                 .with_recoverable(true)
             })
-    }
-
-    fn parse_storage_action(&self, value: &str) -> Option<StepAction> {
-        match value {
-            "navigate" => Some(StepAction::Navigate),
-            "click" => Some(StepAction::Click),
-            "fill" => Some(StepAction::Fill),
-            "select" => Some(StepAction::Select),
-            "check" => Some(StepAction::Check),
-            "uncheck" => Some(StepAction::Uncheck),
-            "wait_for" => Some(StepAction::WaitFor),
-            "assert_text" => Some(StepAction::AssertText),
-            _ => None,
-        }
     }
 
     fn capture_failure_screenshot(
@@ -828,91 +931,31 @@ impl BrowserAutomationService {
         let db_guard = db
             .lock()
             .map_err(|_| AppError::internal("Database lock poisoned"))?;
-        let connection = db_guard.connection();
-        let now = Utc::now().to_rfc3339();
-
-        connection.execute(
-            "INSERT OR REPLACE INTO ui_scripts (id, name, description, start_url, viewport_width, viewport_height, timeout_ms, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, COALESCE((SELECT created_at FROM ui_scripts WHERE id = ?1), ?8), ?9)",
-            params![
-                snapshot.test_case_id,
-                script_name,
-                snapshot.last_error,
-                snapshot.start_url,
-                state.config().viewport_width as i64,
-                state.config().viewport_height as i64,
-                state.config().default_timeout_ms as i64,
-                now,
-                now,
-            ],
-        )?;
-
-        connection.execute(
-            "INSERT OR REPLACE INTO test_cases (id, name, description, case_type, api_endpoint_id, ui_script_id, data_table_id, tags_json, enabled, created_at, updated_at) VALUES (?1, COALESCE((SELECT name FROM test_cases WHERE id = ?1), ?2), NULL, 'ui', NULL, ?3, NULL, '[]', 1, COALESCE((SELECT created_at FROM test_cases WHERE id = ?1), ?4), ?5)",
-            params![
-                snapshot.test_case_id,
-                script_name,
-                snapshot.test_case_id,
-                now,
-                now,
-            ],
-        )?;
-
-        connection.execute(
-            "DELETE FROM ui_script_steps WHERE script_id = ?1",
-            params![snapshot.test_case_id],
-        )?;
-
-        for (index, step) in normalized_steps.iter().enumerate() {
-            connection.execute(
-                "INSERT INTO ui_script_steps (id, script_id, step_order, step_type, selector, value, timeout_ms, description, confidence, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-                params![
-                    format!("step-{}", Uuid::new_v4()),
-                    snapshot.test_case_id,
-                    index as i64,
-                    self.step_action_to_storage(step.action),
-                    step.selector,
-                    step.value,
-                    step.timeout_ms as i64,
-                    step.description,
-                    step.confidence,
-                    now,
-                    now,
-                ],
-            )?;
-        }
-
-        let result_steps = normalized_steps
+        let repository = UiScriptRepository::new(db_guard.connection());
+        let persisted_steps = normalized_steps
             .iter()
-            .map(|item| UiStepDto {
-                id: format!("step-{}", Uuid::new_v4()),
+            .map(|item| PersistedUiScriptStepInput {
                 action: item.action,
                 selector: item.selector.clone(),
                 value: item.value.clone(),
-                timeout_ms: Some(item.timeout_ms),
-                confidence: None,
+                timeout_ms: item.timeout_ms,
+                description: item.description.clone(),
+                confidence: item.confidence,
             })
             .collect::<Vec<_>>();
 
-        Ok(UiTestCaseDto {
-            id: snapshot.test_case_id.clone(),
-            r#type: TestCaseType::Ui,
-            name: script_name,
-            start_url: snapshot.start_url.clone(),
-            steps: result_steps,
-        })
-    }
-
-    fn step_action_to_storage(&self, action: StepAction) -> &'static str {
-        match action {
-            StepAction::Navigate => "navigate",
-            StepAction::Click => "click",
-            StepAction::Fill => "fill",
-            StepAction::Select => "select",
-            StepAction::Check => "check",
-            StepAction::Uncheck => "uncheck",
-            StepAction::WaitFor => "wait_for",
-            StepAction::AssertText => "assert_text",
-        }
+        repository
+            .persist_recording_snapshot(
+                &snapshot.test_case_id,
+                &snapshot.start_url,
+                snapshot.last_error.as_deref(),
+                &script_name,
+                state.config().viewport_width,
+                state.config().viewport_height,
+                state.config().default_timeout_ms,
+                &persisted_steps,
+            )
+            .map_err(|error| self.map_ui_repository_error(error, &snapshot.test_case_id))
     }
 
     fn resolve_script_name(&self, state: &AppState, test_case_id: &str) -> AppResult<String> {
@@ -920,18 +963,9 @@ impl BrowserAutomationService {
         let db_guard = db
             .lock()
             .map_err(|_| AppError::internal("Database lock poisoned"))?;
-        let connection = db_guard.connection();
-
-        let result = connection.query_row(
-            "SELECT name FROM test_cases WHERE id = ?1",
-            params![test_case_id],
-            |row| row.get::<_, String>(0),
-        );
-
-        match result {
-            Ok(name) if !name.trim().is_empty() => Ok(name),
-            _ => Ok(format!("UI Script {}", test_case_id)),
-        }
+        UiScriptRepository::new(db_guard.connection())
+            .resolve_script_name(test_case_id)
+            .map_err(|error| self.map_ui_repository_error(error, test_case_id))
     }
 
     fn emit_recording_status(
@@ -1456,4 +1490,16 @@ fn is_chromium_runtime_explicitly_disabled() -> bool {
 struct BrowserRuntimeCheckResult {
     status: BrowserRuntimeStatus,
     message: String,
+}
+
+#[derive(Debug, Clone)]
+struct ChromiumRuntimeCandidate {
+    source: &'static str,
+    path: PathBuf,
+}
+
+#[derive(Debug)]
+struct PrerequisiteCheck {
+    ok: bool,
+    detail: String,
 }

@@ -36,6 +36,12 @@ pub struct DeleteByIdCommand {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct UiTestCaseGetCommand {
+    pub id: EntityId,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct EnvironmentVariableUpsertVariable {
     pub id: EntityId,
     pub key: String,
@@ -214,6 +220,8 @@ pub enum CommandEnvelope {
     ApiExecute(ApiExecuteCommand),
     #[serde(rename = "ui.testcase.upsert")]
     UiTestcaseUpsert(UiTestCaseDto),
+    #[serde(rename = "ui.testcase.get")]
+    UiTestcaseGet(UiTestCaseGetCommand),
     #[serde(rename = "ui.testcase.delete")]
     UiTestcaseDelete(DeleteByIdCommand),
     #[serde(rename = "browser.recording.start")]

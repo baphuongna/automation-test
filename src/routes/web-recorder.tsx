@@ -841,7 +841,7 @@ export default function WebRecorder() {
                       </span>
                       <p>
                         {inferConfidence(selectedStep) === "low"
-                          ? "Low confidence selector/value detected. Stabilize this step before replay is introduced."
+                          ? "Low confidence selector/value detected. Stabilize this step before replay runs in desktop runtime."
                           : "Confidence is derived from the current selector/value quality and updates in realtime."}
                       </p>
                     </div>
