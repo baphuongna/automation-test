@@ -116,18 +116,20 @@ assert(
 );
 
 assert(
-  rustLibSource.includes("pub fn browser_recording_start") &&
-    rustLibSource.includes("pub fn browser_recording_stop") &&
-    rustLibSource.includes("pub fn browser_recording_cancel") &&
+  rustLibSource.includes("fn browser_recording_start") &&
+    rustLibSource.includes("fn browser_recording_stop") &&
+    rustLibSource.includes("fn browser_recording_cancel") &&
     rustLibSource.includes("BrowserAutomationService::new"),
   "T12 must add backend handlers for recording start/stop/cancel using BrowserAutomationService."
 );
 
 assert(
-  rustMainSource.includes("browser_recording_start") &&
-    rustMainSource.includes("browser_recording_stop") &&
-    rustMainSource.includes("browser_recording_cancel"),
-  "T12 must register recording start/stop/cancel handlers in Tauri invoke handler."
+  rustLibSource.includes("tauri::generate_handler![") &&
+    rustLibSource.includes("browser_recording_start") &&
+    rustLibSource.includes("browser_recording_stop") &&
+    rustLibSource.includes("browser_recording_cancel") &&
+    rustMainSource.includes("testforge::run();"),
+  "T12 must register recording start/stop/cancel handlers through the library run() entrypoint."
 );
 
 assert(

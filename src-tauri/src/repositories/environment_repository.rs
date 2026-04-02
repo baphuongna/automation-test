@@ -1,11 +1,11 @@
 //! Environment Repository
-//! 
+//!
 //! Provides CRUD operations for environments and environment variables.
 
 use crate::error::{Result, TestForgeError};
-use crate::models::{Environment, EnvironmentVariable, EnvironmentType, VariableType};
-use rusqlite::{Connection, params};
+use crate::models::{Environment, EnvironmentType, EnvironmentVariable, VariableType};
 use chrono::Utc;
+use rusqlite::{params, Connection};
 
 /// Repository for environments and their variables
 pub struct EnvironmentRepository<'a> {
@@ -83,7 +83,8 @@ impl<'a> EnvironmentRepository<'a> {
             ORDER BY name ASC
         "#;
 
-        let environments = self.conn
+        let environments = self
+            .conn
             .prepare(sql)?
             .query_map([], |row| {
                 Ok(Environment {
@@ -164,7 +165,9 @@ impl<'a> EnvironmentRepository<'a> {
         )?;
 
         if rows_affected == 0 {
-            return Err(TestForgeError::EnvironmentNotFound { id: environment.id.clone() });
+            return Err(TestForgeError::EnvironmentNotFound {
+                id: environment.id.clone(),
+            });
         }
 
         Ok(())
@@ -179,10 +182,9 @@ impl<'a> EnvironmentRepository<'a> {
         )?;
 
         // Then delete the environment
-        let rows_affected = self.conn.execute(
-            "DELETE FROM environments WHERE id = ?1",
-            params![id],
-        )?;
+        let rows_affected = self
+            .conn
+            .execute("DELETE FROM environments WHERE id = ?1", params![id])?;
 
         if rows_affected == 0 {
             return Err(TestForgeError::EnvironmentNotFound { id: id.to_string() });
@@ -225,7 +227,10 @@ impl<'a> EnvironmentRepository<'a> {
     }
 
     /// Find all variables for an environment
-    pub fn find_variables_by_environment(&self, environment_id: &str) -> Result<Vec<EnvironmentVariable>> {
+    pub fn find_variables_by_environment(
+        &self,
+        environment_id: &str,
+    ) -> Result<Vec<EnvironmentVariable>> {
         let sql = r#"
             SELECT id, environment_id, key, value, masked_preview, var_type, enabled, description, created_at, updated_at
             FROM environment_variables
@@ -233,7 +238,8 @@ impl<'a> EnvironmentRepository<'a> {
             ORDER BY key ASC
         "#;
 
-        let variables = self.conn
+        let variables = self
+            .conn
             .prepare(sql)?
             .query_map(params![environment_id], |row| {
                 Ok(EnvironmentVariable {
@@ -318,7 +324,9 @@ impl<'a> EnvironmentRepository<'a> {
         )?;
 
         if rows_affected == 0 {
-            return Err(TestForgeError::EnvironmentVariableNotFound { id: variable.id.clone() });
+            return Err(TestForgeError::EnvironmentVariableNotFound {
+                id: variable.id.clone(),
+            });
         }
 
         Ok(())
@@ -340,10 +348,8 @@ impl<'a> EnvironmentRepository<'a> {
 
     /// Clear the default flag from all environments
     pub fn clear_default(&self) -> Result<()> {
-        self.conn.execute(
-            "UPDATE environments SET is_default = 0",
-            [],
-        )?;
+        self.conn
+            .execute("UPDATE environments SET is_default = 0", [])?;
         Ok(())
     }
 }

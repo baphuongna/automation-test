@@ -254,13 +254,13 @@ impl<'a> RunnerRepository<'a> {
         let items = if let Some(suite_id) = suite_id {
             let query = format!("{base_query} WHERE tr.suite_id = ?1{order_clause}");
             let mut stmt = self.conn.prepare(&query)?;
-            stmt.query_map(params![suite_id], map_row)?
-                .collect::<std::result::Result<Vec<_>, _>>()?
+            let mapped = stmt.query_map(params![suite_id], map_row)?;
+            mapped.collect::<std::result::Result<Vec<_>, _>>()?
         } else {
             let query = format!("{base_query}{order_clause}");
             let mut stmt = self.conn.prepare(&query)?;
-            stmt.query_map([], map_row)?
-                .collect::<std::result::Result<Vec<_>, _>>()?
+            let mapped = stmt.query_map([], map_row)?;
+            mapped.collect::<std::result::Result<Vec<_>, _>>()?
         };
 
         Ok(items.into_iter().map(Self::to_run_history_entry).collect())

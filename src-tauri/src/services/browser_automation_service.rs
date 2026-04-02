@@ -10,9 +10,9 @@ use std::process::Command;
 use std::sync::Mutex;
 
 use chrono::Utc;
-use rusqlite::params;
+use rusqlite::{params, OptionalExtension};
 use serde_json::json;
-use tauri::Manager;
+use tauri::Emitter;
 use uuid::Uuid;
 
 use crate::contracts::domain::{
@@ -120,7 +120,7 @@ impl BrowserAutomationService {
             self.emit_recording_status(app, test_case_id, RecordingStatus::Failed)?;
         }
 
-        let normalized_steps = self.normalize_steps(snapshot.captured_steps);
+        let normalized_steps = self.normalize_steps(snapshot.captured_steps.clone());
         let persisted = self.persist_recording_snapshot(state, &snapshot, &normalized_steps)?;
 
         self.emit_recording_status(app, test_case_id, RecordingStatus::Stopped)?;
@@ -505,7 +505,7 @@ impl BrowserAutomationService {
     fn load_replay_script(&self, state: &AppState, test_case_id: &str) -> AppResult<ReplayScript> {
         let db = state.db();
         let db_guard = db
-            .read()
+            .lock()
             .map_err(|_| AppError::internal("Database lock poisoned"))?;
         let connection = db_guard.connection();
 
@@ -678,7 +678,7 @@ impl BrowserAutomationService {
 
         let db = state.db();
         let db_guard = db
-            .read()
+            .lock()
             .map_err(|_| AppError::internal("Database lock poisoned"))?;
         artifact_service.persist_artifact_manifest(db_guard.connection(), &manifest)?;
 
@@ -826,7 +826,7 @@ impl BrowserAutomationService {
         let script_name = self.resolve_script_name(state, &snapshot.test_case_id)?;
         let db = state.db();
         let db_guard = db
-            .read()
+            .lock()
             .map_err(|_| AppError::internal("Database lock poisoned"))?;
         let connection = db_guard.connection();
         let now = Utc::now().to_rfc3339();
@@ -918,7 +918,7 @@ impl BrowserAutomationService {
     fn resolve_script_name(&self, state: &AppState, test_case_id: &str) -> AppResult<String> {
         let db = state.db();
         let db_guard = db
-            .read()
+            .lock()
             .map_err(|_| AppError::internal("Database lock poisoned"))?;
         let connection = db_guard.connection();
 
@@ -1001,7 +1001,7 @@ struct ReplayScript {
     steps: Vec<ReplayPersistedStep>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct ChromiumCliReplayRuntimeAdapter {
     executable_path: PathBuf,
     viewport_width: u32,
@@ -1282,14 +1282,32 @@ const path = require('path');
 
 async function sleep(ms){ return new Promise((r)=>setTimeout(r, ms)); }
 
-async function waitWs(port, timeoutMs){
+function normalizeUrl(value){
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  return raw.endsWith('/') ? raw.slice(0, -1) : raw;
+}
+
+async function waitWs(port, timeoutMs, expectedUrl){
+  const normalizedExpected = normalizeUrl(expectedUrl);
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
       const response = await fetch(`http://127.0.0.1:${port}/json/list`);
       if (response.ok) {
         const pages = await response.json();
-        const page = Array.isArray(pages) ? pages.find((item)=>item.webSocketDebuggerUrl) : null;
+        const page = Array.isArray(pages)
+          ? pages.find((item) => {
+              if (!item || !item.webSocketDebuggerUrl || item.type !== 'page') return false;
+              if (!normalizedExpected) return true;
+              const normalizedPageUrl = normalizeUrl(item.url);
+              return normalizedPageUrl === normalizedExpected;
+            }) ||
+            pages.find((item) => {
+              if (!item || !item.webSocketDebuggerUrl || item.type !== 'page') return false;
+              return !String(item.url || '').startsWith('chrome-extension://');
+            })
+          : null;
         if (page && page.webSocketDebuggerUrl) return page.webSocketDebuggerUrl;
       }
     } catch (_) {}
@@ -1306,14 +1324,13 @@ async function run(){
     '--headless', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
     `--window-size=${payload.viewportWidth},${payload.viewportHeight}`,
     `--remote-debugging-port=${port}`,
-    `--virtual-time-budget=${Math.max(200, payload.timeoutMs || 2000)}`,
     `--user-data-dir=${userDir}`,
     payload.url,
   ], { stdio: ['ignore', 'pipe', 'pipe'] });
 
   let ws;
   try {
-    const wsUrl = await waitWs(port, Math.max(1200, payload.timeoutMs || 5000));
+    const wsUrl = await waitWs(port, Math.max(1200, payload.timeoutMs || 5000), payload.url);
     ws = new WebSocket(wsUrl);
     await new Promise((resolve, reject) => {
       ws.addEventListener('open', () => resolve());
@@ -1327,16 +1344,36 @@ async function run(){
       if (data.id && pending.has(data.id)) {
         const promise = pending.get(data.id);
         pending.delete(data.id);
-        if (data.error) promise.reject(new Error(data.error.message || 'CDP error'));
-        else promise.resolve(data.result || {});
+        if (data.error) {
+          promise.reject(new Error(data.error.message || 'CDP error'));
+        } else if (data.exceptionDetails) {
+          promise.reject(new Error(data.exceptionDetails.text || 'Runtime.evaluate exception'));
+        } else {
+          promise.resolve(data.result || {});
+        }
       }
     });
 
     const send = (method, params = {}) => {
       id += 1;
       const currentId = id;
-      ws.send(JSON.stringify({ id: currentId, method, params }));
-      return new Promise((resolve, reject) => pending.set(currentId, { resolve, reject }));
+      return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          pending.delete(currentId);
+          reject(new Error('CDP command timeout: ' + method));
+        }, Math.max(1200, payload.timeoutMs || 5000));
+        pending.set(currentId, {
+          resolve: (value) => {
+            clearTimeout(timeout);
+            resolve(value);
+          },
+          reject: (error) => {
+            clearTimeout(timeout);
+            reject(error);
+          },
+        });
+        ws.send(JSON.stringify({ id: currentId, method, params }));
+      });
     };
 
     await send('Page.enable');
@@ -1346,6 +1383,27 @@ async function run(){
     const safeSelector = JSON.stringify(payload.selector);
     const safeValue = JSON.stringify(payload.value);
     const checked = payload.checked === true ? 'true' : 'false';
+
+    const readinessExpr = `
+      (() => {
+        const selector = ${safeSelector};
+        const ready = document.readyState === 'complete' || document.readyState === 'interactive';
+        const present = selector ? Boolean(document.querySelector(selector)) : true;
+        return ready && present;
+      })()
+    `;
+    const readyDeadline = Date.now() + Math.max(1200, payload.timeoutMs || 5000);
+    let ready = false;
+    while (Date.now() < readyDeadline) {
+      const readyResult = await send('Runtime.evaluate', { expression: readinessExpr, awaitPromise: true, returnByValue: true });
+      ready = Boolean(readyResult?.result?.value);
+      if (ready) break;
+      await sleep(60);
+    }
+    if (!ready) {
+      throw new Error('Replay target DOM not ready');
+    }
+
     let expr = '';
     if (payload.action === 'click') {
       expr = `(() => { const el = document.querySelector(${safeSelector}); if (!el) throw new Error('Selector not found'); el.click(); return true; })()`;

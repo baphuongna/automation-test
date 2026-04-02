@@ -27,6 +27,11 @@ const rustPathsSource = readProjectFile("src-tauri/src/utils/paths.rs");
 const rustBrowserServiceSource = readProjectFile("src-tauri/src/services/browser_automation_service.rs");
 
 assert(
+  existsSync(resolve("src-tauri/icons/icon.ico")),
+  "T17 packaging proof requires a real Windows icon asset at src-tauri/icons/icon.ico so tauri-build can generate Windows resources."
+);
+
+assert(
   packageJsonSource.includes('"version": "0.1.0"'),
   "T17 regression assumes package.json remains the canonical package version source."
 );
@@ -74,11 +79,13 @@ assert(
 );
 
 assert(
-  rustLibSource.includes("pub fn shell_metadata_get") &&
+  rustLibSource.includes("fn shell_metadata_get") &&
     rustLibSource.includes("ShellMetadataDto") &&
     rustLibSource.includes("BrowserAutomationService::new") &&
-    rustMainSource.includes("shell_metadata_get"),
-  "T17 phải thêm backend handler shell_metadata_get và đăng ký nó trong main.rs."
+    rustLibSource.includes("tauri::generate_handler![") &&
+    rustLibSource.includes("shell_metadata_get") &&
+    rustMainSource.includes("testforge::run();"),
+  "T17 phải thêm backend handler shell_metadata_get và đăng ký nó thông qua library run() entrypoint."
 );
 
 assert(

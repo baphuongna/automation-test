@@ -108,18 +108,20 @@ assert(
 );
 
 assert(
-  rustLibSource.includes("pub fn runner_suite_list") &&
-    rustLibSource.includes("pub fn runner_run_history") &&
-    rustLibSource.includes("pub fn runner_run_detail") &&
+  rustLibSource.includes("fn runner_suite_list") &&
+    rustLibSource.includes("fn runner_run_history") &&
+    rustLibSource.includes("fn runner_run_detail") &&
     rustLibSource.includes("RunnerRepository::new"),
   "T16 phải expose Tauri handlers tối thiểu cho suite list, run history, và run detail."
 );
 
 assert(
-  rustMainSource.includes("runner_suite_list") &&
-    rustMainSource.includes("runner_run_history") &&
-    rustMainSource.includes("runner_run_detail"),
-  "T16 phải đăng ký read-side runner handlers trong generate_handler của Tauri app."
+  rustLibSource.includes("tauri::generate_handler![") &&
+    rustLibSource.includes("runner_suite_list") &&
+    rustLibSource.includes("runner_run_history") &&
+    rustLibSource.includes("runner_run_detail") &&
+    rustMainSource.includes("testforge::run();"),
+  "T16 phải đăng ký read-side runner handlers thông qua library run() entrypoint của Tauri app."
 );
 
 assert(

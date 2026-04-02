@@ -242,19 +242,22 @@ impl AppError {
 
     /// Not found error
     pub fn not_found(entity_type: impl Into<String>, id: impl Into<String>) -> Self {
+        let entity_type = entity_type.into();
+        let id = id.into();
         Self::new(
             ErrorCode::NotFound,
-            format!("Không tìm thấy {}.", entity_type.into()),
-            format!("{} not found with id: {}", entity_type.into(), id.into()),
+            format!("Không tìm thấy {}.", entity_type),
+            format!("{} not found with id: {}", entity_type, id),
         )
     }
 
     /// Variable missing error
     pub fn variable_missing(name: impl Into<String>) -> Self {
+        let name = name.into();
         Self::new(
             ErrorCode::VariableMissing,
-            format!("Biến '{}' chưa được định nghĩa.", name.into()),
-            format!("Variable '{}' is not defined", name.into()),
+            format!("Biến '{}' chưa được định nghĩa.", name),
+            format!("Variable '{}' is not defined", name),
         )
         .with_context("variable_name", name)
     }
@@ -302,7 +305,7 @@ impl std::fmt::Display for AppError {
 impl std::error::Error for AppError {}
 
 impl Serialize for AppError {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {

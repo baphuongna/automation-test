@@ -1,6 +1,6 @@
 T19 smoke acceptance summary
 
-Overall MVP exit criteria verdict: BLOCKED
+Overall MVP exit criteria verdict: PASS
 
 MVP exit criteria:
 1. App can bootstrap from empty local data directory without manual dev tooling
@@ -13,8 +13,8 @@ MVP exit criteria:
    - SATISFIED
    - API tester seam passed, covering authoring plus pass/fail detail rendering for API runs. Evidence: API Tester T9 regression test passed.
 4. QA can record, edit, save, and replay a simple UI flow in Chromium
-   - BLOCKED
-   - Recorder UI seam is present, but real Chromium replay smoke is blocked in this environment, so successful simple UI replay cannot be claimed. Blocker: [BROWSER_REPLAY_T14_SMOKE] SMOKE_BLOCKED :: Chromium executable is missing; set PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH or install browser runtime.
+   - SATISFIED
+   - Recorder seam passed and replay smoke executed real browser-side interactions successfully. Evidence: [BROWSER_REPLAY_T14_SMOKE] SMOKE_PASS :: Replay interaction smoke succeeded with browser-side state transitions.
 5. QA can run a mixed suite and inspect progress/history
    - SATISFIED
    - Suite orchestration and runner/history seams both passed, so mixed suite execution and progress/history inspection are evidenced at seam level.
@@ -84,16 +84,14 @@ Minimum smoke scenarios:
    - stderr: (empty)
 9. browser-replay-t14-smoke.ts
    - command: node --import tsx tests/frontend/browser-replay-t14-smoke.ts
-   - status: blocked
-   - exitCode: 1
-   - details: [BROWSER_REPLAY_T14_SMOKE] SMOKE_BLOCKED :: Chromium executable is missing; set PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH or install browser runtime.
-   - stdout: [BROWSER_REPLAY_T14_SMOKE] SMOKE_BLOCKED :: Chromium executable is missing; set PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH or install browser runtime.
+   - status: passed
+   - exitCode: 0
+   - details: [BROWSER_REPLAY_T14_SMOKE] SMOKE_PASS :: Replay interaction smoke succeeded with browser-side state transitions.
+   - stdout: [BROWSER_REPLAY_T14_SMOKE] SMOKE_PASS :: Replay interaction smoke succeeded with browser-side state transitions.
 {
-  "missing": "chromium executable",
-  "candidates": [
-    "D:\\my\\research\\ms-playwright\\chromium\\chrome-win\\chrome.exe",
-    "D:\\my\\research\\src-tauri\\ms-playwright\\chromium\\chrome-win\\chrome.exe"
-  ]
+  "chromiumPath": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  "nodeVersion": "v22.14.0",
+  "url": "file://C:/Users/phuongnb/AppData/Local/Temp/tf-t14-smoke-rt5sxJ/smoke.html"
 }
    - stderr: (empty)
 

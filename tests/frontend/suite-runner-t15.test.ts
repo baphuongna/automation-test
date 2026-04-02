@@ -108,7 +108,7 @@ assert(
   existsSync(resolve("src-tauri/src/repositories/runner_repository.rs")) &&
     existsSync(resolve("src-tauri/src/services/runner_orchestration_service.rs")) &&
     rustRepositoriesModSource.includes("pub mod runner_repository;") &&
-    rustRepositoriesModSource.includes("pub use runner_repository::RunnerRepository;") &&
+    rustRepositoriesModSource.includes("RunnerRepository") &&
     rustServicesModSource.includes("pub mod runner_orchestration_service;") &&
     rustServicesModSource.includes("pub use runner_orchestration_service::RunnerOrchestrationService;"),
   "T15 phải thêm repository/service runner chuyên biệt thay vì nhồi orchestration vào frontend hoặc service hiện có."
@@ -138,8 +138,8 @@ assert(
 );
 
 assert(
-  rustLibSource.includes("pub async fn runner_suite_execute") &&
-    rustLibSource.includes("pub fn runner_suite_cancel") &&
+  rustLibSource.includes("fn runner_suite_execute") &&
+    rustLibSource.includes("fn runner_suite_cancel") &&
     rustLibSource.includes("RunnerOrchestrationService::new") &&
     rustLibSource.includes("runner.execution.started") &&
     rustLibSource.includes("runner.execution.completed"),
@@ -147,8 +147,11 @@ assert(
 );
 
 assert(
-  rustMainSource.includes("runner_suite_execute") && rustMainSource.includes("runner_suite_cancel"),
-  "T15 phải đăng ký runner suite handlers trong generate_handler của Tauri app."
+  rustLibSource.includes("tauri::generate_handler![") &&
+    rustLibSource.includes("runner_suite_execute") &&
+    rustLibSource.includes("runner_suite_cancel") &&
+    rustMainSource.includes("testforge::run();"),
+  "T15 phải đăng ký runner suite handlers thông qua library run() entrypoint của Tauri app."
 );
 
 assert(

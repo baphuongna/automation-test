@@ -1,6 +1,6 @@
 //! Application state management.
 
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 
 use crate::contracts::dto::UiStepDto;
 use crate::db::Database;
@@ -92,7 +92,7 @@ pub enum ReplayState {
 
 /// Shared app state created during backend bootstrap.
 pub struct AppState {
-    db: Arc<RwLock<Database>>,
+    db: Arc<Mutex<Database>>,
     secret_service: Arc<RwLock<SecretService>>,
     paths: AppPaths,
     config: RwLock<AppConfig>,
@@ -113,7 +113,7 @@ impl AppState {
         shell_bootstrap_snapshot: ShellBootstrapSnapshot,
     ) -> Self {
         Self {
-            db: Arc::new(RwLock::new(db)),
+            db: Arc::new(Mutex::new(db)),
             secret_service: Arc::new(RwLock::new(secret_service)),
             paths,
             config: RwLock::new(AppConfig::default()),
@@ -131,7 +131,7 @@ impl AppState {
         &self.paths
     }
 
-    pub fn db(&self) -> Arc<RwLock<Database>> {
+    pub fn db(&self) -> Arc<Mutex<Database>> {
         Arc::clone(&self.db)
     }
 

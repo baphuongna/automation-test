@@ -53,18 +53,20 @@ assert(
 );
 
 assert(
-  rustLibSource.includes("pub fn api_testcase_upsert") &&
-    rustLibSource.includes("pub fn api_testcase_delete") &&
-    rustLibSource.includes("pub async fn api_execute") &&
+  rustLibSource.includes("fn api_testcase_upsert") &&
+    rustLibSource.includes("fn api_testcase_delete") &&
+    rustLibSource.includes("fn api_execute") &&
     rustLibSource.includes("Err(error @ TestForgeError::Validation(_)) => Ok(to_preflight_api_result(error))"),
   "Backend T8 handlers must expose api_testcase_upsert, api_testcase_delete, and api_execute."
 );
 
 assert(
-  rustMainSource.includes("api_testcase_upsert") &&
-    rustMainSource.includes("api_testcase_delete") &&
-    rustMainSource.includes("api_execute"),
-  "Tauri main invoke handler must register all T8 API commands."
+  rustLibSource.includes("tauri::generate_handler![") &&
+    rustLibSource.includes("api_testcase_upsert") &&
+    rustLibSource.includes("api_testcase_delete") &&
+    rustLibSource.includes("api_execute") &&
+    rustMainSource.includes("testforge::run();"),
+  "Tauri runtime must register all T8 API commands through the library run() entrypoint."
 );
 
 assert(

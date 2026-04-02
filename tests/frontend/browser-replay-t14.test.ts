@@ -160,17 +160,17 @@ assert(
 );
 
 assert(
-  rustLibSource.includes("pub fn browser_replay_start") &&
+  rustLibSource.includes("fn browser_replay_start") &&
     rustLibSource.includes("UiReplayResultDto") &&
     rustLibSource.includes("BrowserAutomationService::new"),
   "T14 phải thêm backend handler browser_replay_start trả UiReplayResultDto qua BrowserAutomationService boundary."
 );
 
 assert(
-  rustMainSource.includes("browser_replay_start") &&
-    rustMainSource.includes("generate_handler![") &&
-    rustMainSource.includes("browser_replay_start"),
-  "T14 phải đăng ký browser_replay_start trong Tauri invoke handler."
+  rustLibSource.includes("tauri::generate_handler![") &&
+    rustLibSource.includes("browser_replay_start") &&
+    rustMainSource.includes("testforge::run();"),
+  "T14 phải đăng ký browser_replay_start thông qua library run() entrypoint của Tauri runtime."
 );
 
 assert(

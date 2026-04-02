@@ -58,7 +58,8 @@ pub mod state;
 
 use chrono::Utc;
 use serde_json::json;
-use tauri::State;
+use std::sync::Arc;
+use tauri::{Manager, State};
 
 use contracts::commands::{
     ApiExecuteCommand, BrowserHealthCheckCommand, BrowserRecordingCancelCommand,
@@ -75,7 +76,6 @@ use contracts::dto::{
     DataTableImportResultDto, DataTableRowDto, EnvironmentDto, EnvironmentVariableDto,
     RunDetailDto, RunHistoryEntryDto, UiReplayResultDto, UiTestCaseDto,
 };
-use error::AppError;
 use models::{ColumnDefinition, DataTable, DataTableRow, Environment, EnvironmentType as ModelEnvironmentType, VariableType};
 use repositories::{ApiRepository, DataTableRepository, EnvironmentRepository, RunnerRepository};
 use services::artifact_service::ArtifactKind;
@@ -120,11 +120,12 @@ fn model_variable_kind_to_contract(value: &VariableType) -> contracts::domain::V
 }
 
 fn to_environment_variable_dto(variable: models::EnvironmentVariable) -> EnvironmentVariableDto {
+    let value_masked_preview = variable.display_value().to_string();
     EnvironmentVariableDto {
         id: variable.id,
         key: variable.key,
         kind: model_variable_kind_to_contract(&variable.var_type),
-        value_masked_preview: variable.display_value().to_string(),
+        value_masked_preview,
     }
 }
 
@@ -151,11 +152,13 @@ fn to_data_table_column_dto(column: ColumnDefinition) -> DataTableColumnDto {
 }
 
 fn to_data_table_row_dto(row: DataTableRow) -> Result<DataTableRowDto> {
+    let values = row
+        .get_values()
+        .map_err(|error| TestForgeError::Validation(format!("Data table row values must be valid JSON array: {error}")))?;
+
     Ok(DataTableRowDto {
         id: row.id,
-        values: row
-            .get_values()
-            .map_err(|error| TestForgeError::Validation(format!("Data table row values must be valid JSON array: {error}")))?,
+        values,
         enabled: row.enabled,
         row_index: row.row_index,
         created_at: row.created_at.to_rfc3339(),
@@ -198,7 +201,7 @@ fn to_model_columns(columns: &[DataTableColumnDto]) -> Vec<ColumnDefinition> {
 fn with_data_table_repository<T>(state: &AppState, run: impl FnOnce(DataTableRepository<'_>) -> Result<T>) -> Result<T> {
     let db = state.db();
     let db_guard = db
-        .read()
+        .lock()
         .map_err(|_| TestForgeError::InvalidOperation("Database lock poisoned".to_string()))?;
 
     run(DataTableRepository::new(db_guard.connection()))
@@ -394,7 +397,7 @@ fn export_to_json(table: &DataTableDto) -> Result<String> {
 fn with_environment_repository<T>(state: &AppState, run: impl FnOnce(EnvironmentRepository<'_>) -> Result<T>) -> Result<T> {
     let db = state.db();
     let db_guard = db
-        .read()
+        .lock()
         .map_err(|_| TestForgeError::InvalidOperation("Database lock poisoned".to_string()))?;
 
     run(EnvironmentRepository::new(db_guard.connection()))
@@ -403,7 +406,7 @@ fn with_environment_repository<T>(state: &AppState, run: impl FnOnce(Environment
 fn with_environment_service<T>(state: &AppState, run: impl FnOnce(services::EnvironmentService<'_>) -> Result<T>) -> Result<T> {
     let db = state.db();
     let db_guard = db
-        .read()
+        .lock()
         .map_err(|_| TestForgeError::InvalidOperation("Database lock poisoned".to_string()))?;
     let secret_service = state.secret_service();
     let secret_guard = secret_service
@@ -422,7 +425,7 @@ fn with_api_execution_service<T>(
 ) -> Result<T> {
     let db = state.db();
     let db_guard = db
-        .read()
+        .lock()
         .map_err(|_| TestForgeError::InvalidOperation("Database lock poisoned".to_string()))?;
     let secret_service = state.secret_service();
     let secret_guard = secret_service
@@ -434,33 +437,6 @@ fn with_api_execution_service<T>(
         EnvironmentRepository::new(db_guard.connection()),
         &secret_guard,
     ))
-}
-
-fn with_runner_orchestration_service<T>(
-    state: &AppState,
-    run: impl FnOnce(services::RunnerOrchestrationService<'_>) -> AppResult<T>,
-) -> AppResult<T> {
-    let db = state
-        .db()
-        .read()
-        .map_err(|_| AppError::internal("Database lock poisoned"))?;
-    let secret_service = state.secret_service();
-    let secret_guard = secret_service
-        .read()
-        .map_err(|_| AppError::internal("Secret service lock poisoned"))?;
-
-    let api_service = services::ApiExecutionService::new(
-        ApiRepository::new(db.connection()),
-        EnvironmentRepository::new(db.connection()),
-        &secret_guard,
-    );
-    let runner_service = services::RunnerOrchestrationService::new(
-        RunnerRepository::new(db.connection()),
-        api_service,
-        services::BrowserAutomationService::new(state.paths().clone()),
-    );
-
-    run(runner_service)
 }
 
 fn normalize_variable_id(id: &str) -> Option<&str> {
@@ -519,7 +495,7 @@ fn to_preflight_api_result(error: TestForgeError) -> ApiExecutionResultDto {
 }
 
 #[tauri::command]
-pub fn environment_list(_payload: EmptyCommandPayload, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<Vec<EnvironmentDto>, AppError> {
+fn environment_list(_payload: EmptyCommandPayload, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<Vec<EnvironmentDto>, AppError> {
     with_environment_repository(state.inner().as_ref(), |repository| {
         let environments = repository.find_all()?;
         let mut dtos = Vec::with_capacity(environments.len());
@@ -548,7 +524,7 @@ pub fn environment_list(_payload: EmptyCommandPayload, state: State<'_, std::syn
 }
 
 #[tauri::command]
-pub fn environment_create(payload: EnvironmentCreateCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<EnvironmentDto, AppError> {
+fn environment_create(payload: EnvironmentCreateCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<EnvironmentDto, AppError> {
     with_environment_repository(state.inner().as_ref(), |repository| {
         if payload.is_default {
             repository.clear_default()?;
@@ -568,7 +544,7 @@ pub fn environment_create(payload: EnvironmentCreateCommand, state: State<'_, st
 }
 
 #[tauri::command]
-pub fn environment_update(payload: EnvironmentUpdateCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<EnvironmentDto, AppError> {
+fn environment_update(payload: EnvironmentUpdateCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<EnvironmentDto, AppError> {
     with_environment_repository(state.inner().as_ref(), |repository| {
         if payload.is_default {
             repository.clear_default()?;
@@ -589,7 +565,7 @@ pub fn environment_update(payload: EnvironmentUpdateCommand, state: State<'_, st
 }
 
 #[tauri::command]
-pub fn environment_delete(payload: DeleteByIdCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<contracts::commands::AckResponse, AppError> {
+fn environment_delete(payload: DeleteByIdCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<contracts::commands::AckResponse, AppError> {
     with_environment_repository(state.inner().as_ref(), |repository| {
         repository.delete(&payload.id)?;
         Ok(contracts::commands::AckResponse {
@@ -602,7 +578,7 @@ pub fn environment_delete(payload: DeleteByIdCommand, state: State<'_, std::sync
 }
 
 #[tauri::command]
-pub fn environment_variable_upsert(payload: EnvironmentVariableUpsertCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<EnvironmentVariableDto, AppError> {
+fn environment_variable_upsert(payload: EnvironmentVariableUpsertCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<EnvironmentVariableDto, AppError> {
     with_environment_service(state.inner().as_ref(), |service| {
         let variable = service.upsert_variable(
             &payload.environment_id,
@@ -620,7 +596,7 @@ pub fn environment_variable_upsert(payload: EnvironmentVariableUpsertCommand, st
 }
 
 #[tauri::command]
-pub fn environment_variable_delete(payload: DeleteByIdCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<contracts::commands::AckResponse, AppError> {
+fn environment_variable_delete(payload: DeleteByIdCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<contracts::commands::AckResponse, AppError> {
     with_environment_service(state.inner().as_ref(), |service| {
         service.delete_variable(&payload.id)?;
         Ok(contracts::commands::AckResponse {
@@ -633,7 +609,7 @@ pub fn environment_variable_delete(payload: DeleteByIdCommand, state: State<'_, 
 }
 
 #[tauri::command]
-pub fn api_testcase_upsert(payload: contracts::dto::ApiTestCaseDto, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<contracts::dto::ApiTestCaseDto, AppError> {
+fn api_testcase_upsert(payload: contracts::dto::ApiTestCaseDto, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<contracts::dto::ApiTestCaseDto, AppError> {
     if !payload.validate_type() {
         return Err(map_command_error(TestForgeError::Validation(
             "api.testcase.upsert requires test case type 'api'".to_string(),
@@ -648,7 +624,7 @@ pub fn api_testcase_upsert(payload: contracts::dto::ApiTestCaseDto, state: State
 }
 
 #[tauri::command]
-pub fn api_testcase_delete(payload: DeleteByIdCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<contracts::commands::AckResponse, AppError> {
+fn api_testcase_delete(payload: DeleteByIdCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<contracts::commands::AckResponse, AppError> {
     with_api_execution_service(state.inner().as_ref(), |service| {
         service.delete_test_case(&payload.id)?;
         Ok(contracts::commands::AckResponse {
@@ -661,10 +637,10 @@ pub fn api_testcase_delete(payload: DeleteByIdCommand, state: State<'_, std::syn
 }
 
 #[tauri::command]
-pub async fn api_execute(payload: ApiExecuteCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<ApiExecutionResultDto, AppError> {
-    let db = state
-        .db()
-        .read()
+fn api_execute(payload: ApiExecuteCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<ApiExecutionResultDto, AppError> {
+    let db_handle = state.db();
+    let db = db_handle
+        .lock()
         .map_err(|_| AppError::internal("Database lock poisoned"))?;
     let secret_handle = state.secret_service();
     let secret_guard = secret_handle
@@ -677,15 +653,12 @@ pub async fn api_execute(payload: ApiExecuteCommand, state: State<'_, std::sync:
         &secret_guard,
     );
 
-    match service
-        .execute(
-            payload.test_case_id.as_deref(),
-            &payload.environment_id,
-            payload.request,
-            payload.assertions,
-        )
-        .await
-    {
+    match tauri::async_runtime::block_on(service.execute(
+        payload.test_case_id.as_deref(),
+        &payload.environment_id,
+        payload.request,
+        payload.assertions,
+    )) {
         Ok(result) => Ok(result),
         Err(error @ TestForgeError::Validation(_)) => Ok(to_preflight_api_result(error)),
         Err(error) => Err(map_command_error(error)),
@@ -693,7 +666,7 @@ pub async fn api_execute(payload: ApiExecuteCommand, state: State<'_, std::sync:
 }
 
 #[tauri::command]
-pub fn browser_health_check(
+fn browser_health_check(
     payload: BrowserHealthCheckCommand,
     state: State<'_, std::sync::Arc<AppState>>,
     app: tauri::AppHandle,
@@ -706,7 +679,7 @@ pub fn browser_health_check(
 }
 
 #[tauri::command]
-pub fn shell_metadata_get(
+fn shell_metadata_get(
     payload: EmptyCommandPayload,
     state: State<'_, std::sync::Arc<AppState>>,
 ) -> std::result::Result<ShellMetadataDto, AppError> {
@@ -715,7 +688,7 @@ pub fn shell_metadata_get(
 }
 
 #[tauri::command]
-pub fn browser_recording_start(
+fn browser_recording_start(
     payload: BrowserRecordingStartCommand,
     state: State<'_, std::sync::Arc<AppState>>,
     app: tauri::AppHandle,
@@ -736,7 +709,7 @@ pub fn browser_recording_start(
 }
 
 #[tauri::command]
-pub fn browser_recording_stop(
+fn browser_recording_stop(
     payload: BrowserRecordingStopCommand,
     state: State<'_, std::sync::Arc<AppState>>,
     app: tauri::AppHandle,
@@ -746,7 +719,7 @@ pub fn browser_recording_stop(
 }
 
 #[tauri::command]
-pub fn browser_recording_cancel(
+fn browser_recording_cancel(
     payload: BrowserRecordingCancelCommand,
     state: State<'_, std::sync::Arc<AppState>>,
     app: tauri::AppHandle,
@@ -762,7 +735,7 @@ pub fn browser_recording_cancel(
 }
 
 #[tauri::command]
-pub fn browser_replay_start(
+fn browser_replay_start(
     payload: BrowserReplayStartCommand,
     state: State<'_, std::sync::Arc<AppState>>,
     app: tauri::AppHandle,
@@ -772,7 +745,7 @@ pub fn browser_replay_start(
 }
 
 #[tauri::command]
-pub fn browser_replay_cancel(
+fn browser_replay_cancel(
     payload: BrowserReplayCancelCommand,
     state: State<'_, std::sync::Arc<AppState>>,
     app: tauri::AppHandle,
@@ -788,45 +761,60 @@ pub fn browser_replay_cancel(
 }
 
 #[tauri::command]
-pub async fn runner_suite_execute(
+fn runner_suite_execute(
     payload: RunnerSuiteExecuteCommand,
     state: State<'_, std::sync::Arc<AppState>>,
     app: tauri::AppHandle,
 ) -> std::result::Result<contracts::commands::RunnerSuiteExecuteResponse, AppError> {
+    let db_handle = state.db();
+    let db = db_handle
+        .lock()
+        .map_err(|_| AppError::internal("Database lock poisoned"))?;
+    let secret_service = state.secret_service();
+    let secret_guard = secret_service
+        .read()
+        .map_err(|_| AppError::internal("Secret service lock poisoned"))?;
+
     // runner.execution.started / runner.execution.completed are emitted inside RunnerOrchestrationService.
-    let service = with_runner_orchestration_service(state.inner().as_ref(), Ok)?;
-    service
-        .execute_suite(
-            state.inner().as_ref(),
-            &app,
-            &payload.suite_id,
-            &payload.environment_id,
-            payload.rerun_failed_from_run_id.as_deref(),
-        )
-        .await
+    let service = services::RunnerOrchestrationService::new(
+        RunnerRepository::new(db.connection()),
+        services::ApiExecutionService::new(
+            ApiRepository::new(db.connection()),
+            EnvironmentRepository::new(db.connection()),
+            &secret_guard,
+        ),
+        services::BrowserAutomationService::new(state.paths().clone()),
+    );
+    tauri::async_runtime::block_on(service.execute_suite(
+        state.inner().as_ref(),
+        &app,
+        &payload.suite_id,
+        &payload.environment_id,
+        payload.rerun_failed_from_run_id.as_deref(),
+    ))
 }
 
 #[tauri::command]
-pub fn runner_suite_list(
+fn runner_suite_list(
     _payload: EmptyCommandPayload,
     state: State<'_, std::sync::Arc<AppState>>,
 ) -> std::result::Result<Vec<contracts::dto::SuiteDto>, AppError> {
-    let db = state
-        .db()
-        .read()
+    let db_handle = state.db();
+    let db = db_handle
+        .lock()
         .map_err(|_| AppError::internal("Database lock poisoned"))?;
     let repository = RunnerRepository::new(db.connection());
     repository.list_suites().map_err(map_command_error)
 }
 
 #[tauri::command]
-pub fn runner_run_history(
+fn runner_run_history(
     payload: RunnerRunHistoryCommand,
     state: State<'_, std::sync::Arc<AppState>>,
 ) -> std::result::Result<Vec<RunHistoryEntryDto>, AppError> {
-    let db = state
-        .db()
-        .read()
+    let db_handle = state.db();
+    let db = db_handle
+        .lock()
         .map_err(|_| AppError::internal("Database lock poisoned"))?;
     let repository = RunnerRepository::new(db.connection());
     repository
@@ -835,25 +823,42 @@ pub fn runner_run_history(
 }
 
 #[tauri::command]
-pub fn runner_run_detail(
+fn runner_run_detail(
     payload: RunnerRunDetailCommand,
     state: State<'_, std::sync::Arc<AppState>>,
 ) -> std::result::Result<RunDetailDto, AppError> {
-    let db = state
-        .db()
-        .read()
+    let db_handle = state.db();
+    let db = db_handle
+        .lock()
         .map_err(|_| AppError::internal("Database lock poisoned"))?;
     let repository = RunnerRepository::new(db.connection());
     repository.load_run_detail(&payload.run_id).map_err(map_command_error)
 }
 
 #[tauri::command]
-pub fn runner_suite_cancel(
+fn runner_suite_cancel(
     payload: RunnerSuiteCancelCommand,
     state: State<'_, std::sync::Arc<AppState>>,
     app: tauri::AppHandle,
 ) -> std::result::Result<contracts::commands::AckResponse, AppError> {
-    let service = with_runner_orchestration_service(state.inner().as_ref(), Ok)?;
+    let db_handle = state.db();
+    let db = db_handle
+        .lock()
+        .map_err(|_| AppError::internal("Database lock poisoned"))?;
+    let secret_service = state.secret_service();
+    let secret_guard = secret_service
+        .read()
+        .map_err(|_| AppError::internal("Secret service lock poisoned"))?;
+
+    let service = services::RunnerOrchestrationService::new(
+        RunnerRepository::new(db.connection()),
+        services::ApiExecutionService::new(
+            ApiRepository::new(db.connection()),
+            EnvironmentRepository::new(db.connection()),
+            &secret_guard,
+        ),
+        services::BrowserAutomationService::new(state.paths().clone()),
+    );
     let cancelled = service.cancel_suite(state.inner().as_ref(), &payload.run_id, &app)?;
 
     Ok(contracts::commands::AckResponse {
@@ -864,7 +869,7 @@ pub fn runner_suite_cancel(
 }
 
 #[tauri::command]
-pub fn data_table_list(_payload: EmptyCommandPayload, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<Vec<DataTableDto>, AppError> {
+fn data_table_list(_payload: EmptyCommandPayload, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<Vec<DataTableDto>, AppError> {
     with_data_table_repository(state.inner().as_ref(), |repository| {
         let tables = repository.find_all()?;
         tables
@@ -879,7 +884,7 @@ pub fn data_table_list(_payload: EmptyCommandPayload, state: State<'_, std::sync
 }
 
 #[tauri::command]
-pub fn data_table_create(payload: DataTableCreateCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<DataTableDto, AppError> {
+fn data_table_create(payload: DataTableCreateCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<DataTableDto, AppError> {
     with_data_table_repository(state.inner().as_ref(), |repository| {
         let mut table = DataTable::new(payload.name, to_model_columns(&payload.columns));
         table.description = payload.description.filter(|value| !value.trim().is_empty());
@@ -890,7 +895,7 @@ pub fn data_table_create(payload: DataTableCreateCommand, state: State<'_, std::
 }
 
 #[tauri::command]
-pub fn data_table_update(payload: DataTableUpdateCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<DataTableDto, AppError> {
+fn data_table_update(payload: DataTableUpdateCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<DataTableDto, AppError> {
     with_data_table_repository(state.inner().as_ref(), |repository| {
         let mut table = repository.find_by_id(&payload.id)?;
         table.name = payload.name;
@@ -904,7 +909,7 @@ pub fn data_table_update(payload: DataTableUpdateCommand, state: State<'_, std::
 }
 
 #[tauri::command]
-pub fn data_table_delete(payload: DeleteByIdCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<contracts::commands::AckResponse, AppError> {
+fn data_table_delete(payload: DeleteByIdCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<contracts::commands::AckResponse, AppError> {
     with_data_table_repository(state.inner().as_ref(), |repository| {
         repository.delete(&payload.id)?;
         Ok(contracts::commands::AckResponse {
@@ -917,7 +922,7 @@ pub fn data_table_delete(payload: DeleteByIdCommand, state: State<'_, std::sync:
 }
 
 #[tauri::command]
-pub fn data_table_row_upsert(payload: DataTableRowUpsertCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<DataTableRowDto, AppError> {
+fn data_table_row_upsert(payload: DataTableRowUpsertCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<DataTableRowDto, AppError> {
     with_data_table_repository(state.inner().as_ref(), |repository| {
         let table = repository.find_by_id(&payload.table_id)?;
         if payload.row.values.len() != table.columns.len() {
@@ -944,7 +949,7 @@ pub fn data_table_row_upsert(payload: DataTableRowUpsertCommand, state: State<'_
 }
 
 #[tauri::command]
-pub fn data_table_row_delete(payload: DeleteByIdCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<contracts::commands::AckResponse, AppError> {
+fn data_table_row_delete(payload: DeleteByIdCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<contracts::commands::AckResponse, AppError> {
     with_data_table_repository(state.inner().as_ref(), |repository| {
         repository.delete_row(&payload.id)?;
         Ok(contracts::commands::AckResponse {
@@ -957,7 +962,7 @@ pub fn data_table_row_delete(payload: DeleteByIdCommand, state: State<'_, std::s
 }
 
 #[tauri::command]
-pub fn data_table_import(payload: DataTableImportCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<DataTableImportResultDto, AppError> {
+fn data_table_import(payload: DataTableImportCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<DataTableImportResultDto, AppError> {
     with_data_table_repository(state.inner().as_ref(), |repository| {
         let format = ensure_valid_import_format(&payload.format)?;
         let (columns, imported_rows) = parse_import_payload(&format, &payload.content)?;
@@ -999,7 +1004,7 @@ pub fn data_table_import(payload: DataTableImportCommand, state: State<'_, std::
 }
 
 #[tauri::command]
-pub fn data_table_export(payload: DataTableExportCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<DataTableExportDto, AppError> {
+fn data_table_export(payload: DataTableExportCommand, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<DataTableExportDto, AppError> {
     with_data_table_repository(state.inner().as_ref(), |repository| {
         let table = load_data_table_dto(&repository, &payload.id)?;
         let format = ensure_valid_import_format(&payload.format)?;
@@ -1017,17 +1022,21 @@ pub fn data_table_export(payload: DataTableExportCommand, state: State<'_, std::
             "content": content,
             "file_path": state.paths().exports.to_string_lossy().to_string(),
         });
-        let report_export = artifact_service.persist_report_export(
+        let report_export = artifact_service
+            .persist_report_export(
             &format!("data-table-{}", payload.id),
             "json",
             &report_payload,
-        )?;
+        )
+        .map_err(|error| TestForgeError::InvalidOperation(error.to_string()))?;
 
         let db = state.db();
         let db_guard = db
-            .read()
+            .lock()
             .map_err(|_| TestForgeError::InvalidOperation("Database lock poisoned".to_string()))?;
-        artifact_service.persist_artifact_manifest(db_guard.connection(), &report_export.manifest)?;
+        artifact_service
+            .persist_artifact_manifest(db_guard.connection(), &report_export.manifest)
+            .map_err(|error| TestForgeError::InvalidOperation(error.to_string()))?;
 
         Ok(DataTableExportDto {
             file_name: format!("{}.{}", table.name.to_lowercase().replace(' ', "-"), format),
@@ -1037,4 +1046,113 @@ pub fn data_table_export(payload: DataTableExportCommand, state: State<'_, std::
         })
     })
     .map_err(map_command_error)
+}
+
+/// Output of the backend storage bootstrap.
+pub struct BootstrapResult {
+    pub app_state: Arc<AppState>,
+    pub paths: AppPaths,
+}
+
+/// Bootstrap storage and state for the desktop app.
+pub fn bootstrap(app_handle: &tauri::AppHandle) -> AppResult<BootstrapResult> {
+    let app_data_dir = app_handle.path().app_data_dir().map_err(|error| {
+        AppError::storage_path(format!("Không xác định được app data directory: {error}"))
+    })?;
+
+    let paths = AppPaths::new(app_data_dir);
+    let is_first_run = paths.detect_first_run();
+    paths.bootstrap()?;
+
+    let database = Database::new(paths.database_file())?;
+
+    let secret_service = SecretService::new(paths.base.clone());
+    let degraded_mode = bootstrap_secret_service(&database, &secret_service, &paths)?;
+
+    let shell_bootstrap_snapshot = state::ShellBootstrapSnapshot {
+        app_version: app_handle.package_info().version.to_string(),
+        is_first_run,
+        degraded_mode,
+        master_key_initialized: !degraded_mode,
+    };
+
+    let app_state = Arc::new(AppState::new(
+        database,
+        secret_service,
+        paths.clone(),
+        shell_bootstrap_snapshot,
+    ));
+    app_state.set_degraded_mode(degraded_mode);
+    app_state.set_master_key_initialized(!degraded_mode);
+
+    Ok(BootstrapResult { app_state, paths })
+}
+
+fn bootstrap_secret_service(
+    database: &Database,
+    secret_service: &SecretService,
+    paths: &AppPaths,
+) -> AppResult<bool> {
+    let key_exists = paths.master_key_file().exists();
+    let has_persisted_secrets = database.has_persisted_secrets()?;
+
+    if !key_exists && has_persisted_secrets {
+        secret_service.force_degraded();
+        return Ok(true);
+    }
+
+    match secret_service.initialize() {
+        Ok(_) => Ok(false),
+        Err(TestForgeError::MasterKeyCorrupted) => {
+            secret_service.force_degraded();
+            Ok(true)
+        }
+        Err(error) => Err(AppError::storage_init(format!(
+            "Không thể khởi tạo secret storage: {error}"
+        ))),
+    }
+}
+
+/// Run the Tauri shell.
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
+        .setup(|app| {
+            let result = bootstrap(app.handle())?;
+            app.manage(result.app_state);
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            environment_list,
+            environment_create,
+            environment_update,
+            environment_delete,
+            environment_variable_upsert,
+            environment_variable_delete,
+            api_testcase_upsert,
+            api_testcase_delete,
+            api_execute,
+            browser_health_check,
+            shell_metadata_get,
+            browser_recording_start,
+            browser_recording_stop,
+            browser_recording_cancel,
+            browser_replay_start,
+            browser_replay_cancel,
+            runner_suite_execute,
+            runner_suite_list,
+            runner_run_history,
+            runner_run_detail,
+            runner_suite_cancel,
+            data_table_list,
+            data_table_create,
+            data_table_update,
+            data_table_delete,
+            data_table_row_upsert,
+            data_table_row_delete,
+            data_table_import,
+            data_table_export
+        ])
+        .run(tauri::generate_context![])
+        .expect("Error while running Tauri application");
 }

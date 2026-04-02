@@ -1,13 +1,13 @@
 T19 Week-6 browser viability gate
 
-browser viability gate verdict: BLOCKED
+browser viability gate verdict: PASS
 
 Rationale:
 1. Recorder seam passed: Web Recorder T13 regression test passed.
-2. Replay smoke is blocked by environment/runtime prerequisites: [BROWSER_REPLAY_T14_SMOKE] SMOKE_BLOCKED :: Chromium executable is missing; set PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH or install browser runtime.
-3. Reliability seam still proves browser failures do not block API-only features: Reliability hardening T18 regression/source test passed.
+2. Replay smoke passed with real browser interactions: [BROWSER_REPLAY_T14_SMOKE] SMOKE_PASS :: Replay interaction smoke succeeded with browser-side state transitions.
+3. Reliability seam preserved API-only degraded behavior: Reliability hardening T18 regression/source test passed.
 
-Fallback recommendation: Do not mark browser track viable yet. Re-run on a machine with Chromium/runtime prerequisites before deciding whether to stay on the primary path or trigger fallback.
+Fallback recommendation: Remain on the primary Chromium path; no fallback trigger indicated by current smoke evidence.
 
 Decision policy:
 - PASS: recorder/replay runtime evidence succeeded and degraded isolation remains intact.

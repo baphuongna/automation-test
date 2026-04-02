@@ -21,14 +21,32 @@ const path = require('path');
 
 async function sleep(ms){ return new Promise((r)=>setTimeout(r, ms)); }
 
-async function waitWs(port, timeoutMs){
+function normalizeUrl(value){
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  return raw.endsWith('/') ? raw.slice(0, -1) : raw;
+}
+
+async function waitWs(port, timeoutMs, expectedUrl){
+  const normalizedExpected = normalizeUrl(expectedUrl);
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
       const response = await fetch('http://127.0.0.1:' + port + '/json/list');
       if (response.ok) {
         const pages = await response.json();
-        const page = Array.isArray(pages) ? pages.find((item)=>item.webSocketDebuggerUrl) : null;
+        const page = Array.isArray(pages)
+          ? pages.find((item) => {
+              if (!item || !item.webSocketDebuggerUrl || item.type !== 'page') return false;
+              if (!normalizedExpected) return true;
+              const normalizedPageUrl = normalizeUrl(item.url);
+              return normalizedPageUrl === normalizedExpected;
+            }) ||
+            pages.find((item) => {
+              if (!item || !item.webSocketDebuggerUrl || item.type !== 'page') return false;
+              return !String(item.url || '').startsWith('chrome-extension://');
+            })
+          : null;
         if (page && page.webSocketDebuggerUrl) return page.webSocketDebuggerUrl;
       }
     } catch (_) {}
@@ -45,14 +63,13 @@ async function run(){
     '--headless', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
     '--window-size=1280,720',
     '--remote-debugging-port=' + port,
-    '--virtual-time-budget=3000',
     '--user-data-dir=' + userDir,
     payload.url,
   ], { stdio: ['ignore', 'pipe', 'pipe'] });
 
   let ws;
   try {
-    const wsUrl = await waitWs(port, 7000);
+    const wsUrl = await waitWs(port, 7000, payload.url);
     ws = new WebSocket(wsUrl);
     await new Promise((resolve, reject) => {
       ws.addEventListener('open', () => resolve());
@@ -66,21 +83,54 @@ async function run(){
       if (data.id && pending.has(data.id)) {
         const entry = pending.get(data.id);
         pending.delete(data.id);
-        if (data.error) entry.reject(new Error(data.error.message || 'CDP error'));
-        else entry.resolve(data.result || {});
+        if (data.error) {
+          entry.reject(new Error(data.error.message || 'CDP error'));
+        } else if (data.exceptionDetails) {
+          entry.reject(new Error(data.exceptionDetails.text || 'Runtime.evaluate exception'));
+        } else {
+          entry.resolve(data.result || {});
+        }
       }
     });
 
     const send = (method, params = {}) => {
       id += 1;
       const currentId = id;
-      ws.send(JSON.stringify({ id: currentId, method, params }));
-      return new Promise((resolve, reject) => pending.set(currentId, { resolve, reject }));
+      return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          pending.delete(currentId);
+          reject(new Error('CDP command timeout: ' + method));
+        }, 5000);
+        pending.set(currentId, {
+          resolve: (value) => {
+            clearTimeout(timeout);
+            resolve(value);
+          },
+          reject: (error) => {
+            clearTimeout(timeout);
+            reject(error);
+          },
+        });
+        ws.send(JSON.stringify({ id: currentId, method, params }));
+      });
     };
 
     await send('Page.enable');
     await send('Runtime.enable');
     await send('DOM.enable');
+
+    const readinessExpr = "(() => { const required = ['#btn', '#name', '#role', '#agree']; const ready = document.readyState === 'complete' || document.readyState === 'interactive'; const allPresent = required.every((selector) => document.querySelector(selector)); return ready && allPresent; })()";
+    const readyDeadline = Date.now() + 5000;
+    let ready = false;
+    while (Date.now() < readyDeadline) {
+      const readyResult = await send('Runtime.evaluate', { expression: readinessExpr, awaitPromise: true, returnByValue: true });
+      ready = Boolean(readyResult?.result?.value);
+      if (ready) break;
+      await sleep(60);
+    }
+    if (!ready) {
+      throw new Error('Replay target DOM not ready');
+    }
 
     const clickExpr = "(() => { const el = document.querySelector('#btn'); if (!el) throw new Error('btn missing'); el.click(); return true; })()";
     await send('Runtime.evaluate', { expression: clickExpr, awaitPromise: true, returnByValue: true });

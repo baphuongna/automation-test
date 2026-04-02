@@ -1,11 +1,11 @@
 //! Data Table Repository
-//! 
+//!
 //! Provides CRUD operations for data tables and their rows.
 
 use crate::error::{Result, TestForgeError};
-use crate::models::{DataTable, DataTableRow, ColumnDefinition};
-use rusqlite::{Connection, params};
+use crate::models::{ColumnDefinition, DataTable, DataTableRow};
 use chrono::Utc;
+use rusqlite::{params, Connection};
 
 /// Repository for data tables and their rows
 pub struct DataTableRepository<'a> {
@@ -27,7 +27,7 @@ impl<'a> DataTableRepository<'a> {
             .map_err(TestForgeError::Validation)?;
 
         let columns_json = serde_json::to_string(&table.columns)?;
-        
+
         let sql = r#"
             INSERT INTO data_tables (id, name, description, columns_json, created_at, updated_at)
             VALUES (?1, ?2, ?3, ?4, ?5, ?6)
@@ -58,8 +58,8 @@ impl<'a> DataTableRepository<'a> {
 
         let table = self.conn.query_row(sql, params![id], |row| {
             let columns_json: String = row.get(3)?;
-            let columns: Vec<ColumnDefinition> = serde_json::from_str(&columns_json)
-                .unwrap_or_default();
+            let columns: Vec<ColumnDefinition> =
+                serde_json::from_str(&columns_json).unwrap_or_default();
 
             Ok(DataTable {
                 id: row.get(0)?,
@@ -86,12 +86,13 @@ impl<'a> DataTableRepository<'a> {
             ORDER BY name ASC
         "#;
 
-        let tables = self.conn
+        let tables = self
+            .conn
             .prepare(sql)?
             .query_map([], |row| {
                 let columns_json: String = row.get(3)?;
-                let columns: Vec<ColumnDefinition> = serde_json::from_str(&columns_json)
-                    .unwrap_or_default();
+                let columns: Vec<ColumnDefinition> =
+                    serde_json::from_str(&columns_json).unwrap_or_default();
 
                 Ok(DataTable {
                     id: row.get(0)?,
@@ -118,7 +119,7 @@ impl<'a> DataTableRepository<'a> {
             .map_err(TestForgeError::Validation)?;
 
         let columns_json = serde_json::to_string(&table.columns)?;
-        
+
         let sql = r#"
             UPDATE data_tables
             SET name = ?1, description = ?2, columns_json = ?3, updated_at = ?4
@@ -137,7 +138,9 @@ impl<'a> DataTableRepository<'a> {
         )?;
 
         if rows_affected == 0 {
-            return Err(TestForgeError::DataTableNotFound { id: table.id.clone() });
+            return Err(TestForgeError::DataTableNotFound {
+                id: table.id.clone(),
+            });
         }
 
         Ok(())
@@ -152,10 +155,9 @@ impl<'a> DataTableRepository<'a> {
         )?;
 
         // Then delete the table
-        let rows_affected = self.conn.execute(
-            "DELETE FROM data_tables WHERE id = ?1",
-            params![id],
-        )?;
+        let rows_affected = self
+            .conn
+            .execute("DELETE FROM data_tables WHERE id = ?1", params![id])?;
 
         if rows_affected == 0 {
             return Err(TestForgeError::DataTableNotFound { id: id.to_string() });
@@ -168,8 +170,7 @@ impl<'a> DataTableRepository<'a> {
 
     /// Create a data table row
     pub fn create_row(&self, row: &DataTableRow) -> Result<()> {
-        row
-            .validate_for_storage()
+        row.validate_for_storage()
             .map_err(TestForgeError::Validation)?;
 
         let sql = r#"
@@ -203,7 +204,8 @@ impl<'a> DataTableRepository<'a> {
             ORDER BY row_index ASC
         "#;
 
-        let rows = self.conn
+        let rows = self
+            .conn
             .prepare(sql)?
             .query_map(params![data_table_id], |row| {
                 Ok(DataTableRow {
@@ -234,7 +236,8 @@ impl<'a> DataTableRepository<'a> {
             ORDER BY row_index ASC
         "#;
 
-        let rows = self.conn
+        let rows = self
+            .conn
             .prepare(sql)?
             .query_map(params![data_table_id], |row| {
                 Ok(DataTableRow {
@@ -285,8 +288,7 @@ impl<'a> DataTableRepository<'a> {
 
     /// Update a data table row
     pub fn update_row(&self, row: &DataTableRow) -> Result<()> {
-        row
-            .validate_for_storage()
+        row.validate_for_storage()
             .map_err(TestForgeError::Validation)?;
 
         let sql = r#"
@@ -315,10 +317,9 @@ impl<'a> DataTableRepository<'a> {
 
     /// Delete a data table row
     pub fn delete_row(&self, id: &str) -> Result<()> {
-        let rows_affected = self.conn.execute(
-            "DELETE FROM data_table_rows WHERE id = ?1",
-            params![id],
-        )?;
+        let rows_affected = self
+            .conn
+            .execute("DELETE FROM data_table_rows WHERE id = ?1", params![id])?;
 
         if rows_affected == 0 {
             return Err(TestForgeError::DataTableRowNotFound { id: id.to_string() });
@@ -395,17 +396,10 @@ mod tests {
         let (db, _temp_dir) = create_test_repository();
         let repo = DataTableRepository::new(db.connection());
 
-        let table = DataTable::from_column_names(
-            "Users".to_string(),
-            vec!["username".to_string()],
-        );
+        let table = DataTable::from_column_names("Users".to_string(), vec!["username".to_string()]);
         repo.create(&table).unwrap();
 
-        let row = DataTableRow::with_index(
-            table.id.clone(),
-            vec!["alice".to_string()],
-            0,
-        );
+        let row = DataTableRow::with_index(table.id.clone(), vec!["alice".to_string()], 0);
         repo.create_row(&row).unwrap();
 
         let stored_rows = repo.find_rows_by_table(&table.id).unwrap();

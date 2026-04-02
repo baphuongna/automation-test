@@ -94,19 +94,21 @@ assert(
 );
 
 assert(
-  rustLibSource.includes("pub fn data_table_list") &&
-    rustLibSource.includes("pub fn data_table_create") &&
-    rustLibSource.includes("pub fn data_table_import") &&
-    rustLibSource.includes("pub fn data_table_export"),
+  rustLibSource.includes("fn data_table_list") &&
+    rustLibSource.includes("fn data_table_create") &&
+    rustLibSource.includes("fn data_table_import") &&
+    rustLibSource.includes("fn data_table_export"),
   "Rust Tauri handlers must expose the T7 data table commands."
 );
 
 assert(
-  rustMainSource.includes("data_table_list") &&
-    rustMainSource.includes("data_table_create") &&
-    rustMainSource.includes("data_table_import") &&
-    rustMainSource.includes("data_table_export"),
-  "Tauri bootstrap must register the T7 data table handlers."
+  rustLibSource.includes("tauri::generate_handler![") &&
+    rustLibSource.includes("data_table_list") &&
+    rustLibSource.includes("data_table_create") &&
+    rustLibSource.includes("data_table_import") &&
+    rustLibSource.includes("data_table_export") &&
+    rustMainSource.includes("testforge::run();"),
+  "Tauri bootstrap must register the T7 data table handlers through the library run() entrypoint."
 );
 
 console.log("Data Manager T7 contract and UI regression test passed.");

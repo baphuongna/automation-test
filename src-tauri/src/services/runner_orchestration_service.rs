@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use chrono::Utc;
 use serde_json::json;
+use tauri::Emitter;
 use uuid::Uuid;
 
 use crate::contracts::commands::RunnerSuiteExecuteResponse;

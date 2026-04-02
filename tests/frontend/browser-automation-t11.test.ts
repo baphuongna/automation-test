@@ -59,17 +59,17 @@ assert(
 );
 
 assert(
-  rustLibSource.includes("pub fn browser_health_check") &&
+  rustLibSource.includes("fn browser_health_check") &&
     rustLibSource.includes("BrowserHealthDto") &&
     rustLibSource.includes("BrowserAutomationService::new"),
   "T11 phải thêm backend handler browser_health_check trả BrowserHealthDto thông qua BrowserAutomationService."
 );
 
 assert(
-  rustMainSource.includes("browser_health_check") &&
-    rustMainSource.includes("generate_handler![") &&
-    rustMainSource.includes("browser_health_check"),
-  "T11 phải đăng ký browser_health_check trong Tauri invoke handler."
+  rustLibSource.includes("tauri::generate_handler![") &&
+    rustLibSource.includes("browser_health_check") &&
+    rustMainSource.includes("testforge::run();"),
+  "T11 phải đăng ký browser_health_check thông qua library run() entrypoint của Tauri runtime."
 );
 
 assert(
