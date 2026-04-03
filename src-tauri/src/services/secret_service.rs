@@ -225,6 +225,14 @@ impl SecretService {
                 let chars: Vec<char> = value.chars().collect();
                 format!("{}*{}", chars[0], chars[2])
             }
+            4 => {
+                let chars: Vec<char> = value.chars().collect();
+                format!("{}{}**", chars[0], chars[1])
+            }
+            5 => {
+                let chars: Vec<char> = value.chars().collect();
+                format!("{}***{}{}", chars[0], chars[len - 2], chars[len - 1])
+            }
             _ => {
                 let chars: Vec<char> = value.chars().collect();
                 format!(

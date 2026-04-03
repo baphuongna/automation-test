@@ -130,6 +130,56 @@ assert(
 );
 
 assert(
+  rustRunnerServiceSource.includes("match target.test_case_type") &&
+    rustRunnerServiceSource.includes("TestCaseType::Api =>") &&
+    rustRunnerServiceSource.includes("TestCaseType::Ui =>") &&
+    rustRunnerServiceSource.includes("execute_api_target") &&
+    rustRunnerServiceSource.includes("execute_ui_target") &&
+    !rustRunnerServiceSource.includes("preview-only"),
+  "T15 phải chứng minh orchestration mixed suite thật sự điều phối cả API và UI targets qua seam backend riêng, không dựa preview-only path."
+);
+
+assert(
+  rustRunnerServiceSource.includes("load_failed_targets") &&
+    rustRunnerServiceSource.includes("collect::<HashSet<(String, Option<String>)>>()") &&
+    rustRunnerServiceSource.includes("rerun_target_keys.contains(&(case.test_case_id.clone(), Some(row.id.clone())))") &&
+    rustRunnerServiceSource.includes("rerun_target_keys.contains(&(case.test_case_id.clone(), None))") &&
+    !rustRunnerServiceSource.includes("rerun theo case-level set"),
+  "T15 phải giới hạn rerun-failed theo target case+dataRow đã fail thay vì nới scope ở level test case chung chung."
+);
+
+assert(
+  rustRunnerRepositorySource.includes("SELECT DISTINCT trr.case_id, trr.data_row_id") &&
+    rustRunnerRepositorySource.includes("WHERE trr.run_id = ?1 AND tr.suite_id = ?2 AND trr.status = 'failed'") &&
+    rustRunnerRepositorySource.includes("pub struct FailedRunTarget") &&
+    rustRunnerRepositorySource.includes("pub data_row_id: Option<String>"),
+  "T15 phải giữ rerun-failed repository seam dựa trên failed persisted targets gồm cả dataRow provenance."
+);
+
+assert(
+  rustRunnerServiceSource.includes("state.is_run_cancel_requested(run_id)?") &&
+    rustRunnerServiceSource.includes("RunStatus::Cancelled") &&
+    rustRunnerServiceSource.includes("finalize_run(") &&
+    rustRunnerServiceSource.includes("if !updated {") &&
+    rustRunnerServiceSource.includes("return self.runner_repository.load_run_result(run_id);") &&
+    rustStateSource.includes("pub fn request_run_cancel(&self, expected_run_id: &str)") &&
+    rustStateSource.includes("if *cancel_requested {") &&
+    rustStateSource.includes("RunState::Idle => Ok(false)") &&
+    rustStateSource.includes("pub fn finish_run(&self, expected_run_id: &str)"),
+  "T15 phải giữ cancel idempotent xuyên suốt app state + orchestration finalization để repeated cancel hoặc terminal cleanup không tạo completion giả."
+);
+
+assert(
+  rustRunnerServiceSource.includes("RunnerExecutionStartedEvent") &&
+    rustRunnerServiceSource.includes("RunnerExecutionProgressEvent") &&
+    rustRunnerServiceSource.includes("app.emit(\"runner.execution.completed\"") &&
+    rustRunnerServiceSource.includes("data_row_id: data_row_id.map(ToOwned::to_owned)") &&
+    rustRunnerServiceSource.includes("completed_count") &&
+    rustRunnerServiceSource.includes("failed_count"),
+  "T15 phải phát started/progress/completed events từ orchestration thật để progress/history/detail desktop path bám cùng persisted run semantics."
+);
+
+assert(
   migrationSource.includes("CREATE TABLE IF NOT EXISTS test_runs") &&
     migrationSource.includes("CREATE TABLE IF NOT EXISTS test_run_results") &&
     migrationSource.includes("data_row_id TEXT") &&

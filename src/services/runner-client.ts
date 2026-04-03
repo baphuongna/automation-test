@@ -29,7 +29,7 @@ export const runnerClient = {
     return result.data;
   },
 
-  async executeSuite(input: { suiteId: string; environmentId: string; rerunFailedFromRunId?: string }) {
+  async executeSuite(input: { suiteId: string; environmentId: string } | { suiteId: string; environmentId: string; rerunFailedFromRunId: string }) {
     const result = await invokeCommand("runner.suite.execute", input);
     if (!result.success || result.data === null) {
       throw result.error ?? new Error("Missing command result for runner.suite.execute");

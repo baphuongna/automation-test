@@ -1,5 +1,5 @@
 //! Cryptography utilities
-//! 
+//!
 //! Provides helper functions for cryptographic operations.
 
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
@@ -30,7 +30,7 @@ mod tests {
     fn test_random_bytes_length() {
         let bytes = random_bytes(32);
         assert_eq!(bytes.len(), 32);
-        
+
         let bytes2 = random_bytes(16);
         assert_eq!(bytes2.len(), 16);
     }
@@ -38,8 +38,8 @@ mod tests {
     #[test]
     fn test_base64_encode_decode() {
         let original = b"Hello, World!";
-        let encoded = encode_base64(original.as_bytes());
+        let encoded = encode_base64(original);
         let decoded = decode_base64(&encoded).unwrap();
-        assert_eq!(decoded, original.as_bytes());
+        assert_eq!(decoded, original);
     }
 }

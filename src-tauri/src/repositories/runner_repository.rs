@@ -57,6 +57,15 @@ pub struct FailedRunTarget {
     pub data_row_id: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct RunStatusCounts {
+    pub passed_count: u32,
+    pub failed_count: u32,
+    pub skipped_count: u32,
+    pub cancelled_count: u32,
+    pub completed_count: u32,
+}
+
 pub struct RunnerRepository<'a> {
     conn: &'a Connection,
 }
@@ -418,13 +427,38 @@ impl<'a> RunnerRepository<'a> {
         Ok(changed > 0)
     }
 
+    pub fn count_case_results(&self, run_id: &str) -> Result<RunStatusCounts> {
+        let counts = self.conn.query_row(
+            "SELECT
+                 SUM(CASE WHEN status = 'passed' THEN 1 ELSE 0 END) AS passed_count,
+                 SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed_count,
+                 SUM(CASE WHEN status = 'skipped' THEN 1 ELSE 0 END) AS skipped_count,
+                 SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_count,
+                 COUNT(*) AS completed_count
+             FROM test_run_results
+             WHERE run_id = ?1",
+            params![run_id],
+            |row| {
+                Ok(RunStatusCounts {
+                    passed_count: row.get::<_, Option<i64>>(0)?.unwrap_or(0).max(0) as u32,
+                    failed_count: row.get::<_, Option<i64>>(1)?.unwrap_or(0).max(0) as u32,
+                    skipped_count: row.get::<_, Option<i64>>(2)?.unwrap_or(0).max(0) as u32,
+                    cancelled_count: row.get::<_, Option<i64>>(3)?.unwrap_or(0).max(0) as u32,
+                    completed_count: row.get::<_, i64>(4)?.max(0) as u32,
+                })
+            },
+        )?;
+
+        Ok(counts)
+    }
+
     pub fn load_failed_targets(
         &self,
         run_id: &str,
         suite_id: &str,
     ) -> Result<Vec<FailedRunTarget>> {
         let mut stmt = self.conn.prepare(
-            "SELECT trr.case_id, trr.data_row_id
+            "SELECT DISTINCT trr.case_id, trr.data_row_id
              FROM test_run_results trr
              JOIN test_runs tr ON tr.id = trr.run_id
              WHERE trr.run_id = ?1 AND tr.suite_id = ?2 AND trr.status = 'failed'",

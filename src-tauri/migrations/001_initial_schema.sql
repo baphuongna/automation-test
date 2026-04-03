@@ -155,10 +155,9 @@ CREATE INDEX IF NOT EXISTS idx_ui_steps_order ON ui_script_steps(script_id, step
 -- Purpose: Store data-driven test data tables
 CREATE TABLE IF NOT EXISTS data_tables (
     id TEXT PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL UNIQUE CHECK (trim(name) <> ''),
     description TEXT,
     columns_json TEXT NOT NULL DEFAULT '[]',
-    CHECK (trim(name) <> ''),
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );

@@ -11,7 +11,7 @@ use crate::contracts::dto::{RunResultDto, UiReplayResultDto};
 use crate::contracts::events::{RunnerExecutionProgressEvent, RunnerExecutionStartedEvent};
 use crate::error::{AppError, AppResult, TestForgeError};
 use crate::models::DataTableRow;
-use crate::repositories::{ApiRepository, PersistedSuiteCase, RunnerRepository};
+use crate::repositories::{ApiRepository, PersistedSuiteCase, RunStatusCounts, RunnerRepository};
 use crate::services::{ApiExecutionService, BrowserAutomationService, SecretService};
 use crate::state::AppState;
 
@@ -19,6 +19,12 @@ use crate::state::AppState;
 struct ExecutionTarget {
     test_case_id: String,
     test_case_type: TestCaseType,
+    data_row_id: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct ExecutedTargetOutcome {
+    status: RunStatus,
     data_row_id: Option<String>,
 }
 
@@ -213,10 +219,7 @@ impl<'a> RunnerOrchestrationService<'a> {
     ) -> AppResult<RunResultDto> {
         let _api_parallel_limit = state.config().max_concurrent_api.min(4);
         let total_count = execution_plan.len() as u32;
-        let mut passed_count = 0u32;
-        let mut failed_count = 0u32;
-        let skipped_count = 0u32;
-        let mut completed_count = 0u32;
+        let mut last_counts = RunStatusCounts::default();
 
         for target in execution_plan {
             if state.is_run_cancel_requested(run_id)? {
@@ -225,61 +228,59 @@ impl<'a> RunnerOrchestrationService<'a> {
                         app,
                         run_id,
                         RunStatus::Cancelled,
-                        passed_count,
-                        failed_count,
-                        skipped_count,
+                        &last_counts,
                     )
                     .map_err(map_runner_error)?;
                 return Ok(result);
             }
 
-            let target_result = match target.test_case_type {
+            let target_outcome = match target.test_case_type {
                 TestCaseType::Api => self
                     .execute_api_target(run_id, environment_id, target)
                     .await,
                 TestCaseType::Ui => self.execute_ui_target(state, app, run_id, target),
             };
 
-            let (status, data_row_id) = match target_result {
+            let target_outcome = match target_outcome {
                 Ok(value) => value,
                 Err(error) => {
+                    let counts = self
+                        .runner_repository
+                        .count_case_results(run_id)
+                        .unwrap_or(last_counts);
                     let _ = self.finalize_failed_run(
                         app,
                         run_id,
-                        passed_count,
-                        failed_count.saturating_add(1),
-                        skipped_count,
+                        &counts,
                     );
                     return Err(error);
                 }
             };
 
-            match status {
-                RunStatus::Passed => passed_count += 1,
-                RunStatus::Failed => failed_count += 1,
-                RunStatus::Skipped => {}
-                RunStatus::Cancelled => {}
-                RunStatus::Running | RunStatus::Queued | RunStatus::Idle => {}
-            }
-            completed_count += 1;
+            last_counts = self
+                .runner_repository
+                .count_case_results(run_id)
+                .map_err(map_runner_error)?;
 
             self.emit_progress(
                 app,
                 run_id,
                 &target.test_case_id,
                 target.test_case_type,
-                data_row_id.as_deref(),
-                status,
-                completed_count,
+                target_outcome.data_row_id.as_deref(),
+                target_outcome.status,
+                last_counts.completed_count,
                 total_count,
-                passed_count,
-                failed_count,
-                skipped_count,
+                last_counts.passed_count,
+                last_counts.failed_count,
+                last_counts.skipped_count,
             )?;
         }
 
-        let final_status = if failed_count > 0 {
+        let final_status = if last_counts.failed_count > 0 {
             RunStatus::Failed
+        } else if last_counts.cancelled_count > 0 {
+            RunStatus::Cancelled
         } else {
             RunStatus::Passed
         };
@@ -288,9 +289,7 @@ impl<'a> RunnerOrchestrationService<'a> {
             app,
             run_id,
             final_status,
-            passed_count,
-            failed_count,
-            skipped_count,
+            &last_counts,
         )
         .map_err(map_runner_error)
     }
@@ -300,7 +299,7 @@ impl<'a> RunnerOrchestrationService<'a> {
         run_id: &str,
         environment_id: &str,
         target: &ExecutionTarget,
-    ) -> AppResult<(RunStatus, Option<String>)> {
+    ) -> AppResult<ExecutedTargetOutcome> {
         let result = self
             .api_execution_service
             .execute_for_suite_run(
@@ -312,14 +311,14 @@ impl<'a> RunnerOrchestrationService<'a> {
             .await
             .map_err(map_runner_error)?;
 
-        Ok((
-            if result.status == "passed" {
+        Ok(ExecutedTargetOutcome {
+            status: if result.status == "passed" {
                 RunStatus::Passed
             } else {
                 RunStatus::Failed
             },
-            target.data_row_id.clone(),
-        ))
+            data_row_id: target.data_row_id.clone(),
+        })
     }
 
     fn execute_ui_target(
@@ -328,7 +327,7 @@ impl<'a> RunnerOrchestrationService<'a> {
         app: &tauri::AppHandle,
         run_id: &str,
         target: &ExecutionTarget,
-    ) -> AppResult<(RunStatus, Option<String>)> {
+    ) -> AppResult<ExecutedTargetOutcome> {
         let replay_result: UiReplayResultDto = self
             .browser_automation_service
             .start_replay_for_suite_run(state, app, run_id, &target.test_case_id)?;
@@ -339,32 +338,75 @@ impl<'a> RunnerOrchestrationService<'a> {
             _ => RunStatus::Failed,
         };
 
+        let request_log_json = json!({
+            "executor": "browserReplay",
+            "testCaseType": "ui",
+            "suiteRun": true,
+            "replayRunId": replay_result.run_id,
+            "dataRowId": target.data_row_id,
+        })
+        .to_string();
+
+        let response_log_json = json!({
+            "status": replay_result.status,
+            "failedStepId": replay_result.failed_step_id,
+            "hasScreenshot": replay_result.screenshot_path.is_some(),
+        })
+        .to_string();
+
+        let assertion_results_json = json!([
+            {
+                "kind": "uiReplaySummary",
+                "passed": status == RunStatus::Passed,
+                "status": replay_result.status,
+                "failedStepId": replay_result.failed_step_id,
+            }
+        ])
+        .to_string();
+
+        let screenshot_paths = replay_result
+            .screenshot_path
+            .clone()
+            .into_iter()
+            .collect::<Vec<_>>();
+
+        let error_message = match status {
+            RunStatus::Failed => Some("UI replay thất bại trong quá trình suite execution."),
+            RunStatus::Cancelled => Some("UI replay đã bị huỷ theo yêu cầu."),
+            _ => None,
+        };
+
+        let error_code = match status {
+            RunStatus::Failed => Some("UI_REPLAY_FAILED"),
+            RunStatus::Cancelled => Some("UI_REPLAY_CANCELLED"),
+            _ => None,
+        };
+
         self.runner_repository
             .insert_case_result_if_absent(
                 run_id,
                 &target.test_case_id,
-                None,
+                target.data_row_id.as_deref(),
                 match status {
                     RunStatus::Passed => "passed",
                     RunStatus::Cancelled => "cancelled",
                     RunStatus::Skipped => "skipped",
                     _ => "failed",
                 },
-                "{}",
-                &json!({
-                    "replayRunId": replay_result.run_id,
-                    "failedStepId": replay_result.failed_step_id,
-                })
-                .to_string(),
-                "[]",
-                &json!(replay_result.screenshot_path.into_iter().collect::<Vec<_>>()).to_string(),
-                None,
-                None,
+                &request_log_json,
+                &response_log_json,
+                &assertion_results_json,
+                &json!(screenshot_paths).to_string(),
+                error_message,
+                error_code,
                 0,
             )
             .map_err(map_runner_error)?;
 
-        Ok((status, None))
+        Ok(ExecutedTargetOutcome {
+            status,
+            data_row_id: target.data_row_id.clone(),
+        })
     }
 
     fn load_rows_for_case(&self, case: &PersistedSuiteCase) -> Result<Vec<DataTableRow>, TestForgeError> {
@@ -379,19 +421,10 @@ impl<'a> RunnerOrchestrationService<'a> {
         &self,
         app: &tauri::AppHandle,
         run_id: &str,
-        passed_count: u32,
-        failed_count: u32,
-        skipped_count: u32,
+        counts: &RunStatusCounts,
     ) -> AppResult<RunResultDto> {
-        self.finalize_run(
-            app,
-            run_id,
-            RunStatus::Failed,
-            passed_count,
-            failed_count,
-            skipped_count,
-        )
-        .map_err(map_runner_error)
+        self.finalize_run(app, run_id, RunStatus::Failed, counts)
+            .map_err(map_runner_error)
     }
 
     fn finalize_run(
@@ -399,16 +432,14 @@ impl<'a> RunnerOrchestrationService<'a> {
         app: &tauri::AppHandle,
         run_id: &str,
         status: RunStatus,
-        passed_count: u32,
-        failed_count: u32,
-        skipped_count: u32,
+        counts: &RunStatusCounts,
     ) -> Result<RunResultDto, TestForgeError> {
         let updated = self.runner_repository.update_run_summary_if_active(
             run_id,
             status,
-            passed_count,
-            failed_count,
-            skipped_count,
+            counts.passed_count,
+            counts.failed_count,
+            counts.skipped_count,
             Some(&Utc::now().to_rfc3339()),
         )?;
 

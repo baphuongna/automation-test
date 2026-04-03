@@ -62,9 +62,10 @@ export function subscribeRunnerEvents(handlers: {
 
   const progressListener = (event: Event): void => {
     const payload = (event as CustomEvent<EventPayloadMap["runner.execution.progress"]>).detail;
+    const currentState = useRunStore.getState();
     useRunStore.getState().setRunState({
       activeRunId: payload.runId,
-      isStopping: false,
+      isStopping: currentState.isStopping,
       terminalMessage: null,
       progress: {
         completed: payload.completedCount,
@@ -73,7 +74,7 @@ export function subscribeRunnerEvents(handlers: {
         passed: payload.passedCount,
         total: payload.totalCount
       },
-      status: payload.status
+      status: "running"
     });
     handlers.onProgress?.(payload);
   };
@@ -88,7 +89,7 @@ export function subscribeRunnerEvents(handlers: {
           ? "Run cancelled safely. No active run remains."
           : `Run completed as ${payload.status}.`,
       progress: {
-        completed: payload.totalCount,
+        completed: payload.passedCount + payload.failedCount + payload.skippedCount,
         failed: payload.failedCount,
         skipped: payload.skippedCount,
         passed: payload.passedCount,

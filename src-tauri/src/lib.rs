@@ -25,6 +25,7 @@
 //!     AppState, AppConfig,
 //!     db::{Database, MigrationRunner},
 //!     services::SecretService,
+//!     state::ShellBootstrapSnapshot,
 //!     utils::paths::AppPaths,
 //! };
 //!
@@ -41,7 +42,13 @@
 //!     secret_service.initialize().unwrap();
 //!     
 //!     // Create app state
-//!     let app_state = AppState::new(database, secret_service, paths);
+//!     let shell_bootstrap_snapshot = ShellBootstrapSnapshot {
+//!         app_version: "0.1.0".to_string(),
+//!         is_first_run: true,
+//!         degraded_mode: false,
+//!         master_key_initialized: true,
+//!     };
+//!     let app_state = AppState::new(database, secret_service, paths, shell_bootstrap_snapshot);
 //!     
 //!     // Use app_state...
 //! }

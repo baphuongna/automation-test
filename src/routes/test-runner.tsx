@@ -6,6 +6,37 @@ import { useEnvStore } from "../store/env-store";
 import { subscribeRunnerEvents, useRunStore } from "../store/run-store";
 import type { RunCaseResultDto, RunDetailDto, RunHistoryEntryDto, SuiteDto } from "../types";
 
+async function hydrateSelectedRun(options: {
+  historyItems: RunHistoryEntryDto[];
+  requestedRunId?: string | null;
+  preserveSelectedRun?: boolean;
+  previousSelectedRunId?: string | null;
+}): Promise<{ selectedRunId: string | null; runDetail: RunDetailDto | null }> {
+  const requestedRunId = options.requestedRunId ?? null;
+  const previousSelectedRunId = options.previousSelectedRunId ?? null;
+  const preserveSelectedRun = options.preserveSelectedRun ?? false;
+
+  const nextSelectedRunId =
+    requestedRunId && options.historyItems.some((entry) => entry.runId === requestedRunId)
+      ? requestedRunId
+      : preserveSelectedRun && previousSelectedRunId && options.historyItems.some((entry) => entry.runId === previousSelectedRunId)
+        ? previousSelectedRunId
+        : options.historyItems[0]?.runId ?? null;
+
+  if (!nextSelectedRunId) {
+    return {
+      selectedRunId: null,
+      runDetail: null
+    };
+  }
+
+  const runDetail = await runnerClient.getRunDetail({ runId: nextSelectedRunId });
+  return {
+    selectedRunId: nextSelectedRunId,
+    runDetail
+  };
+}
+
 function formatRunStatus(status: RunHistoryEntryDto["status"]): string {
   switch (status) {
     case "passed":
@@ -82,6 +113,7 @@ export default function TestRunner(): ReactElement {
   const activeRunId = useRunStore((state) => state.activeRunId);
   const progress = useRunStore((state) => state.progress);
   const runStatus = useRunStore((state) => state.status);
+  const isStopping = useRunStore((state) => state.isStopping);
   const terminalMessage = useRunStore((state) => state.terminalMessage);
 
   const selectedSuite = useMemo(
@@ -99,7 +131,7 @@ export default function TestRunner(): ReactElement {
     [activeEnvironmentId, environments]
   );
 
-  async function loadRunnerScreen(options: { preserveSelectedRun?: boolean } = {}): Promise<void> {
+  async function loadRunnerScreen(options: { preserveSelectedRun?: boolean; requestedRunId?: string | null } = {}): Promise<void> {
     const preserveSelectedRun = options.preserveSelectedRun ?? false;
 
     setErrorMessage(null);
@@ -121,15 +153,15 @@ export default function TestRunner(): ReactElement {
     );
     setHistory(historyItems);
 
-    const nextSelectedRunId = preserveSelectedRun ? selectedRunId : historyItems[0]?.runId ?? null;
-    setSelectedRunId(nextSelectedRunId);
+    const selection = await hydrateSelectedRun({
+      historyItems,
+      requestedRunId: options.requestedRunId ?? null,
+      preserveSelectedRun,
+      previousSelectedRunId: selectedRunId
+    });
 
-    if (nextSelectedRunId) {
-      const detail = await runnerClient.getRunDetail({ runId: nextSelectedRunId });
-      setRunDetail(detail);
-    } else {
-      setRunDetail(null);
-    }
+    setSelectedRunId(selection.selectedRunId);
+    setRunDetail(selection.runDetail);
   }
 
   useEffect(() => {
@@ -175,7 +207,6 @@ export default function TestRunner(): ReactElement {
       },
       onCompleted: (payload) => {
         setFeedbackMessage(`Run completed · ${formatRunStatus(payload.status)} with ${payload.failedCount} failed result(s).`);
-        setSelectedRunId(payload.runId);
         void refreshAfterRun(payload.runId);
       }
     });
@@ -212,10 +243,7 @@ export default function TestRunner(): ReactElement {
   async function refreshAfterRun(nextRunId?: string): Promise<void> {
     try {
       setIsRefreshing(true);
-      await loadRunnerScreen({ preserveSelectedRun: true });
-      if (nextRunId) {
-        setSelectedRunId(nextRunId);
-      }
+      await loadRunnerScreen({ preserveSelectedRun: true, requestedRunId: nextRunId ?? null });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Không thể làm mới lịch sử chạy.");
     } finally {
@@ -253,6 +281,8 @@ export default function TestRunner(): ReactElement {
         suiteId: selectedSuite.id,
         environmentId: activeEnvironmentId
       });
+      setSelectedRunId(result.runId);
+      setRunDetail(null);
       setFeedbackMessage(`Runner control accepted · ${result.suite.name} started as ${result.runId}.`);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Không thể chạy suite.");
@@ -266,7 +296,7 @@ export default function TestRunner(): ReactElement {
       return;
     }
 
-    if (isCancelling) {
+    if (isCancelling || isStopping) {
       setFeedbackMessage("Already cancelling the active run. Waiting for terminal update.");
       return;
     }
@@ -274,16 +304,37 @@ export default function TestRunner(): ReactElement {
     try {
       setErrorMessage(null);
       setIsCancelling(true);
+      useRunStore.getState().setRunState({
+        activeRunId,
+        isStopping: true,
+        terminalMessage: "Cancel requested. Waiting for terminal runner update.",
+        progress,
+        status: runStatus
+      });
       const result = await runnerClient.cancelSuite({ runId: activeRunId });
       if (result.cancelled) {
         setFeedbackMessage(`Cancel requested for active run ${activeRunId}.`);
       } else {
         setFeedbackMessage("No active run right now.");
         setIsCancelling(false);
+        useRunStore.getState().setRunState({
+          activeRunId: null,
+          isStopping: false,
+          terminalMessage: "No active run right now.",
+          progress,
+          status: "idle"
+        });
       }
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Không thể cancel suite run.");
       setIsCancelling(false);
+      useRunStore.getState().setRunState({
+        activeRunId,
+        isStopping: false,
+        terminalMessage: null,
+        progress,
+        status: runStatus
+      });
     }
   }
 
@@ -293,14 +344,21 @@ export default function TestRunner(): ReactElement {
       return;
     }
 
+    if (activeRunId || isExecuting || isRerunningFailed) {
+      setFeedbackMessage("Wait for the active run to finish before rerunning failed targets.");
+      return;
+    }
+
     try {
       setErrorMessage(null);
       setIsRerunningFailed(true);
-      await runnerClient.executeSuite({
+      const result = await runnerClient.executeSuite({
         suiteId: selectedRun.suiteId,
         environmentId: activeEnvironmentId,
         rerunFailedFromRunId: selectedRun.runId
       });
+      setSelectedRunId(result.runId);
+      setRunDetail(null);
       setFeedbackMessage(`Rerun failed accepted from historical run ${selectedRun.runId}.`);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Không thể rerun failed.");
@@ -311,8 +369,12 @@ export default function TestRunner(): ReactElement {
   const liveCompleted = progress?.completed ?? 0;
   const liveTotal = progress?.total ?? selectedRun?.totalCount ?? 0;
   const livePercent = buildProgressPercent(liveCompleted, liveTotal);
-  const canRun = Boolean(selectedSuite && activeEnvironmentId) && !isExecuting;
-  const canRerunFailed = Boolean(selectedRun?.suiteId && selectedRun.failedCount > 0 && activeEnvironmentId) && !isRerunningFailed;
+  const canRun = Boolean(selectedSuite && activeEnvironmentId) && !isExecuting && !activeRunId;
+  const canRerunFailed =
+    Boolean(selectedRun?.suiteId && selectedRun.failedCount > 0 && activeEnvironmentId) &&
+    !isRerunningFailed &&
+    !isExecuting &&
+    !activeRunId;
 
   return (
     <section className="test-runner" data-testid="route-test-runner">
@@ -350,7 +412,7 @@ export default function TestRunner(): ReactElement {
             type="button"
             className="test-runner__danger-action"
             onClick={() => void handleCancelSuite()}
-            disabled={!activeRunId || isCancelling}
+            disabled={!activeRunId || isCancelling || isStopping}
           >
             {isCancelling ? "Cancelling…" : "Cancel active run"}
           </button>
@@ -397,6 +459,7 @@ export default function TestRunner(): ReactElement {
                 </div>
                 <p>{activeRunId ? `runId · ${activeRunId}` : "No active run right now."}</p>
                 <p>{activeEnvironment?.name ? `Environment ready · ${activeEnvironment.name}` : getEnvironmentLabel(activeEnvironmentId, selectedSuiteId)}</p>
+                {isStopping ? <p>Cancel requested. Waiting for terminal runner update.</p> : null}
                 <div className="test-runner__progress-track" aria-label="Active progress bar">
                   <span className="test-runner__progress-value" style={{ width: `${livePercent}%` }} />
                 </div>

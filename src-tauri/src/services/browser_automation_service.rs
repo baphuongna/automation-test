@@ -14,9 +14,7 @@ use serde_json::json;
 use tauri::Emitter;
 use uuid::Uuid;
 
-use crate::contracts::domain::{
-    BrowserRuntimeStatus, RecordingStatus, ReplayStatus, StepAction, TestCaseType,
-};
+use crate::contracts::domain::{BrowserRuntimeStatus, RecordingStatus, ReplayStatus, StepAction};
 use crate::contracts::dto::{BrowserHealthDto, UiReplayResultDto, UiStepDto, UiTestCaseDto};
 use crate::contracts::events::{
     BrowserRecordingStatusChangedEvent, BrowserRecordingStepCapturedEvent,
