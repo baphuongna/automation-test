@@ -1,0 +1,18 @@
+﻿P2-T4 packaged first-run evidence
+
+Packaged executable: D:\my\research\src-tauri\target\release\testforge.exe
+
+App data root observed: C:\Users\phuongnb\AppData\Roaming\com.testforge.app
+
+Bootstrap files created: settings.json, testforge.db, master.key
+
+Bootstrap facts:
+
+{
+    "appRoot":  "C:\\Users\\phuongnb\\AppData\\Roaming\\com.testforge.app",
+    "settingsExists":  true,
+    "dbExists":  true,
+    "masterKeyExists":  true,
+    "settingsJson":  "{\n  \"schemaVersion\": 1,\n  \"databasePath\": \"C:\\\\Users\\\\phuongnb\\\\AppData\\\\Roaming\\\\com.testforge.app\\\\db\\\\testforge.db\",\n  \"logsPath\": \"C:\\\\Users\\\\phuongnb\\\\AppData\\\\Roaming\\\\com.testforge.app\\\\logs\",\n  \"screenshotsPath\": \"C:\\\\Users\\\\phuongnb\\\\AppData\\\\Roaming\\\\com.testforge.app\\\\screenshots\",\n  \"exportsPath\": \"C:\\\\Users\\\\phuongnb\\\\AppData\\\\Roaming\\\\com.testforge.app\\\\exports\"\n}"
+}
+

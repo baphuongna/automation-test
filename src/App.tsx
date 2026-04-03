@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { StatusBar } from './components/StatusBar';
@@ -49,22 +49,6 @@ function App() {
     });
   });
 
-  const runtimeStatusMessage = useMemo(() => {
-    if (!shellMetadata) {
-      return 'Ready';
-    }
-
-    if (shellMetadata.browserRuntime.runtimeStatus === 'healthy') {
-      return shellMetadata.browserRuntime.message;
-    }
-
-    if (shellMetadata.browserRuntime.runtimeStatus === 'unavailable') {
-      return 'Browser automation unavailable. Browser flows are blocked while API/data features remain usable.';
-    }
-
-    return 'Browser automation unavailable until Chromium runtime is restored. API/data features remain usable.';
-  }, [shellMetadata]);
-
   return (
     <div className="app-shell" data-testid="app-shell">
       <aside className="app-sidebar" aria-label="Primary navigation">
@@ -91,7 +75,7 @@ function App() {
           </Routes>
         </main>
 
-        <StatusBar shellMetadata={shellMetadata} runtimeStatusMessage={runtimeStatusMessage} />
+        <StatusBar shellMetadata={shellMetadata} />
       </div>
     </div>
   );

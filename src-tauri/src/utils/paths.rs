@@ -39,6 +39,21 @@ impl BootstrapSettings {
     }
 }
 
+/// Snapshot của trạng thái bootstrap trước khi backend ghi thêm dữ liệu mặc định.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BootstrapState {
+    pub settings_exists: bool,
+    pub database_exists: bool,
+    pub master_key_exists: bool,
+}
+
+impl BootstrapState {
+    /// First run chỉ đúng khi chưa tồn tại bất kỳ bootstrap/runtime state bền vững nào.
+    pub fn is_first_run(&self) -> bool {
+        !self.settings_exists && !self.database_exists && !self.master_key_exists
+    }
+}
+
 /// App path policy under the app-data root.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppPaths {
@@ -100,8 +115,16 @@ impl AppPaths {
         Ok(())
     }
 
+    pub fn inspect_bootstrap_state(&self) -> BootstrapState {
+        BootstrapState {
+            settings_exists: self.settings_file().exists(),
+            database_exists: self.database_file().exists(),
+            master_key_exists: self.master_key_file().exists(),
+        }
+    }
+
     pub fn detect_first_run(&self) -> bool {
-        !self.settings_file().exists()
+        self.inspect_bootstrap_state().is_first_run()
     }
 
     pub fn database_file(&self) -> PathBuf {
@@ -238,5 +261,33 @@ mod tests {
         assert!(screenshots_path(&root).starts_with(&root));
         assert!(exports_path(&root).starts_with(&root));
         assert!(logs_path(&root).starts_with(&root));
+    }
+
+    #[test]
+    fn detect_first_run_requires_absence_of_all_bootstrap_state() {
+        let temp_dir = TempDir::new().unwrap();
+        let paths = AppPaths::new(temp_dir.path().join("app-data"));
+
+        assert!(paths.detect_first_run());
+
+        ensure_dir_exists(&paths.db).unwrap();
+        fs::write(paths.database_file(), b"sqlite").unwrap();
+
+        assert!(!paths.detect_first_run());
+    }
+
+    #[test]
+    fn bootstrap_state_reports_existing_master_key_without_settings() {
+        let temp_dir = TempDir::new().unwrap();
+        let paths = AppPaths::new(temp_dir.path().join("app-data"));
+
+        ensure_dir_exists(&paths.base).unwrap();
+        fs::write(paths.master_key_file(), b"key").unwrap();
+
+        let state = paths.inspect_bootstrap_state();
+        assert!(!state.settings_exists);
+        assert!(!state.database_exists);
+        assert!(state.master_key_exists);
+        assert!(!state.is_first_run());
     }
 }

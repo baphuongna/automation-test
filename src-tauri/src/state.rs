@@ -112,6 +112,9 @@ impl AppState {
         paths: AppPaths,
         shell_bootstrap_snapshot: ShellBootstrapSnapshot,
     ) -> Self {
+        let degraded_mode = shell_bootstrap_snapshot.degraded_mode;
+        let master_key_initialized = shell_bootstrap_snapshot.master_key_initialized;
+
         Self {
             db: Arc::new(Mutex::new(db)),
             secret_service: Arc::new(RwLock::new(secret_service)),
@@ -121,8 +124,8 @@ impl AppState {
             recording_state: RwLock::new(RecordingState::Idle),
             replay_state: RwLock::new(ReplayState::Idle),
             run_state: RwLock::new(RunState::Idle),
-            degraded_mode: RwLock::new(false),
-            master_key_initialized: RwLock::new(false),
+            degraded_mode: RwLock::new(degraded_mode),
+            master_key_initialized: RwLock::new(master_key_initialized),
             shell_bootstrap_snapshot: RwLock::new(shell_bootstrap_snapshot),
         }
     }

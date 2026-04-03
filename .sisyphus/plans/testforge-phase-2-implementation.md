@@ -454,7 +454,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `feat(runner): prove and harden mixed suite desktop execution`
 
-- [ ] P2-T4. Windows packaging + first-run runtime validation
+- [x] P2-T4. Windows packaging + first-run runtime validation
 
   **What to do**:
   - Produce honest packaged-app verification for Windows-first distribution, including first-run bootstrap, version/runtime surface, and missing-runtime guidance.

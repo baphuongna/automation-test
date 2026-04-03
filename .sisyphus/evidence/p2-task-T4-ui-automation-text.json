@@ -1,0 +1,382 @@
+﻿[
+    {
+        "name":  "TestForge",
+        "className":  "Chrome_WidgetWin_1",
+        "controlType":  "ControlType.Pane"
+    },
+    {
+        "name":  "TestForge - Web content",
+        "className":  "BrowserRootView",
+        "controlType":  "ControlType.Pane"
+    },
+    {
+        "name":  "Untitled",
+        "className":  "Label",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Minimize",
+        "className":  "EdgeWindowsCaptionButton",
+        "controlType":  "ControlType.Button"
+    },
+    {
+        "name":  "Maximize",
+        "className":  "EdgeWindowsCaptionButton",
+        "controlType":  "ControlType.Button"
+    },
+    {
+        "name":  "Close",
+        "className":  "EdgeWindowsCaptionButton",
+        "controlType":  "ControlType.Button"
+    },
+    {
+        "name":  "TestForge",
+        "className":  "",
+        "controlType":  "ControlType.Document"
+    },
+    {
+        "name":  "Primary navigation",
+        "className":  "app-sidebar",
+        "controlType":  "ControlType.Group"
+    },
+    {
+        "name":  "TestForge",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "MVP shell placeholder",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "API Tester",
+        "className":  "sidebar-link sidebar-link--active",
+        "controlType":  "ControlType.Hyperlink"
+    },
+    {
+        "name":  "Web Recorder",
+        "className":  "sidebar-link",
+        "controlType":  "ControlType.Hyperlink"
+    },
+    {
+        "name":  "Test Runner",
+        "className":  "sidebar-link",
+        "controlType":  "ControlType.Hyperlink"
+    },
+    {
+        "name":  "Environment",
+        "className":  "sidebar-link",
+        "controlType":  "ControlType.Hyperlink"
+    },
+    {
+        "name":  "Data Manager",
+        "className":  "sidebar-link",
+        "controlType":  "ControlType.Hyperlink"
+    },
+    {
+        "name":  "Settings",
+        "className":  "sidebar-link",
+        "controlType":  "ControlType.Hyperlink"
+    },
+    {
+        "name":  "Tab placeholder",
+        "className":  "tab-bar",
+        "controlType":  "ControlType.Group"
+    },
+    {
+        "name":  "Shell Overview",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Placeholder Route",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Build Verified",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Main content",
+        "className":  "app-content",
+        "controlType":  "ControlType.Group"
+    },
+    {
+        "name":  "API TESTER",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Author requests, define assertions, and inspect actual vs expected API behavior",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Collection tree, request builder, redacted request preview, and result viewer all stay on the typed T8 surface. Transport, preflight, and assertion failures are separated explicitly for QA clarity.",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "New request",
+        "className":  "api-tester__primary-action",
+        "controlType":  "ControlType.Button"
+    },
+    {
+        "name":  "Run request",
+        "className":  "api-tester__secondary-action",
+        "controlType":  "ControlType.Button"
+    },
+    {
+        "name":  "Collection tree uses a local workspace cache because the current T8 surface does not expose api.list/load commands.",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "COLLECTION",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Collection tree",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "0 items",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Empty state · No saved API tests yet. Save the current request to populate the collection tree.",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "DRAFT",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "SAVED",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "No Saved collection items yet.",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "BUILDER",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Request builder",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Select environment in Environment Manager",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "API builder tabs",
+        "className":  "api-tester__tab-list",
+        "controlType":  "ControlType.Tab"
+    },
+    {
+        "name":  "Request",
+        "className":  "api-tester__tab api-tester__tab--active",
+        "controlType":  "ControlType.TabItem"
+    },
+    {
+        "name":  "Auth",
+        "className":  "api-tester__tab",
+        "controlType":  "ControlType.TabItem"
+    },
+    {
+        "name":  "Headers",
+        "className":  "api-tester__tab",
+        "controlType":  "ControlType.TabItem"
+    },
+    {
+        "name":  "Body",
+        "className":  "api-tester__tab",
+        "controlType":  "ControlType.TabItem"
+    },
+    {
+        "name":  "Request builder",
+        "className":  "api-tester__tab-panel",
+        "controlType":  "ControlType.Group"
+    },
+    {
+        "name":  "Request name",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Request name",
+        "className":  "",
+        "controlType":  "ControlType.Edit"
+    },
+    {
+        "name":  "Method",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Method",
+        "className":  "",
+        "controlType":  "ControlType.ComboBox"
+    },
+    {
+        "name":  "URL",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "URL",
+        "className":  "",
+        "controlType":  "ControlType.Edit"
+    },
+    {
+        "name":  "Query params",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Query params",
+        "className":  "",
+        "controlType":  "ControlType.Edit"
+    },
+    {
+        "name":  "Assertions",
+        "className":  "api-tester__assertion-builder",
+        "controlType":  "ControlType.Group"
+    },
+    {
+        "name":  "ASSERTIONS",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Assertion builder UI",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Add assertion",
+        "className":  "api-tester__tertiary-action",
+        "controlType":  "ControlType.Button"
+    },
+    {
+        "name":  "Assertion ",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "1",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Remove",
+        "className":  "api-tester__ghost-action",
+        "controlType":  "ControlType.Button"
+    },
+    {
+        "name":  "Operator",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Operator",
+        "className":  "",
+        "controlType":  "ControlType.ComboBox"
+    },
+    {
+        "name":  "Expected value",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Expected value",
+        "className":  "",
+        "controlType":  "ControlType.Edit"
+    },
+    {
+        "name":  "Source path",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Source path",
+        "className":  "",
+        "controlType":  "ControlType.Edit"
+    },
+    {
+        "name":  "Compare the HTTP status code.",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Save request",
+        "className":  "api-tester__primary-action",
+        "controlType":  "ControlType.Button"
+    },
+    {
+        "name":  "Run request",
+        "className":  "api-tester__secondary-action",
+        "controlType":  "ControlType.Button"
+    },
+    {
+        "name":  "Delete request",
+        "className":  "api-tester__danger-action",
+        "controlType":  "ControlType.Button"
+    },
+    {
+        "name":  "RESPONSE VIEWER",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Result state panels",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Waiting for first run",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Empty state · Response viewer, assertion summary, and actual vs expected details appear after a run.",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Status bar placeholder",
+        "className":  "status-bar",
+        "controlType":  "ControlType.Group"
+    },
+    {
+        "name":  "First run bootstrap completed",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "Chromium runtime is not discovered yet. Browser flows are blocked while API-only features remain available. checked candidates=[bundled:C:\\Users\\phuongnb\\AppData\\Roaming\\com.testforge.app\\ms-playwright\\chromium\\chrome-win\\chrome.exe:exists=false] reason=chromium_not_found",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    },
+    {
+        "name":  "0.1.0",
+        "className":  "",
+        "controlType":  "ControlType.Text"
+    }
+]

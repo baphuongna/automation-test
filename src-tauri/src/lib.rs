@@ -252,6 +252,28 @@ fn build_shell_metadata(state: &AppState) -> ShellMetadataDto {
     }
 }
 
+fn resolve_shell_app_version(app_handle: &tauri::AppHandle) -> String {
+    let version = app_handle.package_info().version.to_string();
+    if version.trim().is_empty() {
+        "0.0.0".to_string()
+    } else {
+        version
+    }
+}
+
+fn build_shell_bootstrap_snapshot(
+    app_handle: &tauri::AppHandle,
+    bootstrap_state: utils::paths::BootstrapState,
+    degraded_mode: bool,
+) -> state::ShellBootstrapSnapshot {
+    state::ShellBootstrapSnapshot {
+        app_version: resolve_shell_app_version(app_handle),
+        is_first_run: bootstrap_state.is_first_run(),
+        degraded_mode,
+        master_key_initialized: !degraded_mode,
+    }
+}
+
 fn parse_csv_import(content: &str) -> Result<(Vec<ColumnDefinition>, Vec<(Vec<String>, bool)>)> {
     let trimmed = content.trim();
     if trimmed.is_empty() {
@@ -1126,7 +1148,7 @@ pub fn bootstrap(app_handle: &tauri::AppHandle) -> AppResult<BootstrapResult> {
     })?;
 
     let paths = AppPaths::new(app_data_dir);
-    let is_first_run = paths.detect_first_run();
+    let bootstrap_state = paths.inspect_bootstrap_state();
     paths.bootstrap()?;
 
     let database = Database::new(paths.database_file())?;
@@ -1134,12 +1156,11 @@ pub fn bootstrap(app_handle: &tauri::AppHandle) -> AppResult<BootstrapResult> {
     let secret_service = SecretService::new(paths.base.clone());
     let degraded_mode = bootstrap_secret_service(&database, &secret_service, &paths)?;
 
-    let shell_bootstrap_snapshot = state::ShellBootstrapSnapshot {
-        app_version: app_handle.package_info().version.to_string(),
-        is_first_run,
+    let shell_bootstrap_snapshot = build_shell_bootstrap_snapshot(
+        app_handle,
+        bootstrap_state,
         degraded_mode,
-        master_key_initialized: !degraded_mode,
-    };
+    );
 
     let app_state = Arc::new(AppState::new(
         database,
@@ -1147,9 +1168,6 @@ pub fn bootstrap(app_handle: &tauri::AppHandle) -> AppResult<BootstrapResult> {
         paths.clone(),
         shell_bootstrap_snapshot,
     ));
-    app_state.set_degraded_mode(degraded_mode);
-    app_state.set_master_key_initialized(!degraded_mode);
-
     Ok(BootstrapResult { app_state, paths })
 }
 

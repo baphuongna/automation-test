@@ -13,6 +13,10 @@ function readProjectFile(relativePath: string): string {
   return readFileSync(absolutePath, "utf8");
 }
 
+function assertIncludesAll(source: string, needles: string[], message: string): void {
+  assert(needles.every((needle) => source.includes(needle)), message);
+}
+
 const packageJsonSource = readProjectFile("package.json");
 const tauriConfigSource = readProjectFile("src-tauri/tauri.conf.json");
 const tsCommandSource = readProjectFile("src/types/commands.ts");
@@ -28,84 +32,100 @@ const rustBrowserServiceSource = readProjectFile("src-tauri/src/services/browser
 
 assert(
   existsSync(resolve("src-tauri/icons/icon.ico")),
-  "T17 packaging proof requires a real Windows icon asset at src-tauri/icons/icon.ico so tauri-build can generate Windows resources."
+  "P2-T4 source/seam regression requires a real Windows icon asset at src-tauri/icons/icon.ico so packaged-resource generation remains wired."
 );
 
 assert(
   packageJsonSource.includes('"version": "0.1.0"'),
-  "T17 regression assumes package.json remains the canonical package version source."
+  "P2-T4 source/seam regression assumes package.json remains the canonical package version source for packaged metadata alignment."
 );
 
 assert(
   !tauriConfigSource.includes('"beforeDevCommand": "npm run dev"'),
-  "T17 phải bỏ beforeDevCommand chạy npm run dev khỏi Tauri config để packaging/dev flow không lệch khỏi build-only policy."
+  "P2-T4 phải giữ Tauri config tránh beforeDevCommand chạy npm run dev để packaging/bootstrap seam tiếp tục bám build-only policy."
+);
+
+assertIncludesAll(
+  tsCommandSource,
+  ['"shell.metadata.get": Record<string, never>;', '"shell.metadata.get": ShellMetadataDto;'],
+  "P2-T4 phải giữ typed command shell.metadata.get trong TypeScript command contract map."
+);
+
+assertIncludesAll(
+  tsDtoSource,
+  [
+    "export interface ShellMetadataDto",
+    "appVersion: string;",
+    "isFirstRun: boolean;",
+    "browserRuntime: BrowserHealthDto;"
+  ],
+  "P2-T4 phải giữ ShellMetadataDto tối thiểu cho version/bootstrap/browser runtime summary."
+);
+
+assertIncludesAll(
+  tauriClientSource,
+  ['invokeCommand("shell.metadata.get", {})', "export async function getShellMetadata()"],
+  "P2-T4 phải giữ typed IPC trong tauri-client và expose helper getShellMetadata()."
+);
+
+assertIncludesAll(
+  appSource,
+  ["getShellMetadata", "<StatusBar", "shellMetadata="],
+  "P2-T4 phải fetch shell metadata trong App và truyền shellMetadata xuống StatusBar qua seam typed hiện có."
 );
 
 assert(
-  tsCommandSource.includes('"shell.metadata.get": Record<string, never>;') &&
-    tsCommandSource.includes('"shell.metadata.get": ShellMetadataDto;'),
-  "T17 phải thêm typed command shell.metadata.get ở TypeScript contract map."
+  !statusBarSource.includes("v0.1.0"),
+  "P2-T4 không được hardcode version UI; packaged shell metadata phải là nguồn runtime-canonical."
+);
+
+assertIncludesAll(
+  statusBarSource,
+  [
+    "shellMetadata.appVersion",
+    "shellMetadata.browserRuntime.message",
+    "Browser automation unavailable",
+    "API/data features remain usable"
+  ],
+  "P2-T4 phải hiển thị version runtime-canonical và runtime guidance actionable trực tiếp từ shell metadata trong StatusBar."
+);
+
+assertIncludesAll(
+  rustLibSource,
+  [
+    "fn shell_metadata_get",
+    "ShellMetadataDto",
+    "BrowserAutomationService::new",
+    "tauri::generate_handler![",
+    "shell_metadata_get"
+  ],
+  "P2-T4 phải giữ backend handler shell_metadata_get và đăng ký nó ở library command surface."
 );
 
 assert(
-  tsDtoSource.includes("export interface ShellMetadataDto") &&
-    tsDtoSource.includes("appVersion: string;") &&
-    tsDtoSource.includes("isFirstRun: boolean;") &&
-    tsDtoSource.includes("browserRuntime: BrowserHealthDto;"),
-  "T17 phải thêm ShellMetadataDto tối thiểu cho version/bootstrap/browser runtime summary."
+  rustMainSource.includes("testforge::run();"),
+  "P2-T4 phải giữ packaged shell bootstrap đi qua library run() entrypoint."
 );
 
-assert(
-  tauriClientSource.includes('invokeCommand("shell.metadata.get", {})') &&
-    tauriClientSource.includes("export async function getShellMetadata()"),
-  "T17 phải giữ typed IPC trong tauri-client và expose helper getShellMetadata()."
-);
-
-assert(
-  appSource.includes("getShellMetadata") &&
-    appSource.includes("<StatusBar") &&
-    appSource.includes("shellMetadata=") &&
-    appSource.includes("runtimeStatusMessage="),
-  "T17 phải fetch shell metadata trong App và truyền xuống StatusBar qua props thay vì hardcode tại component."
-);
-
-assert(
-  !statusBarSource.includes("v0.1.0") &&
-    statusBarSource.includes("shellMetadata.appVersion") &&
-    statusBarSource.includes("runtimeStatusMessage") &&
-    statusBarSource.includes("Browser automation unavailable") &&
-    statusBarSource.includes("API/data features remain usable"),
-  "T17 phải hiển thị version runtime-canonical và shell-level runtime guidance actionable trong StatusBar."
-);
-
-assert(
-  rustLibSource.includes("fn shell_metadata_get") &&
-    rustLibSource.includes("ShellMetadataDto") &&
-    rustLibSource.includes("BrowserAutomationService::new") &&
-    rustLibSource.includes("tauri::generate_handler![") &&
-    rustLibSource.includes("shell_metadata_get") &&
-    rustMainSource.includes("testforge::run();"),
-  "T17 phải thêm backend handler shell_metadata_get và đăng ký nó thông qua library run() entrypoint."
-);
-
-assert(
-  rustStateSource.includes("pub struct ShellBootstrapSnapshot") &&
-    rustStateSource.includes("pub fn shell_bootstrap_snapshot") &&
-    rustStateSource.includes("is_first_run"),
-  "T17 phải lưu bootstrap snapshot tối thiểu trong AppState để shell đọc qua seam typed hiện có."
+assertIncludesAll(
+  rustStateSource,
+  ["pub struct ShellBootstrapSnapshot", "pub fn shell_bootstrap_snapshot", "is_first_run"],
+  "P2-T4 phải lưu bootstrap snapshot tối thiểu trong AppState để shell đọc qua seam typed hiện có."
 );
 
 assert(
   rustPathsSource.includes("pub fn settings_file_existed_before_bootstrap") ||
     rustPathsSource.includes("pub fn detect_first_run") ||
     rustMainSource.includes("is_first_run"),
-  "T17 phải suy ra first-run/bootstrap metadata từ seam AppPaths/bootstrap hiện có thay vì invent subsystem khác."
+  "P2-T4 phải suy ra first-run/bootstrap metadata từ seam AppPaths/bootstrap hiện có thay vì invent subsystem khác."
 );
 
 assert(
   rustBrowserServiceSource.includes("Browser flows are blocked while API-only features remain available") ||
     rustBrowserServiceSource.includes("API/data features remain usable"),
-  "T17 runtime guidance phải nói rõ browser flows unavailable/degraded nhưng API/data features vẫn dùng được."
+  "P2-T4 runtime guidance phải nói rõ browser flows unavailable/degraded nhưng API/data features vẫn dùng được."
 );
 
-console.log("Packaging/bootstrap T17 regression/source test passed.");
+console.log(
+  "Packaging/bootstrap T17 source/seam regression passed. Runtime-packaged proof remains a separate requirement."
+);

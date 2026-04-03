@@ -1,0 +1,14 @@
+{
+    "packagedRuntimeExecuted":  true,
+    "executablePath":  "D:\\my\\research\\src-tauri\\target\\release\\testforge.exe",
+    "firstRunVerified":  true,
+    "shellMetadataVerified":  true,
+    "versionMatchesPackageJson":  true,
+    "browserRuntimeGuidanceVerified":  true,
+    "runtimeStatusMessage":  "Chromium runtime is not discovered yet. Browser flows are blocked while API-only features remain available. checked candidates=[bundled:C:\\Users\\phuongnb\\AppData\\Roaming\\com.testforge.app\\ms-playwright\\chromium\\chrome-win\\chrome.exe:exists=false] reason=chromium_not_found",
+    "browserRuntimeStatus":  "missing",
+    "missingRuntimeGuidance":  "Chromium runtime is not discovered yet. Browser flows are blocked while API-only features remain available. checked candidates=[bundled:C:\\Users\\phuongnb\\AppData\\Roaming\\com.testforge.app\\ms-playwright\\chromium\\chrome-win\\chrome.exe:exists=false] reason=chromium_not_found",
+    "diagnosticsCaptured":  true,
+    "capturedAt":  "2026-04-03T10:25:19.1467993+07:00",
+    "notes":  "bootstrapLabel=First run bootstrap completed; appRoot=C:\\Users\\phuongnb\\AppData\\Roaming\\com.testforge.app; localAppDataAlsoContainsWebViewOnly=True"
+}

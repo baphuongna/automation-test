@@ -1,0 +1,68 @@
+P2-T4 Windows packaged bootstrap smoke scaffold
+Status: SMOKE_PASS
+Details: Packaged-runtime marker confirms the required P2-T4 Windows first-run checks.
+
+Required evidence scenarios:
+- packaged executable launches on Windows first run
+- shell metadata reports version + first-run bootstrap state from packaged runtime
+- missing browser/runtime guidance remains actionable without claiming browser success
+- operator captured first-run diagnostics and runtime metadata evidence
+
+Expected packaged-runtime evidence paths:
+- src-tauri/target/release/testforge.exe
+- src-tauri/target/release/bundle/msi/TestForge_0.1.0_x64_en-US.msi
+- src-tauri/target/release/bundle/nsis/TestForge_0.1.0_x64-setup.exe
+- D:\my\research\.sisyphus\evidence\p2-task-T4-windows-packaged-bootstrap-ran.json
+
+Criteria:
+- [SATISFIED] packaged executable launches on Windows first run: Runtime marker records a real packaged Windows executable launch: D:\my\research\src-tauri\target\release\testforge.exe
+- [SATISFIED] shell metadata reports version + first-run bootstrap state from packaged runtime: Runtime marker confirms packaged first-run bootstrap state plus version metadata matched the canonical package version.
+- [SATISFIED] missing browser/runtime guidance remains actionable without claiming browser success: Runtime marker preserves actionable missing browser/runtime guidance: Chromium runtime is not discovered yet. Browser flows are blocked while API-only features remain available. checked candidates=[bundled:C:\Users\phuongnb\AppData\Roaming\com.testforge.app\ms-playwright\chromium\chrome-win\chrome.exe:exists=false] reason=chromium_not_found
+- [SATISFIED] operator captured first-run diagnostics and runtime metadata evidence: Runtime diagnostics were captured from packaged first run. Status: Chromium runtime is not discovered yet. Browser flows are blocked while API-only features remain available. checked candidates=[bundled:C:\Users\phuongnb\AppData\Roaming\com.testforge.app\ms-playwright\chromium\chrome-win\chrome.exe:exists=false] reason=chromium_not_found
+
+Diagnostics:
+{
+  "packagedRuntimeMarkerPath": "D:\\my\\research\\.sisyphus\\evidence\\p2-task-T4-windows-packaged-bootstrap-ran.json",
+  "expectedPackagedRuntimePaths": [
+    "src-tauri/target/release/testforge.exe",
+    "src-tauri/target/release/bundle/msi/TestForge_0.1.0_x64_en-US.msi",
+    "src-tauri/target/release/bundle/nsis/TestForge_0.1.0_x64-setup.exe"
+  ],
+  "legacySourceEvidencePath": "D:\\my\\research\\.sisyphus\\evidence\\task-T17-packaging-bootstrap-2026-04-01.txt",
+  "marker": {
+    "packagedRuntimeExecuted": true,
+    "executablePath": "D:\\my\\research\\src-tauri\\target\\release\\testforge.exe",
+    "firstRunVerified": true,
+    "shellMetadataVerified": true,
+    "versionMatchesPackageJson": true,
+    "browserRuntimeGuidanceVerified": true,
+    "runtimeStatusMessage": "Chromium runtime is not discovered yet. Browser flows are blocked while API-only features remain available. checked candidates=[bundled:C:\\Users\\phuongnb\\AppData\\Roaming\\com.testforge.app\\ms-playwright\\chromium\\chrome-win\\chrome.exe:exists=false] reason=chromium_not_found",
+    "browserRuntimeStatus": "missing",
+    "missingRuntimeGuidance": "Chromium runtime is not discovered yet. Browser flows are blocked while API-only features remain available. checked candidates=[bundled:C:\\Users\\phuongnb\\AppData\\Roaming\\com.testforge.app\\ms-playwright\\chromium\\chrome-win\\chrome.exe:exists=false] reason=chromium_not_found",
+    "diagnosticsCaptured": true,
+    "capturedAt": "2026-04-03T10:25:19.1467993+07:00",
+    "notes": "bootstrapLabel=First run bootstrap completed; appRoot=C:\\Users\\phuongnb\\AppData\\Roaming\\com.testforge.app; localAppDataAlsoContainsWebViewOnly=True"
+  },
+  "scaffoldCriteria": [
+    {
+      "name": "source regression stays separate from packaged proof",
+      "verdict": "SATISFIED",
+      "rationale": "T17 regression explicitly states it only guards source/seam behavior and cannot prove packaged runtime."
+    },
+    {
+      "name": "packaged shell metadata seam remains wired",
+      "verdict": "SATISFIED",
+      "rationale": "Source seams still require packaged shell metadata to flow through typed IPC into the app shell."
+    },
+    {
+      "name": "missing browser/runtime guidance remains explicit",
+      "verdict": "SATISFIED",
+      "rationale": "StatusBar source still preserves actionable degraded-runtime guidance instead of implying browser success."
+    },
+    {
+      "name": "first-run bootstrap snapshot seam remains available",
+      "verdict": "SATISFIED",
+      "rationale": "Backend seams still expose first-run/bootstrap state through the shell metadata pathway."
+    }
+  ]
+}
