@@ -130,6 +130,22 @@ impl<'a> RunnerOrchestrationService<'a> {
         }
     }
 
+    pub async fn execute_suite_for_ci_handoff(
+        &self,
+        state: &AppState,
+        app: &tauri::AppHandle,
+        suite_id: &str,
+        environment_id: &str,
+    ) -> AppResult<RunResultDto> {
+        let response = self
+            .execute_suite(state, app, suite_id, environment_id, None)
+            .await?;
+
+        self.runner_repository
+            .load_run_result(&response.run_id)
+            .map_err(map_runner_error)
+    }
+
     pub fn cancel_suite(
         &self,
         state: &AppState,

@@ -75,7 +75,26 @@
     "ses_2ad4cff60ffeFAl22SCRDTxqrL",
     "ses_2ad38b7edffeGvSruWy6ZEJrML",
     "ses_2ad3648e2ffer6343EOrHBc2fU",
-    "ses_2ad363999ffe2tRKjujWWAwvLY"
+    "ses_2ad363999ffe2tRKjujWWAwvLY",
+    "ses_2ad235208ffeCCCnjzad9W2Nqy",
+    "ses_2ad06aba6ffeDv25N4b4dBu4j3",
+    "ses_2ad02d900ffeVBiDTkssjo14uf",
+    "ses_2acfd2766ffeib7Rs4mHmcKSsK",
+    "ses_2acf65f45ffeS8RymLfaaA8kkn",
+    "ses_2acf142b7ffe9Fv6pSGlXEiGNJ",
+    "ses_2acef84b5ffe5I9RI4q6KUBYH6",
+    "ses_2acedbf72ffeGje4klzSJsWPEY",
+    "ses_2acedbeaeffe1KgteSjmYdvAHX",
+    "ses_2ace8a656ffe532SmcUSVYfFNt",
+    "ses_2acd992fbffeQRF5R6m6wVXsgs",
+    "ses_2acd98961ffeD2nB0YVLCuXTs5",
+    "ses_2acd71326ffenqiohpIp0yxqnH",
+    "ses_2acd71263ffeD7hul2G1w26Hbw",
+    "ses_2acd712dbffeqpj3QbBDIei8Fv",
+    "ses_2accb4ad7ffek44OCAzll8Odiq",
+    "ses_2accb4c3cffegE2tBWLVe5OZq8",
+    "ses_2acc56dc3ffeHgk3XgePIO3pfY",
+    "ses_2acc02364ffeqLd2Wu4pNF7khi"
   ],
   "plan_name": "testforge-phase-2-implementation",
   "worktree_path": null,
@@ -112,6 +131,8 @@
     "P2-T7-final-code-review": "ses_2ad43005dffeyTgr60WnxhxhLs",
     "P2-T7-truncated-summary": "ses_2ad38b7edffeGvSruWy6ZEJrML",
     "P2-T7-blocker-spec-check": "ses_2ad3648e2ffer6343EOrHBc2fU",
-    "P2-T7-blocker-code-check": "ses_2ad363999ffe2tRKjujWWAwvLY"
+    "P2-T7-blocker-code-check": "ses_2ad363999ffe2tRKjujWWAwvLY",
+    "P2-T8-final-verification": "ses_2c300a36effen50w5oAYZ0xmCW",
+    "P2-T8-evidence-update": "ses_2c300a36effen50w5oAYZ0xmCW"
   }
 }

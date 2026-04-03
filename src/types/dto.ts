@@ -280,6 +280,14 @@ export interface BrowserHealthDto {
   checkedAt: IsoDateTime;
 }
 
+export interface CiHandoffResultDto {
+  runId: EntityId;
+  suiteId: EntityId;
+  status: "passed" | "failed" | "blocked";
+  exitCode: 0 | 1 | 2;
+  artifactPath: string;
+}
+
 export interface ShellMetadataDto {
   appVersion: string;
   isFirstRun: boolean;

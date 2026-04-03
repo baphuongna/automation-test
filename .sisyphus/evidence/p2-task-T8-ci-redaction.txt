@@ -1,0 +1,24 @@
+STATUS: PASS
+
+Goal:
+- Prove P2-T8 CI handoff/export path remains secret-safe for machine-readable outputs and preview artifacts.
+
+Fresh verification commands (2026-04-03):
+1) node --import tsx tests/frontend/security-export-redaction-p2.test.ts
+   - Result: PASS
+   - Output: "P2 security export redaction regression test passed."
+2) cargo test --test ci_handoff_service_p2 --manifest-path src-tauri/Cargo.toml
+   - Result: PASS (7 passed, 0 failed)
+   - Includes `diagnostics_are_sanitized_and_never_emit_raw_secret_material`:
+     - Verifies sensitive markers (Bearer/token/API key style fragments) are redacted to [REDACTED].
+
+Regression coverage summary:
+- Frontend redaction regression asserts CI handoff artifact seam keeps:
+  - canonical JSON persistence path
+  - preview-safe manifest serialization path
+  - self-reference artifact consistency seam
+  - redaction metadata/sanitization seams in CI handoff service
+- Existing P2-T5 redaction assertions remain green (secret/ciphertext/masked_preview/value-style fields and suspicious value fragments).
+
+Conclusion:
+- CI handoff JSON outputs remain secret-safe by regression evidence, without exposing raw secrets in projection diagnostics or preview-safe export metadata.

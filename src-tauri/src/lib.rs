@@ -72,7 +72,7 @@ use tauri::{Manager, State};
 use contracts::commands::{
     ApiExecuteCommand, BrowserHealthCheckCommand, BrowserRecordingCancelCommand,
     BrowserRecordingStartCommand, BrowserRecordingStopCommand, BrowserReplayCancelCommand,
-    BrowserReplayStartCommand, RunnerRunDetailCommand, RunnerRunHistoryCommand,
+    BrowserReplayStartCommand, CiHandoffExecuteCommand, RunnerRunDetailCommand, RunnerRunHistoryCommand,
     SchedulerScheduleDeleteCommand, SchedulerScheduleSetEnabledCommand, SchedulerScheduleUpsertCommand,
     RunnerSuiteCancelCommand, RunnerSuiteExecuteCommand,
     DataTableCreateCommand, DataTableExportCommand, DataTableImportCommand, DataTableRowUpsertCommand,
@@ -81,6 +81,7 @@ use contracts::commands::{
 };
 use contracts::dto::{
     ApiExecutionResultDto, BrowserHealthDto,
+    CiHandoffResultDto,
     DataTableAssociationMetadataDto, DataTableColumnDto, DataTableDto, DataTableExportDto,
     DataTableImportResultDto, DataTableRowDto, EnvironmentDto, EnvironmentVariableDto,
     RunDetailDto, RunHistoryDto, RunHistoryFilterDto, UiReplayResultDto, UiTestCaseDto,
@@ -1013,6 +1014,64 @@ fn runner_suite_cancel(
 }
 
 #[tauri::command]
+fn ci_handoff_execute(
+    payload: CiHandoffExecuteCommand,
+    state: State<'_, std::sync::Arc<AppState>>,
+    app: tauri::AppHandle,
+) -> std::result::Result<CiHandoffResultDto, AppError> {
+    let db_handle = state.db();
+    let db = db_handle
+        .lock()
+        .map_err(|_| AppError::internal("Database lock poisoned"))?;
+    let secret_service = state.secret_service();
+    let secret_guard = secret_service
+        .read()
+        .map_err(|_| AppError::internal("Secret service lock poisoned"))?;
+
+    let environment_repository = EnvironmentRepository::new(db.connection());
+    let default_environment = environment_repository
+        .find_default()
+        .map_err(map_command_error)?
+        .ok_or_else(|| {
+            map_command_error(TestForgeError::Validation(
+                "ci.handoff.execute requires a default environment".to_string(),
+            ))
+        })?;
+
+    let orchestration_service = services::RunnerOrchestrationService::new(
+        RunnerRepository::new(db.connection()),
+        services::ApiExecutionService::new(
+            ApiRepository::new(db.connection()),
+            EnvironmentRepository::new(db.connection()),
+            &secret_guard,
+        ),
+        services::BrowserAutomationService::new(state.paths().clone()),
+    );
+
+    let handoff_service = services::CiHandoffService::new(
+        RunnerRepository::new(db.connection()),
+        services::ArtifactService::new(state.paths().clone()),
+    );
+
+    tauri::async_runtime::block_on(handoff_service.execute_for_suite(
+        &orchestration_service,
+        state.inner().as_ref(),
+        &app,
+        &payload.suite_id,
+        &default_environment.id,
+        match payload.trigger.source {
+            contracts::commands::CiHandoffSource::Ci => "ci",
+        },
+        match payload.trigger.actor {
+            contracts::commands::CiHandoffActor::Pipeline => "pipeline",
+        },
+        &Utc::now().to_rfc3339(),
+        payload.output.output_dir.as_deref(),
+        payload.output.file_name.as_deref(),
+    ))
+}
+
+#[tauri::command]
 fn scheduler_schedule_list(
     _payload: EmptyCommandPayload,
     state: State<'_, std::sync::Arc<AppState>>,
@@ -1362,6 +1421,7 @@ pub fn run() {
             runner_run_history,
             runner_run_detail,
             runner_suite_cancel,
+            ci_handoff_execute,
             scheduler_schedule_list,
             scheduler_schedule_upsert,
             scheduler_schedule_set_enabled,

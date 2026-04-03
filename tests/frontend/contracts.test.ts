@@ -99,3 +99,42 @@ assert(
   /pub\s+scope\s*:\s*AppErrorScope\s*,/.test(rustEventsContract),
   "Rust AppErrorEvent.scope must use AppErrorScope instead of free-form String"
 );
+
+const dtoSource = readFileSync(path.resolve(process.cwd(), "src/types/dto.ts"), "utf-8");
+const ciClientSource = readFileSync(path.resolve(process.cwd(), "src/services/ci-client.ts"), "utf-8");
+
+const ciHandoffCommand: CommandEnvelope<"ci.handoff.execute"> = {
+  command: "ci.handoff.execute",
+  payload: {
+    suiteId: "suite-ci-1",
+    trigger: {
+      source: "ci",
+      actor: "pipeline"
+    },
+    output: {
+      writeJson: true,
+      outputDir: "exports/ci",
+      fileName: "ci-execution-suite-ci-1.json"
+    }
+  }
+};
+
+assertEqual(ciHandoffCommand.payload.trigger.source, "ci", "ci.handoff.execute must lock trigger.source to ci");
+assertEqual(ciHandoffCommand.payload.output.writeJson, true, "ci.handoff.execute must require canonical json output");
+
+assert(
+  dtoSource.includes("export interface CiHandoffResultDto") &&
+    dtoSource.includes('status: "passed" | "failed" | "blocked"') &&
+    dtoSource.includes("artifactPath: string") &&
+    dtoSource.includes("runId: EntityId") &&
+    dtoSource.includes("suiteId: EntityId") &&
+    dtoSource.includes("exitCode: 0 | 1 | 2"),
+  "TS DTO contract must define thin CiHandoffResultDto with stable status/exit/path/run fields"
+);
+
+assert(
+  ciClientSource.includes('invokeCommand("ci.handoff.execute"') &&
+    ciClientSource.includes("async executeCiHandoff(input:") &&
+    !ciClientSource.includes("invoke("),
+  "CI handoff seam must use typed invokeCommand client helper without raw invoke leakage"
+);

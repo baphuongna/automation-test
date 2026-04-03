@@ -9,7 +9,7 @@
 
 use std::collections::BTreeMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use chrono::Utc;
 use rusqlite::{params, Connection};
@@ -57,6 +57,21 @@ impl ArtifactKind {
 
 pub struct ArtifactService {
     paths: AppPaths,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PersistedCiHandoffArtifact {
+    pub file_path: String,
+    pub relative_path: String,
+    pub manifest: ArtifactManifestDto,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CiHandoffArtifactTarget {
+    file_path: PathBuf,
+    relative_path: String,
+    logical_name: String,
+    manifest_id: String,
 }
 
 impl ArtifactService {
@@ -165,6 +180,181 @@ impl ArtifactService {
 
         Ok(())
     }
+
+    pub fn persist_ci_handoff_contract_json(
+        &self,
+        run_id: &str,
+        payload: &Value,
+        output_dir: Option<&str>,
+        file_name: Option<&str>,
+    ) -> AppResult<PersistedCiHandoffArtifact> {
+        let target = self.build_ci_handoff_artifact_target(run_id, output_dir, file_name)?;
+        if let Some(parent) = target.file_path.parent() {
+            ensure_dir_exists(parent)?;
+            self.verify_path_under_exports_root(parent)?;
+        }
+
+        let canonical_json = serde_json::to_string_pretty(payload).map_err(|error| {
+            AppError::storage_write(format!(
+                "Không thể serialize CI handoff canonical JSON: {error}"
+            ))
+        })?;
+
+        fs::write(&target.file_path, canonical_json).map_err(|error| {
+            AppError::storage_write(format!(
+                "Không thể ghi CI handoff artifact {:?}: {error}",
+                target.file_path
+            ))
+        })?;
+
+        let preview_safe = self.preview_safe_json_value(payload);
+        let preview_json = serde_json::to_string_pretty(&preview_safe).map_err(|error| {
+            AppError::storage_write(format!(
+                "Không thể serialize CI handoff preview JSON: {error}"
+            ))
+        })?;
+
+        let manifest = ArtifactManifestDto {
+            id: target.manifest_id,
+            artifact_type: "report_json".to_string(),
+            logical_name: target.logical_name,
+            file_path: target.file_path.to_string_lossy().into_owned(),
+            relative_path: target.relative_path.clone(),
+            preview_json,
+            created_at: Utc::now().to_rfc3339(),
+        };
+
+        Ok(PersistedCiHandoffArtifact {
+            file_path: target.file_path.to_string_lossy().into_owned(),
+            relative_path: target.relative_path,
+            manifest,
+        })
+    }
+
+    pub fn preview_ci_handoff_artifact_reference(
+        &self,
+        run_id: &str,
+        output_dir: Option<&str>,
+        file_name: Option<&str>,
+    ) -> AppResult<(String, String)> {
+        let target = self.build_ci_handoff_artifact_target(run_id, output_dir, file_name)?;
+        Ok((
+            target.file_path.to_string_lossy().into_owned(),
+            target.relative_path,
+        ))
+    }
+
+    fn resolve_ci_handoff_output_dir(&self, output_dir: Option<&str>) -> AppResult<PathBuf> {
+        let default_dir = self.paths.exports.join("ci");
+        let Some(raw_output_dir) = output_dir else {
+            return Ok(default_dir);
+        };
+
+        let normalized = normalize_relative_output_dir(raw_output_dir)?;
+        if normalized.as_os_str().is_empty() {
+            return Ok(default_dir);
+        }
+
+        let normalized_text = normalized.to_string_lossy().replace('\\', "/");
+        let normalized_under_exports = if normalized_text == "exports" {
+            PathBuf::new()
+        } else if normalized_text.starts_with("exports/") {
+            normalized
+                .strip_prefix("exports")
+                .map(Path::to_path_buf)
+                .unwrap_or_else(|_| normalized.clone())
+        } else {
+            normalized
+        };
+
+        Ok(self.paths.exports.join(normalized_under_exports))
+    }
+
+    fn build_ci_handoff_artifact_target(
+        &self,
+        run_id: &str,
+        output_dir: Option<&str>,
+        file_name: Option<&str>,
+    ) -> AppResult<CiHandoffArtifactTarget> {
+        let directory = self.resolve_ci_handoff_output_dir(output_dir)?;
+        let default_name = format!("ci-execution-{run_id}.json");
+        let safe_file_name = sanitize_file_name(file_name.unwrap_or(&default_name));
+        let file_path = directory.join(&safe_file_name);
+
+        let relative_path = file_path
+            .strip_prefix(&self.paths.base)
+            .map(normalize_relative_path)
+            .unwrap_or_else(|_| format!("exports/ci/{safe_file_name}"));
+
+        Ok(CiHandoffArtifactTarget {
+            file_path,
+            relative_path,
+            logical_name: format!("ci-execution-{run_id}"),
+            manifest_id: format!("artifact-ci-handoff-{run_id}"),
+        })
+    }
+
+    fn verify_path_under_exports_root(&self, path: &Path) -> AppResult<()> {
+        let exports_root = fs::canonicalize(&self.paths.exports).map_err(|error| {
+            AppError::storage_path(format!(
+                "Không thể canonicalize exports root {:?}: {error}",
+                self.paths.exports
+            ))
+        })?;
+        let candidate = fs::canonicalize(path).map_err(|error| {
+            AppError::storage_path(format!(
+                "Không thể canonicalize CI handoff output dir {:?}: {error}",
+                path
+            ))
+        })?;
+
+        if candidate.starts_with(&exports_root) {
+            Ok(())
+        } else {
+            Err(AppError::validation(
+                "CI handoff outputDir must resolve under app exports root",
+            ))
+        }
+    }
+}
+
+fn normalize_relative_output_dir(raw: &str) -> AppResult<PathBuf> {
+    let candidate = Path::new(raw.trim());
+    if candidate.as_os_str().is_empty() {
+        return Ok(PathBuf::new());
+    }
+
+    if candidate.is_absolute() {
+        return Err(AppError::validation(
+            "CI handoff outputDir must be a relative path",
+        ));
+    }
+
+    let mut normalized = PathBuf::new();
+    for component in candidate.components() {
+        match component {
+            Component::CurDir => {}
+            Component::Normal(segment) => normalized.push(segment),
+            Component::ParentDir => {
+                if !normalized.pop() {
+                    return Err(AppError::validation(
+                        "CI handoff outputDir must not traverse outside exports root",
+                    ));
+                }
+            }
+            Component::RootDir | Component::Prefix(_) => {
+                return Err(AppError::validation(
+                    "CI handoff outputDir must be a normalized relative path",
+                ));
+            }
+        }
+    }
+
+    Ok(normalized)
+}
+
+fn normalize_relative_path(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
 }
 
 fn sanitize_path_segment(value: &str) -> String {

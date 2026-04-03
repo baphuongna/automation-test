@@ -13,6 +13,7 @@ import type {
   RunDetailDto,
   RunHistoryDto,
   RunHistoryEntryDto,
+  CiHandoffResultDto,
   ShellMetadataDto,
   SuiteScheduleDto,
   SuiteDto,
@@ -146,6 +147,19 @@ export interface CommandPayloadMap {
   "scheduler.schedule.delete": {
     scheduleId: EntityId;
   };
+  "ci.handoff.execute": {
+    suiteId: EntityId;
+    trigger: {
+      source: "ci";
+      actor: "pipeline";
+      label?: string;
+    };
+    output: {
+      writeJson: true;
+      outputDir?: string;
+      fileName?: string;
+    };
+  };
 }
 
 export interface CommandResponseMap {
@@ -188,6 +202,7 @@ export interface CommandResponseMap {
   "scheduler.schedule.upsert": SuiteScheduleDto;
   "scheduler.schedule.setEnabled": SuiteScheduleDto;
   "scheduler.schedule.delete": { deleted: true };
+  "ci.handoff.execute": CiHandoffResultDto;
 }
 
 export type CommandName = keyof CommandPayloadMap;

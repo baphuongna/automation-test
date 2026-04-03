@@ -713,7 +713,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `feat(schedule): add local suite scheduling baseline`
 
-- [ ] P2-T8. CI/CD handoff contract + machine-readable execution outputs
+- [x] P2-T8. CI/CD handoff contract + machine-readable execution outputs
 
   **What to do**:
   - Define and implement the narrowest useful CI/CD handoff path for TestForge.
@@ -745,9 +745,9 @@ Wave FINAL (parallel verification)
   - Create: `tests/frontend/ci-handoff-p2.test.ts`
 
   **Acceptance Criteria**:
-  - [ ] Machine-readable run output format is documented and stable.
-  - [ ] CI handoff path exposes clear success/fail/blocked semantics.
-  - [ ] Exported payloads remain secret-safe and artifact-consistent.
+  - [x] Machine-readable run output format is documented and stable.
+  - [x] CI handoff path exposes clear success/fail/blocked semantics.
+  - [x] Exported payloads remain secret-safe and artifact-consistent.
 
   **QA Scenarios**:
   ```
@@ -772,6 +772,9 @@ Wave FINAL (parallel verification)
     Failure Indicators: Raw secret leakage
     Evidence: .sisyphus/evidence/p2-task-T8-ci-redaction.txt
   ```
+
+  **Execution Status Evidence**:
+  - `.sisyphus/evidence/p2-task-T8-ci-blocked.txt`
 
   **Commit**: YES
   - Message: `feat(ci): add pipeline handoff contract and outputs`

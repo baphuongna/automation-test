@@ -15,6 +15,7 @@ function readProjectFile(relativePath: string): string {
 
 const rustArtifactServiceSource = readProjectFile("src-tauri/src/services/artifact_service.rs");
 const rustDtoContractsSource = readProjectFile("src-tauri/src/contracts/dto.rs");
+const rustCiHandoffServiceSource = readProjectFile("src-tauri/src/services/ci_handoff_service.rs");
 const tsDtoSource = readProjectFile("src/types/dto.ts");
 
 assert(
@@ -41,6 +42,21 @@ assert(
     rustArtifactServiceSource.includes("authorization:") &&
     rustArtifactServiceSource.includes("token="),
   "P2-T5 must classify suspicious secret-bearing values and previews so plaintext, ciphertext, and masked-preview strings stay redacted in exports."
+);
+
+assert(
+  rustArtifactServiceSource.includes("pub fn persist_ci_handoff_contract_json") &&
+    rustArtifactServiceSource.includes("let canonical_json = serde_json::to_string_pretty(payload)") &&
+    rustArtifactServiceSource.includes("let preview_safe = self.preview_safe_json_value(payload)") &&
+    rustArtifactServiceSource.includes("preview_json") &&
+    rustArtifactServiceSource.includes("pub fn preview_ci_handoff_artifact_reference") &&
+    rustArtifactServiceSource.includes("build_ci_handoff_artifact_target") &&
+    rustCiHandoffServiceSource.includes("if !artifacts.iter().any(|artifact| artifact.relative_path == self_relative_path)") &&
+    rustCiHandoffServiceSource.includes("default_redaction_metadata") &&
+    rustCiHandoffServiceSource.includes("\"redaction\": {") &&
+    rustCiHandoffServiceSource.includes("\"policyVersion\":") &&
+    rustCiHandoffServiceSource.includes("sanitize_ci_handoff_text"),
+  "P2-T8 must keep CI handoff JSON artifact persistence canonical, preview-safe, self-referentially consistent, and redaction-aware."
 );
 
 assert(

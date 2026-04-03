@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::domain::{EntityId, EnvironmentType, IsoDateTime, RunStatus};
 use super::dto::{
@@ -163,6 +163,68 @@ pub struct RunnerSuiteExecuteCommand {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum CiHandoffSource {
+    Ci,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum CiHandoffActor {
+    Pipeline,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CiHandoffWriteJson;
+
+impl Serialize for CiHandoffWriteJson {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_bool(true)
+    }
+}
+
+impl<'de> Deserialize<'de> for CiHandoffWriteJson {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let write_json = bool::deserialize(deserializer)?;
+        if write_json {
+            Ok(Self)
+        } else {
+            Err(serde::de::Error::custom("writeJson must be true"))
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CiHandoffTrigger {
+    pub source: CiHandoffSource,
+    pub actor: CiHandoffActor,
+    pub label: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CiHandoffOutput {
+    pub write_json: CiHandoffWriteJson,
+    pub output_dir: Option<String>,
+    pub file_name: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CiHandoffExecuteCommand {
+    pub suite_id: EntityId,
+    pub trigger: CiHandoffTrigger,
+    pub output: CiHandoffOutput,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct RunnerSuiteCancelCommand {
     pub run_id: EntityId,
@@ -272,6 +334,8 @@ pub enum CommandEnvelope {
     RunnerRunDetail(RunnerRunDetailCommand),
     #[serde(rename = "runner.suite.cancel")]
     RunnerSuiteCancel(RunnerSuiteCancelCommand),
+    #[serde(rename = "ci.handoff.execute")]
+    CiHandoffExecute(CiHandoffExecuteCommand),
     #[serde(rename = "scheduler.schedule.list")]
     SchedulerScheduleList(EmptyCommandPayload),
     #[serde(rename = "scheduler.schedule.upsert")]
@@ -390,5 +454,29 @@ mod tests {
         assert!(json.contains("dataTable.import"));
         assert!(json.contains("tableId"));
         assert!(json.contains("format"));
+    }
+
+    #[test]
+    fn serialize_ci_handoff_execute_command_with_canonical_name() {
+        let envelope = CommandEnvelope::CiHandoffExecute(super::CiHandoffExecuteCommand {
+            suite_id: "suite-1".to_string(),
+            trigger: super::CiHandoffTrigger {
+                source: super::CiHandoffSource::Ci,
+                actor: super::CiHandoffActor::Pipeline,
+                label: Some("nightly".to_string()),
+            },
+            output: super::CiHandoffOutput {
+                write_json: super::CiHandoffWriteJson,
+                output_dir: Some("exports/ci".to_string()),
+                file_name: Some("ci-execution-suite-1.json".to_string()),
+            },
+        });
+
+        let json = serde_json::to_string(&envelope)
+            .expect("failed to serialize ci.handoff.execute envelope");
+
+        assert!(json.contains("ci.handoff.execute"));
+        assert!(json.contains("suiteId"));
+        assert!(json.contains("writeJson"));
     }
 }

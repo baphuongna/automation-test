@@ -1,0 +1,27 @@
+STATUS: PASS
+
+Goal:
+- Prove P2-T8 CI handoff emits deterministic machine-readable output with stable status/exit semantics and artifact linkage.
+
+Fresh verification commands (2026-04-03):
+1) node --import tsx tests/frontend/contracts.test.ts
+   - Result: PASS (exit code 0, no stderr)
+2) node --import tsx tests/frontend/ci-handoff-p2.test.ts
+   - Result: PASS
+   - Output: "P2-T8 CI handoff source contract regression test passed."
+3) cargo test --test ci_handoff_service_p2 --manifest-path src-tauri/Cargo.toml
+   - Result: PASS (7 passed, 0 failed)
+   - Includes deterministic contract JSON and exit-code mapping checks:
+     - passed -> exitCode 0
+     - failed -> exitCode 1
+     - blocked -> exitCode 2
+4) npm run build
+   - Result: PASS
+   - Output: tsc + vite build completed successfully.
+
+Artifact consistency notes:
+- Rust regression `projection_self_reference_uses_override_output_target` passed, proving self artifact reference follows override output target.
+- Rust regression `preview_reference_matches_persisted_target_when_overrides_supplied` passed, proving preview and persisted artifact references remain consistent.
+
+Conclusion:
+- Final targeted CI output verification is green for deterministic JSON shape, status/exit semantics, and artifact path consistency.

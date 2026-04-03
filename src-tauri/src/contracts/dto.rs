@@ -354,3 +354,63 @@ pub struct BrowserHealthDto {
     pub message: String,
     pub checked_at: IsoDateTime,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum CiHandoffStatus {
+    Passed,
+    Failed,
+    Blocked,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CiHandoffExitCode {
+    Passed = 0,
+    Failed = 1,
+    Blocked = 2,
+}
+
+impl Serialize for CiHandoffExitCode {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_i32(*self as i32)
+    }
+}
+
+impl<'de> Deserialize<'de> for CiHandoffExitCode {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = i32::deserialize(deserializer)?;
+        match value {
+            0 => Ok(Self::Passed),
+            1 => Ok(Self::Failed),
+            2 => Ok(Self::Blocked),
+            _ => Err(serde::de::Error::custom(
+                "exitCode must be one of 0 (passed), 1 (failed), or 2 (blocked)",
+            )),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CiHandoffResultDto {
+    pub run_id: EntityId,
+    pub suite_id: EntityId,
+    pub status: CiHandoffStatus,
+    pub exit_code: CiHandoffExitCode,
+    pub artifact_path: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CiHandoffArtifactReferenceDto {
+    pub artifact_id: EntityId,
+    pub kind: String,
+    pub path: String,
+    pub relative_path: String,
+}

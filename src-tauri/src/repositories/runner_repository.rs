@@ -661,6 +661,10 @@ impl<'a> RunnerRepository<'a> {
         })
     }
 
+    pub fn load_run_detail_for_ci_handoff(&self, run_id: &str) -> Result<RunDetailDto> {
+        self.load_run_detail(run_id)
+    }
+
     fn to_run_result_dto(summary: PersistedRunSummary) -> RunResultDto {
         RunResultDto {
             run_id: summary.run_id,
