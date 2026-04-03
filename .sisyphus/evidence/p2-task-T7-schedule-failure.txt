@@ -1,0 +1,28 @@
+STATUS: BLOCKED (runtime harness limitation)
+
+Goal:
+- Prove a failed or blocked scheduled trigger surfaces actionable diagnostics without leaking secrets.
+
+What was verified successfully:
+- `refresh_invalid_diagnostics()` now preserves valid operational blocked/failed state instead of wiping it.
+- Blocked/failed/queued statuses remain inside the shared `RunStatus` contract.
+- Rust integration coverage confirms:
+  - blocked schedule retains `Skipped` plus diagnostic message,
+  - trigger failure retains `Failed` plus technical error,
+  - invalid-config diagnostics stay reconcilable,
+  - refresh pass no longer erases valid operational evidence.
+- Supporting regression/tests:
+  - `node --import tsx tests/frontend/security-export-redaction-p2.test.ts` -> PASS
+  - `cargo test --test scheduler_service_p2 --manifest-path src-tauri/Cargo.toml` -> PASS (after rerun with `CARGO_INCREMENTAL=0` due transient Windows paging-file mmap issue)
+
+Why this evidence is BLOCKED instead of PASS:
+- I was not able to stage and observe a full live desktop-runtime failure/blocked schedule scenario end-to-end through the actual Tauri window in this harness.
+- Because that exact runtime capture is missing, I am not claiming a full PASS for the live scenario.
+
+Best available honest evidence:
+- Source/Rust tests cover blocked, failed, and invalid-config scheduler diagnostics directly.
+- Redaction regression stayed green, so no new secret leakage was introduced in verified outputs.
+
+Conclusion:
+- Diagnostic semantics and secret-safe behavior are strongly supported by tests.
+- Live desktop-runtime proof of a failed/blocked scheduled trigger remains BLOCKED by harness interaction limits.

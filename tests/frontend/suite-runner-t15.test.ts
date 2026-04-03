@@ -13,6 +13,10 @@ function readProjectFile(relativePath: string): string {
   return readFileSync(absolutePath, "utf8");
 }
 
+function includesAll(source: string, fragments: string[]): boolean {
+  return fragments.every((fragment) => source.includes(fragment));
+}
+
 const tsCommandSource = readProjectFile("src/types/commands.ts");
 const tsEventSource = readProjectFile("src/types/events.ts");
 const tsDtoSource = readProjectFile("src/types/dto.ts");
@@ -32,6 +36,7 @@ const rustMainSource = readProjectFile("src-tauri/src/main.rs");
 const rustRepositoriesModSource = readProjectFile("src-tauri/src/repositories/mod.rs");
 const rustServicesModSource = readProjectFile("src-tauri/src/services/mod.rs");
 const migrationSource = readProjectFile("src-tauri/migrations/001_initial_schema.sql");
+const schedulingMigrationPath = resolve("src-tauri/migrations/004_add_suite_schedules.sql");
 
 assert(
   tsCommandSource.includes('"runner.suite.execute": {') &&
@@ -188,12 +193,41 @@ assert(
 );
 
 assert(
+  includesAll(tsCommandSource, [
+    '"scheduler.schedule.list": Record<string, never>;',
+    '"scheduler.schedule.upsert": {',
+    '"scheduler.schedule.setEnabled": {',
+    '"scheduler.schedule.delete": {'
+  ]) &&
+    includesAll(tsDtoSource, ["export interface SuiteScheduleDto", "cadenceMinutes: number", "lastRunStatus?"]) &&
+    includesAll(rustCommandContractSource, [
+      '#[serde(rename = "scheduler.schedule.list")]',
+      '#[serde(rename = "scheduler.schedule.upsert")]',
+      '#[serde(rename = "scheduler.schedule.setEnabled")]',
+      '#[serde(rename = "scheduler.schedule.delete")]'
+    ]) &&
+    rustDtoContractSource.includes("pub struct SuiteScheduleDto") &&
+    existsSync(schedulingMigrationPath),
+  "P2-T7 phải khóa scheduling contract/migration seam nhưng vẫn reuse runner orchestration/history pipeline hiện có thay vì tạo suite execution model riêng."
+);
+
+assert(
   rustLibSource.includes("fn runner_suite_execute") &&
     rustLibSource.includes("fn runner_suite_cancel") &&
     rustLibSource.includes("RunnerOrchestrationService::new") &&
     rustLibSource.includes("runner.execution.started") &&
     rustLibSource.includes("runner.execution.completed"),
   "T15 phải expose Tauri handlers cho runner suite execute/cancel và đi qua RunnerOrchestrationService."
+);
+
+assert(
+  rustLibSource.includes("start_scheduler_loop") &&
+    rustLibSource.includes("SchedulerService::new") &&
+    rustLibSource.includes("schedule_tick") &&
+    rustLibSource.includes("RunnerOrchestrationService::new") &&
+    rustLibSource.includes(".setup(|app| {") &&
+    rustLibSource.includes("start_scheduler_loop(app.handle().clone(), Arc::clone(&result.app_state))?;"),
+  "P2-T7 Chunk 3 phải bootstrap local scheduler loop ngay từ Tauri setup path và trigger qua RunnerOrchestrationService thay vì tạo execution pipeline riêng."
 );
 
 assert(

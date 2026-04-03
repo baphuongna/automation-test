@@ -188,6 +188,20 @@ export interface SuiteDto {
   items: SuiteItemDto[];
 }
 
+export interface SuiteScheduleDto {
+  id: EntityId;
+  suiteId: EntityId;
+  environmentId: EntityId;
+  enabled: boolean;
+  cadenceMinutes: number;
+  lastRunAt?: IsoDateTime;
+  nextRunAt?: IsoDateTime;
+  lastRunStatus?: Exclude<RunStatus, "idle">;
+  lastError?: string;
+  createdAt: IsoDateTime;
+  updatedAt: IsoDateTime;
+}
+
 export interface RunResultDto {
   runId: EntityId;
   status: RunStatus;

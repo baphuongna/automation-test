@@ -23,6 +23,7 @@ const tsRunnerRouteSource = readProjectFile("src/routes/test-runner.tsx");
 const rustErrorSource = readProjectFile("src-tauri/src/error.rs");
 const rustLibSource = readProjectFile("src-tauri/src/lib.rs");
 const tsAppSource = readProjectFile("src/App.tsx");
+const rustSchedulerServiceSource = readProjectFile("src-tauri/src/services/scheduler_service.rs");
 
 assert(
   rustStateSource.includes("pub fn cancel_recording(&self, expected_test_case_id: &str) -> AppResult<bool>") &&
@@ -91,6 +92,19 @@ assert(
     rustLibSource.includes("Err(error @ TestForgeError::Validation(_)) => Ok(to_preflight_api_result(error))") &&
     tsAppSource.includes("Browser automation unavailable. Browser flows are blocked while API/data features remain usable."),
   "T18 phải giữ browser degraded độc lập với API/data usability và tiếp tục surfacing lỗi cụ thể thay vì fallback generic."
+);
+
+assert(
+  rustStateSource.includes("scheduler_runtime_started") &&
+    rustStateSource.includes("mark_scheduler_started") &&
+    rustStateSource.includes("is_scheduler_started") &&
+    rustSchedulerServiceSource.includes("schedule_tick") &&
+    rustSchedulerServiceSource.includes("state.run_state()") &&
+    rustSchedulerServiceSource.includes("RunState::Running") &&
+    rustSchedulerServiceSource.includes("Blocked: another suite run is already active") &&
+    rustSchedulerServiceSource.includes("trigger_due_schedules") &&
+    rustLibSource.includes("start_scheduler_loop"),
+  "P2-T7 Chunk 3 phải harden scheduler runtime để chỉ bootstrap một loop, tôn trọng active-run guard, và lưu blocked diagnostics trung thực thay vì spawn execution chồng lấn."
 );
 
 console.log("Reliability hardening T18 regression/source test passed.");

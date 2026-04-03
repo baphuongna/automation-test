@@ -39,6 +39,11 @@ impl BrowserAutomationService {
                 if message.starts_with("UI test case not found:") {
                     AppError::not_found("ui test case", test_case_id)
                         .with_context("testCaseId", test_case_id)
+                } else if message.contains("script replay") {
+                    AppError::validation(format!(
+                        "Ui test case không còn script replay hợp lệ. {message}"
+                    ))
+                    .with_context("testCaseId", test_case_id)
                 } else {
                     AppError::validation(message).with_context("testCaseId", test_case_id)
                 }
@@ -1099,6 +1104,10 @@ impl ChromiumCliReplayRuntimeAdapter {
     }
 
     fn navigate(&self, url: &str, timeout_ms: u64) -> AppResult<()> {
+        if let Ok(mut snapshot_guard) = self.last_dom_snapshot.lock() {
+            *snapshot_guard = None;
+        }
+
         let window_size = format!("{},{}", self.viewport_width, self.viewport_height);
         let virtual_budget = timeout_ms.max(200).to_string();
 
@@ -1500,4 +1509,37 @@ struct ChromiumRuntimeCandidate {
 struct PrerequisiteCheck {
     ok: bool,
     detail: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn navigate_clears_cached_dom_snapshot_before_launching_browser() {
+        let runtime = ChromiumCliReplayRuntimeAdapter::new(
+            PathBuf::from("__definitely_missing_chromium__.exe"),
+            1280,
+            720,
+        );
+
+        {
+            let mut snapshot_guard = runtime
+                .last_dom_snapshot
+                .lock()
+                .expect("test should lock cached DOM snapshot");
+            *snapshot_guard = Some("<html>stale dom</html>".to_string());
+        }
+
+        let _ = runtime.navigate("https://example.com", 250);
+
+        let snapshot_guard = runtime
+            .last_dom_snapshot
+            .lock()
+            .expect("test should re-lock cached DOM snapshot");
+        assert!(
+            snapshot_guard.is_none(),
+            "navigate must clear stale DOM cache even when Chromium launch fails"
+        );
+    }
 }

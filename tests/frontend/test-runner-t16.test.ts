@@ -13,8 +13,13 @@ function readProjectFile(relativePath: string): string {
   return readFileSync(absolutePath, "utf8");
 }
 
+function includesAll(source: string, fragments: string[]): boolean {
+  return fragments.every((fragment) => source.includes(fragment));
+}
+
 const routeSource = readProjectFile("src/routes/test-runner.tsx");
 const clientSource = readProjectFile("src/services/runner-client.ts");
+const schedulerClientSource = readProjectFile("src/services/scheduler-client.ts");
 const commandSource = readProjectFile("src/types/commands.ts");
 const dtoSource = readProjectFile("src/types/dto.ts");
 const runStoreSource = readProjectFile("src/store/run-store.ts");
@@ -24,6 +29,7 @@ const rustDtoContractSource = readProjectFile("src-tauri/src/contracts/dto.rs");
 const rustRepositorySource = readProjectFile("src-tauri/src/repositories/runner_repository.rs");
 const rustLibSource = readProjectFile("src-tauri/src/lib.rs");
 const rustMainSource = readProjectFile("src-tauri/src/main.rs");
+const scheduleMigrationPath = resolve("src-tauri/migrations/004_add_suite_schedules.sql");
 
 assert(
   routeSource.includes("Runner control") &&
@@ -47,35 +53,68 @@ assert(
 );
 
 assert(
-  routeSource.includes("Promise.all([") &&
-    routeSource.includes("runnerClient.listSuites()") &&
-    routeSource.includes("environmentClient.list()") &&
-    routeSource.includes("const historyFilters: Parameters<typeof runnerClient.listRunHistory>[0] = {};") &&
-    routeSource.includes("runnerClient.listRunHistoryReport(historyFilters)") &&
-    routeSource.includes("setHistory(historyItems)") &&
-    routeSource.includes("setHistoryGroupSummary(historyReport.groupSummary)") &&
-    routeSource.includes("const selection = await hydrateSelectedRun({") &&
-    routeSource.includes("previousSelectedRunId: selectedRunId") &&
-    routeSource.includes("const runDetail = await runnerClient.getRunDetail({ runId: nextSelectedRunId });"),
+  includesAll(routeSource, [
+    'data-testid="route-test-runner"',
+    "Schedule",
+    "Enabled",
+    "Disabled",
+    "Last run",
+    "Next run",
+    "Diagnostics"
+  ]),
+  "P2-T7 phải nhúng scheduling panel với status copy trực tiếp vào test-runner thay vì tách route mới."
+);
+
+assert(
+  includesAll(routeSource, [
+    "schedulerClient.listSchedules()",
+    "schedulerClient.upsertSchedule(",
+    "schedulerClient.setScheduleEnabled(",
+    "schedulerClient.deleteSchedule(",
+    "setSchedules(",
+    "setScheduleForm(",
+    "cadenceMinutes",
+    "Save schedule",
+    "Update schedule",
+    "Enable schedule",
+    "Disable schedule",
+    "Delete schedule",
+    "No persisted schedules yet."
+  ]),
+  "P2-T7 route phải nâng schedule marker thành UI thật: local form state, CRUD actions, refresh/list rendering và diagnostics tối thiểu trong test-runner."
+);
+
+assert(
+  includesAll(routeSource, [
+    "runnerClient.listSuites()",
+    "environmentClient.list()",
+    "runnerClient.listRunHistoryReport(",
+    "hydrateSelectedRun({",
+    "runnerClient.getRunDetail({ runId: selectedRunId })",
+    "setHistory(",
+    "setHistoryGroupSummary("
+  ]),
   "T16 route phải hydrate suites + environments + run history cùng lúc và tự load run detail từ persisted selection thay vì chỉ render read-side placeholder."
 );
 
 assert(
-  routeSource.includes("const selectedRun = useMemo(") &&
-    routeSource.includes("if (!selectedRun || !selectedRun.suiteId || !activeEnvironmentId)") &&
-    routeSource.includes("rerunFailedFromRunId: selectedRun.runId") &&
-    routeSource.includes("Rerun failed accepted from historical run") &&
-    routeSource.includes("selectedRun.failedCount > 0") &&
-    routeSource.includes("Select a persisted suite run and environment before rerunning failures."),
+  includesAll(routeSource, [
+    "rerunFailedFromRunId: selectedRun.runId",
+    "Rerun failed accepted from historical run",
+    "Select a persisted suite run and environment before rerunning failures.",
+    "failedCount > 0"
+  ]),
   "T16 route phải buộc rerun-failed xuất phát từ historical failed run đã persist và chỉ mở action khi target scope hợp lệ."
 );
 
 assert(
-  routeSource.includes("if (!activeRunId)") &&
-    routeSource.includes("Already cancelling the active run. Waiting for terminal update.") &&
-    routeSource.includes("Cancel requested for active run") &&
-    routeSource.includes("No active run right now.") &&
-    routeSource.includes("disabled={!activeRunId || isCancelling || isStopping}"),
+  includesAll(routeSource, [
+    "runnerClient.cancelSuite({ runId: activeRunId })",
+    "Already cancelling the active run. Waiting for terminal update.",
+    "Cancel requested for active run",
+    "No active run right now.",
+    "Cancel active run"
+  ]),
   "T16 route phải phản ánh cancel idempotent guard semantics trung thực trong desktop runner surface."
 );
 
@@ -96,6 +135,21 @@ assert(
     clientSource.includes("invokeCommand(\"runner.suite.execute\"") &&
     !clientSource.includes("invoke("),
   "T16 phải thêm thin runner client cho suite list, run history, run detail và vẫn giữ raw invoke phía sau tauri-client."
+);
+
+assert(
+  includesAll(schedulerClientSource, [
+    'invokeCommand("scheduler.schedule.list"',
+    'invokeCommand("scheduler.schedule.upsert"',
+    'invokeCommand("scheduler.schedule.setEnabled"',
+    'invokeCommand("scheduler.schedule.delete"',
+    "async listSchedules()",
+    "async upsertSchedule(input:",
+    "async setScheduleEnabled(input:",
+    "async deleteSchedule(input:"
+  ]) &&
+    !schedulerClientSource.includes("invoke("),
+  "P2-T7 phải thêm scheduler-client mỏng và typed để route không leak raw invoke khi load/save/toggle/delete schedules."
 );
 
 assert(
@@ -153,6 +207,18 @@ assert(
     dtoSource.includes("requestPreview") &&
     dtoSource.includes("responsePreview"),
   "T16 phải thêm DTO rõ ràng cho history/detail, gồm artifact manifests, sanitized previews, và failure category."
+);
+
+assert(
+  includesAll(dtoSource, ["export interface SuiteScheduleDto", "cadenceMinutes: number", "lastRunStatus?"]) &&
+    includesAll(commandSource, [
+      '"scheduler.schedule.list": Record<string, never>;',
+      '"scheduler.schedule.upsert": {',
+      '"scheduler.schedule.setEnabled": {',
+      '"scheduler.schedule.delete": {'
+    ]) &&
+    existsSync(scheduleMigrationPath),
+  "P2-T7 phải khóa typed scheduling contracts + migration seam ngay từ regression của test-runner route."
 );
 
 assert(

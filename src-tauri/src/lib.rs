@@ -65,6 +65,7 @@ pub mod state;
 
 use chrono::Utc;
 use serde_json::json;
+use std::time::Duration;
 use std::sync::Arc;
 use tauri::{Manager, State};
 
@@ -72,6 +73,7 @@ use contracts::commands::{
     ApiExecuteCommand, BrowserHealthCheckCommand, BrowserRecordingCancelCommand,
     BrowserRecordingStartCommand, BrowserRecordingStopCommand, BrowserReplayCancelCommand,
     BrowserReplayStartCommand, RunnerRunDetailCommand, RunnerRunHistoryCommand,
+    SchedulerScheduleDeleteCommand, SchedulerScheduleSetEnabledCommand, SchedulerScheduleUpsertCommand,
     RunnerSuiteCancelCommand, RunnerSuiteExecuteCommand,
     DataTableCreateCommand, DataTableExportCommand, DataTableImportCommand, DataTableRowUpsertCommand,
     DataTableUpdateCommand, DeleteByIdCommand, EmptyCommandPayload, EnvironmentCreateCommand,
@@ -93,6 +95,54 @@ pub use state::{AppState, AppConfig, RecordingState, RunState};
 pub use db::{Database, DbConnection, MigrationRunner, MigrationResult};
 pub use services::{ApiExecutionService, EnvironmentService, SecretService};
 pub use utils::paths::AppPaths;
+
+fn start_scheduler_loop(app_handle: tauri::AppHandle, app_state: Arc<AppState>) -> AppResult<()> {
+    app_state.mark_scheduler_started()?;
+
+    tauri::async_runtime::spawn(async move {
+        let interval_duration = Duration::from_secs(30);
+        loop {
+            let _ = schedule_tick(app_handle.clone(), Arc::clone(&app_state));
+            tokio::time::sleep(interval_duration).await;
+        }
+    });
+
+    Ok(())
+}
+
+fn schedule_tick(app_handle: tauri::AppHandle, app_state: Arc<AppState>) -> AppResult<usize> {
+    let db_handle = app_state.db();
+    let db = db_handle
+        .lock()
+        .map_err(|_| AppError::internal("Database lock poisoned"))?;
+    let secret_service = app_state.secret_service();
+    let secret_guard = secret_service
+        .read()
+        .map_err(|_| AppError::internal("Secret service lock poisoned"))?;
+
+    let scheduler_service = services::SchedulerService::new(db.connection());
+    scheduler_service.schedule_tick(app_state.as_ref(), Utc::now(), |schedule| {
+        let service = services::RunnerOrchestrationService::new(
+            RunnerRepository::new(db.connection()),
+            services::ApiExecutionService::new(
+                ApiRepository::new(db.connection()),
+                EnvironmentRepository::new(db.connection()),
+                &secret_guard,
+            ),
+            services::BrowserAutomationService::new(app_state.paths().clone()),
+        );
+
+        tauri::async_runtime::block_on(service.execute_suite(
+            app_state.as_ref(),
+            &app_handle,
+            &schedule.suite_id,
+            &schedule.environment_id,
+            None,
+        ))?;
+
+        Ok(())
+    })
+}
 
 fn contract_env_type_to_model(value: contracts::domain::EnvironmentType) -> ModelEnvironmentType {
     match value {
@@ -691,6 +741,7 @@ fn api_execute(payload: ApiExecuteCommand, state: State<'_, std::sync::Arc<AppSt
         &secret_guard,
     );
 
+    // Err(error @ TestForgeError::Validation(_)) => Ok(to_preflight_api_result(error))
     match tauri::async_runtime::block_on(service.execute(
         payload.test_case_id.as_deref(),
         &payload.environment_id,
@@ -962,6 +1013,80 @@ fn runner_suite_cancel(
 }
 
 #[tauri::command]
+fn scheduler_schedule_list(
+    _payload: EmptyCommandPayload,
+    state: State<'_, std::sync::Arc<AppState>>,
+) -> std::result::Result<Vec<contracts::dto::SuiteScheduleDto>, AppError> {
+    let db_handle = state.db();
+    let db = db_handle
+        .lock()
+        .map_err(|_| AppError::internal("Database lock poisoned"))?;
+    services::SchedulerService::new(db.connection())
+        .list_schedule_dtos()
+        .map_err(map_command_error)
+}
+
+#[tauri::command]
+fn scheduler_schedule_upsert(
+    payload: SchedulerScheduleUpsertCommand,
+    state: State<'_, std::sync::Arc<AppState>>,
+) -> std::result::Result<contracts::dto::SuiteScheduleDto, AppError> {
+    let db_handle = state.db();
+    let db = db_handle
+        .lock()
+        .map_err(|_| AppError::internal("Database lock poisoned"))?;
+    let service = services::SchedulerService::new(db.connection());
+    let schedule = service
+        .upsert_schedule(services::scheduler_service::ScheduleUpsertInput {
+            id: payload.schedule_id,
+            suite_id: payload.suite_id,
+            environment_id: payload.environment_id,
+            enabled: payload.enabled,
+            cadence_minutes: i64::from(payload.cadence_minutes),
+            next_run_at: Some(Utc::now() + chrono::Duration::minutes(i64::from(payload.cadence_minutes))),
+        })
+        .map(|record| record.into())
+        .map_err(map_command_error)?;
+
+    Ok(schedule)
+}
+
+#[tauri::command]
+fn scheduler_schedule_set_enabled(
+    payload: SchedulerScheduleSetEnabledCommand,
+    state: State<'_, std::sync::Arc<AppState>>,
+) -> std::result::Result<contracts::dto::SuiteScheduleDto, AppError> {
+    let db_handle = state.db();
+    let db = db_handle
+        .lock()
+        .map_err(|_| AppError::internal("Database lock poisoned"))?;
+    services::SchedulerService::new(db.connection())
+        .set_schedule_enabled(&payload.schedule_id, payload.enabled)
+        .map(|record| record.into())
+        .map_err(map_command_error)
+}
+
+#[tauri::command]
+fn scheduler_schedule_delete(
+    payload: SchedulerScheduleDeleteCommand,
+    state: State<'_, std::sync::Arc<AppState>>,
+) -> std::result::Result<contracts::commands::AckResponse, AppError> {
+    let db_handle = state.db();
+    let db = db_handle
+        .lock()
+        .map_err(|_| AppError::internal("Database lock poisoned"))?;
+    let deleted = services::SchedulerService::new(db.connection())
+        .delete_schedule(&payload.schedule_id)
+        .map_err(map_command_error)?;
+
+    Ok(contracts::commands::AckResponse {
+        deleted: Some(deleted),
+        started: None,
+        cancelled: None,
+    })
+}
+
+#[tauri::command]
 fn data_table_list(_payload: EmptyCommandPayload, state: State<'_, std::sync::Arc<AppState>>) -> std::result::Result<Vec<DataTableDto>, AppError> {
     with_data_table_repository(state.inner().as_ref(), |repository| {
         let tables = repository.find_all()?;
@@ -1208,6 +1333,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             let result = bootstrap(app.handle())?;
+            start_scheduler_loop(app.handle().clone(), Arc::clone(&result.app_state))?;
             app.manage(result.app_state);
             Ok(())
         })
@@ -1236,6 +1362,10 @@ pub fn run() {
             runner_run_history,
             runner_run_detail,
             runner_suite_cancel,
+            scheduler_schedule_list,
+            scheduler_schedule_upsert,
+            scheduler_schedule_set_enabled,
+            scheduler_schedule_delete,
             data_table_list,
             data_table_create,
             data_table_update,

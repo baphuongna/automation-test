@@ -648,7 +648,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `feat(reporting): add advanced run summaries and drilldown`
 
-- [ ] P2-T7. Local scheduling + unattended suite execution baseline
+- [x] P2-T7. Local scheduling + unattended suite execution baseline
 
   **What to do**:
   - Add local scheduling for unattended suite execution with a narrow, internal-ops-friendly scope.
@@ -682,9 +682,9 @@ Wave FINAL (parallel verification)
   - Create: `tests/rust/scheduler_service_p2.rs`
 
   **Acceptance Criteria**:
-  - [ ] Users can create, enable/disable, and inspect a local schedule for a suite.
-  - [ ] Scheduled runs execute through the normal runner pipeline and produce standard history/artifacts.
-  - [ ] Failed scheduled runs surface actionable diagnostics.
+  - [x] Users can create, enable/disable, and inspect a local schedule for a suite.
+  - [x] Scheduled runs execute through the normal runner pipeline and produce standard history/artifacts.
+  - [x] Failed scheduled runs surface actionable diagnostics.
 
   **QA Scenarios**:
   ```

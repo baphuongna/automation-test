@@ -1,0 +1,30 @@
+STATUS: BLOCKED (runtime harness limitation)
+
+Goal:
+- Prove an enabled local schedule triggers unattended execution through the normal runner pipeline while the desktop app is open.
+
+What was verified successfully:
+- Source/test coverage is green for scheduler lifecycle, embedded UI, command wiring, blocked/failure semantics, and persistence.
+- `node --import tsx tests/frontend/suite-runner-t15.test.ts` -> PASS
+- `node --import tsx tests/frontend/test-runner-t16.test.ts` -> PASS
+- `node --import tsx tests/frontend/reliability-hardening-t18.test.ts` -> PASS
+- `node --import tsx tests/frontend/scheduler-route-p2.test.ts` -> PASS
+- `node --import tsx tests/frontend/security-export-redaction-p2.test.ts` -> PASS
+- `cargo test --test scheduler_service_p2 --manifest-path src-tauri/Cargo.toml` -> PASS (after rerun with `CARGO_INCREMENTAL=0` due Windows paging-file mmap issue)
+
+Runtime attempt:
+- Built frontend successfully with `npm run build`.
+- Started desktop runtime with `cargo run --manifest-path src-tauri/Cargo.toml`.
+- Process launched and remained running until harness timeout, which proves startup viability.
+
+Why this evidence is BLOCKED instead of PASS:
+- Current harness did not provide a trustworthy way to drive the live Tauri desktop window end-to-end, create/enable a schedule through the real UI/runtime, wait through a trigger window, and then inspect resulting history/artifacts from the same live session.
+- Because that interactive runtime proof was not captured, claiming a full unattended scheduled-run PASS would be dishonest.
+
+Most relevant runtime evidence available:
+- `cargo run --manifest-path src-tauri/Cargo.toml` started the desktop app successfully.
+- Scheduler lifecycle/source tests prove the loop bootstraps from `.setup(...)`, uses active-run guards, and routes through existing runner orchestration.
+
+Conclusion:
+- Code/test evidence strongly supports the feature.
+- Honest runtime end-to-end proof for this scenario remains BLOCKED by harness interaction limits.

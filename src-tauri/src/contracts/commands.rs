@@ -4,7 +4,7 @@ use super::domain::{EntityId, EnvironmentType, IsoDateTime, RunStatus};
 use super::dto::{
     ApiAssertionDto, ApiExecutionResultDto, ApiRequestDto, ApiTestCaseDto, DataTableColumnDto,
     DataTableExportDto, DataTableImportResultDto, DataTableRowDto, EnvironmentVariableDto,
-    RunDetailDto, RunHistoryDto, RunHistoryEntryDto, SuiteDto, UiTestCaseDto,
+    RunDetailDto, RunHistoryEntryDto, SuiteDto, SuiteScheduleDto, UiTestCaseDto,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -185,6 +185,29 @@ pub struct RunnerRunDetailCommand {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct SchedulerScheduleUpsertCommand {
+    pub schedule_id: Option<EntityId>,
+    pub suite_id: EntityId,
+    pub environment_id: EntityId,
+    pub cadence_minutes: u32,
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SchedulerScheduleSetEnabledCommand {
+    pub schedule_id: EntityId,
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SchedulerScheduleDeleteCommand {
+    pub schedule_id: EntityId,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 #[serde(tag = "command", content = "payload")]
 pub enum CommandEnvelope {
     #[serde(rename = "environment.list")]
@@ -249,6 +272,14 @@ pub enum CommandEnvelope {
     RunnerRunDetail(RunnerRunDetailCommand),
     #[serde(rename = "runner.suite.cancel")]
     RunnerSuiteCancel(RunnerSuiteCancelCommand),
+    #[serde(rename = "scheduler.schedule.list")]
+    SchedulerScheduleList(EmptyCommandPayload),
+    #[serde(rename = "scheduler.schedule.upsert")]
+    SchedulerScheduleUpsert(SchedulerScheduleUpsertCommand),
+    #[serde(rename = "scheduler.schedule.setEnabled")]
+    SchedulerScheduleSetEnabled(SchedulerScheduleSetEnabledCommand),
+    #[serde(rename = "scheduler.schedule.delete")]
+    SchedulerScheduleDelete(SchedulerScheduleDeleteCommand),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -256,6 +287,12 @@ pub enum CommandEnvelope {
 pub struct RunnerSuiteExecuteResponse {
     pub run_id: EntityId,
     pub suite: SuiteDto,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct SchedulerScheduleListResponse {
+    pub schedules: Vec<SuiteScheduleDto>,
 }
 
 #[allow(dead_code)]

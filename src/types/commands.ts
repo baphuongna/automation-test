@@ -14,6 +14,7 @@ import type {
   RunHistoryDto,
   RunHistoryEntryDto,
   ShellMetadataDto,
+  SuiteScheduleDto,
   SuiteDto,
   UiReplayResultDto,
   UiTestCaseDto
@@ -130,6 +131,21 @@ export interface CommandPayloadMap {
   "runner.suite.cancel": {
     runId: EntityId;
   };
+  "scheduler.schedule.list": Record<string, never>;
+  "scheduler.schedule.upsert": {
+    scheduleId?: EntityId;
+    suiteId: EntityId;
+    environmentId: EntityId;
+    cadenceMinutes: number;
+    enabled: boolean;
+  };
+  "scheduler.schedule.setEnabled": {
+    scheduleId: EntityId;
+    enabled: boolean;
+  };
+  "scheduler.schedule.delete": {
+    scheduleId: EntityId;
+  };
 }
 
 export interface CommandResponseMap {
@@ -168,6 +184,10 @@ export interface CommandResponseMap {
   "runner.run.history": RunHistoryDto;
   "runner.run.detail": RunDetailDto;
   "runner.suite.cancel": { cancelled: true };
+  "scheduler.schedule.list": SuiteScheduleDto[];
+  "scheduler.schedule.upsert": SuiteScheduleDto;
+  "scheduler.schedule.setEnabled": SuiteScheduleDto;
+  "scheduler.schedule.delete": { deleted: true };
 }
 
 export type CommandName = keyof CommandPayloadMap;

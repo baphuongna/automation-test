@@ -100,6 +100,7 @@ pub struct AppState {
     recording_state: RwLock<RecordingState>,
     replay_state: RwLock<ReplayState>,
     run_state: RwLock<RunState>,
+    scheduler_runtime_started: RwLock<bool>,
     degraded_mode: RwLock<bool>,
     master_key_initialized: RwLock<bool>,
     shell_bootstrap_snapshot: RwLock<ShellBootstrapSnapshot>,
@@ -124,6 +125,7 @@ impl AppState {
             recording_state: RwLock::new(RecordingState::Idle),
             replay_state: RwLock::new(ReplayState::Idle),
             run_state: RwLock::new(RunState::Idle),
+            scheduler_runtime_started: RwLock::new(false),
             degraded_mode: RwLock::new(degraded_mode),
             master_key_initialized: RwLock::new(master_key_initialized),
             shell_bootstrap_snapshot: RwLock::new(shell_bootstrap_snapshot),
@@ -474,6 +476,20 @@ impl AppState {
 
     pub fn stop_run(&self, expected_run_id: &str) {
         self.finish_run(expected_run_id);
+    }
+
+    pub fn is_scheduler_started(&self) -> bool {
+        *self.scheduler_runtime_started.read().unwrap()
+    }
+
+    pub fn mark_scheduler_started(&self) -> AppResult<()> {
+        let mut state = self.scheduler_runtime_started.write().unwrap();
+        if *state {
+            return Err(AppError::internal("Scheduler loop already active"));
+        }
+
+        *state = true;
+        Ok(())
     }
 
     pub fn config(&self) -> AppConfig {

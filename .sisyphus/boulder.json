@@ -49,11 +49,33 @@
     "ses_2adb6c313ffeDIeqkLf2xK4lWz",
     "ses_2adb6c298ffeQahCwXkGN2xBQO",
     "ses_2adaefe4bffeJV1UNxyV2QNXBU",
-    "ses_2adaefe7bffeGr0k6Fo1poOkRx"
-    ,"ses_2add987b2ffehqXC7GAKsAFGwl"
-    ,"ses_2adc560acffeqPksWJCkiPl7if"
-    ,"ses_2adecfa74ffe7pdjgZfvQKlnNa"
-    ,"ses_2aded03d6ffeUk9oOJnAXKBCI9"
+    "ses_2adaefe7bffeGr0k6Fo1poOkRx",
+    "ses_2add987b2ffehqXC7GAKsAFGwl",
+    "ses_2adc560acffeqPksWJCkiPl7if",
+    "ses_2adecfa74ffe7pdjgZfvQKlnNa",
+    "ses_2aded03d6ffeUk9oOJnAXKBCI9",
+    "ses_2ada21592ffeM14E0R73BDl6v0",
+    "ses_2ada21585ffeMc6sxc96WwQlFP",
+    "ses_2ad847d98ffenvVFeKBCbqalQV",
+    "ses_2ad7c51a6ffeDAgQ9x2Rz99j7f",
+    "ses_2ad77f145ffeUx42P3q34X2QjH",
+    "ses_2ad77e864ffe32eR864Rwyyig1",
+    "ses_2ad6e18f7ffea5iB1QPtsRxei5",
+    "ses_2ad6e06ceffeMJwltHB6hZseuG",
+    "ses_2ad50a864ffeNNIAGDud1NyR56",
+    "ses_2ad50a105ffeLRNr1ZhxDNdSVy",
+    "ses_2ad4cff60ffeFAl22SCRDTxqrL",
+    "ses_2ad43005dffeyTgr60WnxhxhLs",
+    "ses_2ad430ee6ffeEV3UCiMuWbc6my",
+    "ses_2ad38b7edffeGvSruWy6ZEJrML",
+    "ses_2ad3648e2ffer6343EOrHBc2fU",
+    "ses_2ad363999ffe2tRKjujWWAwvLY",
+    "ses_2ad43005dffeyTgr60WnxhxhLs",
+    "ses_2ad430ee6ffeEV3UCiMuWbc6my",
+    "ses_2ad4cff60ffeFAl22SCRDTxqrL",
+    "ses_2ad38b7edffeGvSruWy6ZEJrML",
+    "ses_2ad3648e2ffer6343EOrHBc2fU",
+    "ses_2ad363999ffe2tRKjujWWAwvLY"
   ],
   "plan_name": "testforge-phase-2-implementation",
   "worktree_path": null,
@@ -76,6 +98,20 @@
     "P2-T6-spec-review": "ses_2add987b2ffehqXC7GAKsAFGwl",
     "P2-T6-code-review": "ses_2adc560acffeqPksWJCkiPl7if",
     "P2-T6-impl-frontend": "ses_2adecfa74ffe7pdjgZfvQKlnNa",
-    "P2-T6-impl-backend": "ses_2aded03d6ffeUk9oOJnAXKBCI9"
+    "P2-T6-impl-backend": "ses_2aded03d6ffeUk9oOJnAXKBCI9",
+    "P2-T7-spec-review": "ses_2ad847d98ffenvVFeKBCbqalQV",
+    "P2-T7-plan-review": "ses_2ad7c51a6ffeDAgQ9x2Rz99j7f",
+    "P2-T7-impl-contracts": "ses_2ad77f145ffeUx42P3q34X2QjH",
+    "P2-T7-impl-backend": "ses_2ad77e864ffe32eR864Rwyyig1",
+    "P2-T7-foundation-spec-review": "ses_2ad6e18f7ffea5iB1QPtsRxei5",
+    "P2-T7-foundation-code-review": "ses_2ad6e06ceffeMJwltHB6hZseuG",
+    "P2-T7-chunk34-spec-review": "ses_2ad50a864ffeNNIAGDud1NyR56",
+    "P2-T7-chunk34-code-review": "ses_2ad50a105ffeLRNr1ZhxDNdSVy",
+    "P2-T7-browser-fix": "ses_2ad4cff60ffeFAl22SCRDTxqrL",
+    "P2-T7-final-spec-review": "ses_2ad430ee6ffeEV3UCiMuWbc6my",
+    "P2-T7-final-code-review": "ses_2ad43005dffeyTgr60WnxhxhLs",
+    "P2-T7-truncated-summary": "ses_2ad38b7edffeGvSruWy6ZEJrML",
+    "P2-T7-blocker-spec-check": "ses_2ad3648e2ffer6343EOrHBc2fU",
+    "P2-T7-blocker-code-check": "ses_2ad363999ffe2tRKjujWWAwvLY"
   }
 }

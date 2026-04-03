@@ -2,11 +2,29 @@ import { useEffect, useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { environmentClient } from "../services/environment-client";
 import { runnerClient } from "../services/runner-client";
+import { schedulerClient } from "../services/scheduler-client";
 import { useEnvStore } from "../store/env-store";
 import { subscribeRunnerEvents, useRunStore } from "../store/run-store";
-import type { RunCaseResultDto, RunDetailDto, RunHistoryEntryDto, RunHistoryGroupSummaryDto, SuiteDto } from "../types";
+import type { RunCaseResultDto, RunDetailDto, RunHistoryEntryDto, RunHistoryGroupSummaryDto, SuiteDto, SuiteScheduleDto } from "../types";
 
 type ReportingRunStatusFilter = Exclude<RunHistoryEntryDto["status"], "idle">;
+type ScheduleFormState = {
+  scheduleId?: string;
+  suiteId: string;
+  environmentId: string;
+  cadenceMinutes: number;
+  enabled: boolean;
+};
+
+function buildScheduleFormState(seed?: Partial<ScheduleFormState>): ScheduleFormState {
+  return {
+    ...(seed?.scheduleId ? { scheduleId: seed.scheduleId } : {}),
+    suiteId: seed?.suiteId ?? "",
+    environmentId: seed?.environmentId ?? "",
+    cadenceMinutes: seed?.cadenceMinutes ?? 15,
+    enabled: seed?.enabled ?? true
+  };
+}
 
 async function hydrateSelectedRun(options: {
   historyItems: RunHistoryEntryDto[];
@@ -171,11 +189,13 @@ function getEnvironmentLabel(activeEnvironmentId: string | null, suiteFilterId: 
 
 export default function TestRunner(): ReactElement {
   const [suites, setSuites] = useState<SuiteDto[]>([]);
+  const [schedules, setSchedules] = useState<SuiteScheduleDto[]>([]);
   const [history, setHistory] = useState<RunHistoryEntryDto[]>([]);
   const [selectedSuiteId, setSelectedSuiteId] = useState<string | null>(null);
   const [reportSuiteFilterId, setReportSuiteFilterId] = useState<string | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [runDetail, setRunDetail] = useState<RunDetailDto | null>(null);
+  const [scheduleForm, setScheduleForm] = useState<ScheduleFormState>(buildScheduleFormState());
   const [historyGroupSummary, setHistoryGroupSummary] = useState<RunHistoryGroupSummaryDto>({
     totalRuns: 0,
     passedRuns: 0,
@@ -191,6 +211,8 @@ export default function TestRunner(): ReactElement {
   const [isExecuting, setIsExecuting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isRerunningFailed, setIsRerunningFailed] = useState(false);
+  const [isSavingSchedule, setIsSavingSchedule] = useState(false);
+  const [activeScheduleMutationId, setActiveScheduleMutationId] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -247,6 +269,37 @@ export default function TestRunner(): ReactElement {
     };
   }, [historyGroupSummary.cancelledRuns, historyGroupSummary.failedRuns, historyGroupSummary.passedRuns, history]);
 
+  const scheduleSummary = useMemo(() => {
+    const enabledCount = schedules.filter((schedule) => schedule.enabled).length;
+    const disabledCount = schedules.length - enabledCount;
+    const nextSchedule = schedules.find((schedule) => schedule.enabled && schedule.nextRunAt);
+    const lastScheduleRun = schedules.find((schedule) => schedule.lastRunAt);
+
+    return {
+      enabledCount,
+      disabledCount,
+      nextRunAt: nextSchedule?.nextRunAt,
+      lastRunAt: lastScheduleRun?.lastRunAt,
+      diagnostics:
+        schedules.find((schedule) => Boolean(schedule.lastError))?.lastError ??
+        "Diagnostics stay concise here until runtime scheduling wiring lands."
+    };
+  }, [schedules]);
+
+  useEffect(() => {
+    setScheduleForm((current) => {
+      if (current.scheduleId) {
+        return current;
+      }
+
+      return {
+        ...current,
+        suiteId: current.suiteId || selectedSuiteId || suites[0]?.id || "",
+        environmentId: current.environmentId || activeEnvironmentId || environments[0]?.id || ""
+      };
+    });
+  }, [activeEnvironmentId, environments, selectedSuiteId, suites]);
+
   async function loadRunnerScreen(options: { preserveSelectedRun?: boolean; requestedRunId?: string | null } = {}): Promise<void> {
     const preserveSelectedRun = options.preserveSelectedRun ?? false;
 
@@ -267,14 +320,16 @@ export default function TestRunner(): ReactElement {
       historyFilters.startedBefore = dateFilters.startedBefore;
     }
 
-    const [suiteItems, environmentItems, historyReport] = await Promise.all([
+    const [suiteItems, environmentItems, historyReport, scheduleItems] = await Promise.all([
       runnerClient.listSuites(),
       environmentClient.list(),
-      runnerClient.listRunHistoryReport(historyFilters)
+      runnerClient.listRunHistoryReport(historyFilters),
+      schedulerClient.listSchedules()
     ]);
     const historyItems = historyReport.entries;
 
     setSuites(suiteItems);
+    setSchedules(scheduleItems);
     setEnvironments(
       environmentItems.map((environment) => ({
         id: environment.id,
@@ -295,6 +350,17 @@ export default function TestRunner(): ReactElement {
 
     setSelectedRunId(selection.selectedRunId);
     setRunDetail(selection.runDetail);
+    setScheduleForm((current) => {
+      if (current.scheduleId) {
+        return current;
+      }
+
+      return {
+        ...current,
+        suiteId: current.suiteId || suiteItems[0]?.id || "",
+        environmentId: current.environmentId || environmentItems[0]?.id || current.environmentId
+      };
+    });
   }
 
   useEffect(() => {
@@ -405,6 +471,98 @@ export default function TestRunner(): ReactElement {
       setErrorMessage(error instanceof Error ? error.message : "Không thể refresh runner screen.");
     } finally {
       setIsRefreshing(false);
+    }
+  }
+
+  function resetScheduleForm(): void {
+    setScheduleForm(
+      buildScheduleFormState({
+        suiteId: selectedSuiteId || suites[0]?.id || "",
+        environmentId: activeEnvironmentId || environments[0]?.id || ""
+      })
+    );
+  }
+
+  function handleScheduleEdit(schedule: SuiteScheduleDto): void {
+    setScheduleForm({
+      scheduleId: schedule.id,
+      suiteId: schedule.suiteId,
+      environmentId: schedule.environmentId,
+      cadenceMinutes: schedule.cadenceMinutes,
+      enabled: schedule.enabled
+    });
+    setFeedbackMessage(`Schedule ${schedule.id} loaded into the editor.`);
+  }
+
+  async function refreshSchedulesAfterMutation(message: string): Promise<void> {
+    await loadRunnerScreen({ preserveSelectedRun: true });
+    resetScheduleForm();
+    setFeedbackMessage(message);
+  }
+
+  async function handleScheduleSave(): Promise<void> {
+    if (!scheduleForm.suiteId || !scheduleForm.environmentId) {
+      setErrorMessage("Select both suite and environment before saving a schedule.");
+      return;
+    }
+
+    if (!Number.isFinite(scheduleForm.cadenceMinutes) || scheduleForm.cadenceMinutes <= 0) {
+      setErrorMessage("Cadence minutes must be a positive number.");
+      return;
+    }
+
+    try {
+      setErrorMessage(null);
+      setIsSavingSchedule(true);
+      const savedSchedule = await schedulerClient.upsertSchedule({
+        ...(scheduleForm.scheduleId ? { scheduleId: scheduleForm.scheduleId } : {}),
+        suiteId: scheduleForm.suiteId,
+        environmentId: scheduleForm.environmentId,
+        cadenceMinutes: scheduleForm.cadenceMinutes,
+        enabled: scheduleForm.enabled
+      });
+      await refreshSchedulesAfterMutation(
+        scheduleForm.scheduleId
+          ? `Update schedule accepted for ${savedSchedule.id}.`
+          : `Save schedule accepted for ${savedSchedule.id}.`
+      );
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Không thể lưu schedule.");
+    } finally {
+      setIsSavingSchedule(false);
+    }
+  }
+
+  async function handleScheduleToggle(schedule: SuiteScheduleDto): Promise<void> {
+    try {
+      setErrorMessage(null);
+      setActiveScheduleMutationId(schedule.id);
+      const updatedSchedule = await schedulerClient.setScheduleEnabled({
+        scheduleId: schedule.id,
+        enabled: !schedule.enabled
+      });
+      await refreshSchedulesAfterMutation(
+        updatedSchedule.enabled
+          ? `Enable schedule accepted for ${updatedSchedule.id}.`
+          : `Disable schedule accepted for ${updatedSchedule.id}.`
+      );
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Không thể đổi trạng thái schedule.");
+    } finally {
+      setActiveScheduleMutationId(null);
+    }
+  }
+
+  async function handleScheduleDelete(scheduleId: string): Promise<void> {
+    try {
+      setErrorMessage(null);
+      setActiveScheduleMutationId(scheduleId);
+      await schedulerClient.deleteSchedule({ scheduleId });
+      await refreshSchedulesAfterMutation(`Delete schedule accepted for ${scheduleId}.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Không thể xóa schedule.");
+    } finally {
+      setActiveScheduleMutationId(null);
     }
   }
 
@@ -753,6 +911,184 @@ export default function TestRunner(): ReactElement {
                 ))}
               </div>
             )}
+          </article>
+
+          <article className="test-runner__summary-card">
+            <div className="test-runner__subsection-header">
+              <div>
+                <span className="test-runner__eyebrow">Schedule</span>
+                <h3>Schedule status and editor</h3>
+              </div>
+              <button type="button" className="test-runner__ghost-action" onClick={resetScheduleForm}>
+                Reset schedule form
+              </button>
+            </div>
+            <dl className="test-runner__metric-grid test-runner__metric-grid--four">
+              <div>
+                <dt>Enabled</dt>
+                <dd>{scheduleSummary.enabledCount}</dd>
+              </div>
+              <div>
+                <dt>Disabled</dt>
+                <dd>{scheduleSummary.disabledCount}</dd>
+              </div>
+              <div>
+                <dt>Last run</dt>
+                <dd>{formatTimestamp(scheduleSummary.lastRunAt)}</dd>
+              </div>
+              <div>
+                <dt>Next run</dt>
+                <dd>{formatTimestamp(scheduleSummary.nextRunAt)}</dd>
+              </div>
+            </dl>
+            <div className="test-runner__preview-grid">
+              <label className="test-runner__field">
+                <span>Suite</span>
+                <select
+                  value={scheduleForm.suiteId}
+                  onChange={(event) => setScheduleForm((current) => ({ ...current, suiteId: event.target.value }))}
+                >
+                  <option value="">Select suite</option>
+                  {suites.map((suite) => (
+                    <option key={suite.id} value={suite.id}>
+                      {suite.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="test-runner__field">
+                <span>Environment</span>
+                <select
+                  value={scheduleForm.environmentId}
+                  onChange={(event) => setScheduleForm((current) => ({ ...current, environmentId: event.target.value }))}
+                >
+                  <option value="">Select environment</option>
+                  {environments.map((environment) => (
+                    <option key={environment.id} value={environment.id}>
+                      {environment.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="test-runner__preview-grid">
+              <label className="test-runner__field">
+                <span>Cadence minutes</span>
+                <input
+                  type="number"
+                  min={1}
+                  step={1}
+                  value={scheduleForm.cadenceMinutes}
+                  onChange={(event) =>
+                    setScheduleForm((current) => ({
+                      ...current,
+                      cadenceMinutes: Number.parseInt(event.target.value, 10) || 0
+                    }))
+                  }
+                />
+              </label>
+
+              <label className="test-runner__field">
+                <span>Enabled by default</span>
+                <select
+                  value={scheduleForm.enabled ? "enabled" : "disabled"}
+                  onChange={(event) => setScheduleForm((current) => ({ ...current, enabled: event.target.value === "enabled" }))}
+                >
+                  <option value="enabled">Enabled</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </label>
+            </div>
+            <div className="test-runner__hero-actions">
+              <button
+                type="button"
+                className="test-runner__primary-action"
+                onClick={() => void handleScheduleSave()}
+                disabled={isSavingSchedule}
+              >
+                {isSavingSchedule ? "Saving…" : scheduleForm.scheduleId ? "Update schedule" : "Save schedule"}
+              </button>
+            </div>
+            <div className="test-runner__detail-stack">
+              <article className="test-runner__artifact-card">
+                <div className="test-runner__subsection-header">
+                  <div>
+                    <span className="test-runner__eyebrow">Diagnostics</span>
+                    <h4>Scheduler status summary</h4>
+                  </div>
+                  <span>{schedules.length} schedules</span>
+                </div>
+                <p>{scheduleSummary.diagnostics}</p>
+              </article>
+
+              {schedules.length === 0 ? <p className="test-runner__muted">No persisted schedules yet.</p> : null}
+
+              <div className="test-runner__detail-stack">
+                {schedules.map((schedule) => {
+                  const isMutatingSchedule = activeScheduleMutationId === schedule.id;
+                  const scheduleSuiteName = suites.find((suite) => suite.id === schedule.suiteId)?.name ?? schedule.suiteId;
+                  const scheduleEnvironmentName =
+                    environments.find((environment) => environment.id === schedule.environmentId)?.name ?? schedule.environmentId;
+
+                  return (
+                    <article key={schedule.id} className="test-runner__artifact-card">
+                      <div className="test-runner__subsection-header">
+                        <div>
+                          <strong>{scheduleSuiteName}</strong>
+                          <p>{scheduleEnvironmentName}</p>
+                        </div>
+                        <span className={`test-runner__status-badge test-runner__status-badge--${schedule.enabled ? "passed" : "cancelled"}`}>
+                          {schedule.enabled ? "Enabled" : "Disabled"}
+                        </span>
+                      </div>
+                      <dl className="test-runner__metric-grid test-runner__metric-grid--four">
+                        <div>
+                          <dt>Cadence</dt>
+                          <dd>{schedule.cadenceMinutes} minutes</dd>
+                        </div>
+                        <div>
+                          <dt>Last run</dt>
+                          <dd>{formatTimestamp(schedule.lastRunAt)}</dd>
+                        </div>
+                        <div>
+                          <dt>Next run</dt>
+                          <dd>{formatTimestamp(schedule.nextRunAt)}</dd>
+                        </div>
+                        <div>
+                          <dt>Last status</dt>
+                          <dd>{schedule.lastRunStatus ? formatRunStatus(schedule.lastRunStatus) : "Idle"}</dd>
+                        </div>
+                      </dl>
+                      <p>
+                        <strong>Diagnostics</strong> · {schedule.lastError ?? "No scheduler diagnostics captured yet."}
+                      </p>
+                      <div className="test-runner__hero-actions">
+                        <button type="button" className="test-runner__ghost-action" onClick={() => handleScheduleEdit(schedule)}>
+                          Edit schedule
+                        </button>
+                        <button
+                          type="button"
+                          className="test-runner__secondary-action"
+                          onClick={() => void handleScheduleToggle(schedule)}
+                          disabled={isMutatingSchedule}
+                        >
+                          {schedule.enabled ? "Disable schedule" : "Enable schedule"}
+                        </button>
+                        <button
+                          type="button"
+                          className="test-runner__danger-action"
+                          onClick={() => void handleScheduleDelete(schedule.id)}
+                          disabled={isMutatingSchedule}
+                        >
+                          Delete schedule
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
           </article>
 
           <article className="test-runner__summary-card">

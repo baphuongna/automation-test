@@ -1,0 +1,19 @@
+STATUS: BLOCKED (runtime harness limitation)
+
+Goal:
+- Prove a disabled schedule does not execute when a trigger window passes.
+
+What was verified successfully:
+- Scheduler persistence and toggle/enable-disable command surfaces are implemented and covered by source/Rust tests.
+- Scheduler status semantics stay inspectable and do not silently invent success.
+- Regression suite remained green:
+  - `node --import tsx tests/frontend/scheduler-route-p2.test.ts` -> PASS
+  - `cargo test --test scheduler_service_p2 --manifest-path src-tauri/Cargo.toml` -> PASS (after rerun with `CARGO_INCREMENTAL=0` because of transient Windows paging-file mmap failure)
+
+Why this evidence is BLOCKED instead of PASS:
+- I could not reliably drive the live Tauri window to create/disable a real schedule, wait through an actual trigger window, and observe the absence of a new run from the same desktop runtime session.
+- Without that live runtime observation, marking this scenario PASS would overstate what was actually proven.
+
+Conclusion:
+- Code/test coverage indicates disabled schedules are modeled correctly.
+- Honest live-runtime proof for “no execution while disabled” is BLOCKED by current harness limits.

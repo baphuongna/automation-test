@@ -239,6 +239,22 @@ pub struct SuiteDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct SuiteScheduleDto {
+    pub id: EntityId,
+    pub suite_id: EntityId,
+    pub environment_id: EntityId,
+    pub enabled: bool,
+    pub cadence_minutes: u32,
+    pub last_run_at: Option<IsoDateTime>,
+    pub next_run_at: Option<IsoDateTime>,
+    pub last_run_status: Option<RunStatus>,
+    pub last_error: Option<String>,
+    pub created_at: IsoDateTime,
+    pub updated_at: IsoDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct RunResultDto {
     pub run_id: EntityId,
     pub status: RunStatus,

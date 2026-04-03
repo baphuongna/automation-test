@@ -15,6 +15,7 @@ import type { BrowserHealthDto, ShellMetadataDto } from './types';
 
 function App() {
   const [shellMetadata, setShellMetadata] = useState<ShellMetadataDto | null>(null);
+  // Browser automation unavailable. Browser flows are blocked while API/data features remain usable.
 
   useEffect(() => {
     let isActive = true;
