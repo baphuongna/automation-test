@@ -1,0 +1,31 @@
+P2-T5 key rotation verification
+Date: 2026-04-03
+
+Scope:
+- Implement real SecretService::rotate_key in src-tauri/src/services/secret_service.rs
+- Re-encrypt persisted environment secret values with a new master key
+- Preserve degraded-mode blocking semantics and forbid plaintext fallback
+
+Code evidence:
+- rotate_key now accepts a rusqlite::Connection and loads persisted secret rows from environment_variables
+- existing ciphertext is decrypted with the current in-memory master key
+- new ciphertext is produced with a fresh AES-256-GCM key and fresh nonce per secret
+- DB values are updated only with encrypted secret values; no DTO/log plaintext exposure was added
+
+Verification commands:
+1. cargo test rotate_key
+
+Observed result:
+- running 2 tests
+- test services::secret_service::tests::test_rotate_key_reencrypts_persisted_secrets_without_losing_access ... ok
+- test services::secret_service::tests::test_rotate_key_fails_on_corrupt_persisted_secret_without_plaintext_fallback ... ok
+- test result: ok. 2 passed; 0 failed
+
+What this proves:
+- Existing encrypted secrets remain recoverable after key rotation
+- Ciphertext changes after rotation, confirming re-encryption rather than key reuse
+- Corrupt persisted ciphertext fails clearly with SecretDecryption and does not trigger plaintext fallback
+- Service stays non-degraded on rotation failure caused by bad persisted ciphertext
+
+Conclusion:
+- P2-T5 key rotation acceptance criteria verified at Rust runtime-test level.

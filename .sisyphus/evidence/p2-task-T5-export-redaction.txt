@@ -1,0 +1,29 @@
+P2-T5 export redaction verification
+Date: 2026-04-03
+
+Scope:
+- Harden preview_safe export/report sanitization in src-tauri/src/services/artifact_service.rs
+- Keep Phase 2 outputs redacted by default for secret-bearing values and previews
+
+Code evidence:
+- looks_like_sensitive_value now classifies secret-like fragments beyond the previous narrow checks
+- added detection for authorization:, token=, password=, secret=, encrypted:, masked preview, masked_preview, ciphertext, api_key
+- no new plaintext/ciphertext/masked-preview DTO fields were introduced in shared Rust or TypeScript contracts
+
+Verification commands:
+1. node --import tsx tests/frontend/security-export-redaction-p2.test.ts
+2. node --import tsx tests/frontend/export-artifact-t10.test.ts
+3. npm run build (with NODE_OPTIONS=--max-old-space-size=4096)
+
+Observed result:
+- P2 security export redaction regression test passed.
+- Export + artifact path T10 regression test passed.
+- Production build passed.
+
+What this proves:
+- Report/export payloads still flow through the shared preview-safe artifact seam
+- Secret-bearing keys and suspicious value fragments are redacted by default
+- Existing T10 artifact/export guardrails still hold after the P2-T5 hardening change
+
+Conclusion:
+- P2-T5 redaction/output-hardening acceptance criteria verified.

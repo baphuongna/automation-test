@@ -19,6 +19,7 @@ use std::sync::RwLock;
 use zeroize::Zeroizing;
 
 use crate::error::{Result, TestForgeError};
+use crate::models::VariableType;
 
 /// Nonce size for AES-256-GCM (12 bytes)
 const NONCE_SIZE: usize = 12;
@@ -46,6 +47,12 @@ pub struct SecretService {
     state: AtomicBool, // true = healthy, false = degraded
     /// Path to master key file
     key_file_path: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+struct PersistedSecretRecord {
+    id: String,
+    encrypted_value: String,
 }
 
 impl SecretService {
@@ -132,27 +139,7 @@ impl SecretService {
             .as_ref()
             .ok_or_else(|| TestForgeError::MasterKey("Master key not initialized".to_string()))?;
 
-        // Create cipher
-        let cipher = Aes256Gcm::new_from_slice(key.as_slice()).map_err(|e| {
-            TestForgeError::SecretEncryption(format!("Failed to create cipher: {}", e))
-        })?;
-
-        // Generate random nonce
-        let mut nonce_bytes = [0u8; NONCE_SIZE];
-        OsRng.fill_bytes(&mut nonce_bytes);
-        let nonce = Nonce::from_slice(&nonce_bytes);
-
-        // Encrypt
-        let ciphertext = cipher
-            .encrypt(nonce, plaintext.as_bytes())
-            .map_err(|e| TestForgeError::SecretEncryption(format!("Encryption failed: {}", e)))?;
-
-        // Combine nonce + ciphertext and encode as base64
-        let mut combined = Vec::with_capacity(NONCE_SIZE + ciphertext.len());
-        combined.extend_from_slice(&nonce_bytes);
-        combined.extend_from_slice(&ciphertext);
-
-        Ok(BASE64.encode(&combined))
+        self.encrypt_with_key(key.as_slice(), plaintext)
     }
 
     /// Decrypt a secret value
@@ -176,35 +163,7 @@ impl SecretService {
             .as_ref()
             .ok_or_else(|| TestForgeError::MasterKey("Master key not initialized".to_string()))?;
 
-        // Decode base64
-        let combined = BASE64
-            .decode(encrypted)
-            .map_err(|e| TestForgeError::Base64Decode(format!("Failed to decode base64: {}", e)))?;
-
-        if combined.len() < NONCE_SIZE + 1 {
-            return Err(TestForgeError::SecretDecryption(
-                "Encrypted data too short".to_string(),
-            ));
-        }
-
-        // Extract nonce and ciphertext
-        let nonce = Nonce::from_slice(&combined[..NONCE_SIZE]);
-        let ciphertext = &combined[NONCE_SIZE..];
-
-        // Create cipher
-        let cipher = Aes256Gcm::new_from_slice(key.as_slice()).map_err(|e| {
-            TestForgeError::SecretDecryption(format!("Failed to create cipher: {}", e))
-        })?;
-
-        // Decrypt
-        let plaintext = cipher
-            .decrypt(nonce, ciphertext)
-            .map_err(|e| TestForgeError::SecretDecryption(format!("Decryption failed: {}", e)))?;
-
-        // Convert to string
-        String::from_utf8(plaintext).map_err(|e| {
-            TestForgeError::SecretDecryption(format!("Invalid UTF-8 in decrypted data: {}", e))
-        })
+        self.decrypt_with_key(key.as_slice(), encrypted)
     }
 
     /// Generate a masked preview for a secret value
@@ -308,24 +267,35 @@ impl SecretService {
         Ok(())
     }
 
-    /// Rotate the master key (generate new key and re-encrypt all secrets)
-    /// This is a placeholder for future implementation
-    pub fn rotate_key(&self) -> Result<()> {
+    /// Rotate the master key and re-encrypt all persisted secrets.
+    pub fn rotate_key(&self, conn: &rusqlite::Connection) -> Result<()> {
         if self.is_degraded() {
             return Err(TestForgeError::DegradedMode(
                 "Cannot rotate key in degraded mode".to_string(),
             ));
         }
 
-        // TODO: Implement key rotation
-        // 1. Generate new key
-        // 2. Decrypt all secrets with old key
-        // 3. Re-encrypt with new key
-        // 4. Save new key
+        let old_key = self.current_master_key()?;
+        let persisted_secrets = Self::load_persisted_secrets(conn)?;
 
-        Err(TestForgeError::InvalidOperation(
-            "Key rotation not yet implemented".to_string(),
-        ))
+        let mut decrypted_secrets = Vec::with_capacity(persisted_secrets.len());
+        for secret in &persisted_secrets {
+            let plaintext = self.decrypt_with_key(old_key.as_slice(), &secret.encrypted_value)?;
+            decrypted_secrets.push((secret.id.clone(), plaintext));
+        }
+
+        let new_key = Self::generate_master_key();
+        let mut rotated_secrets = Vec::with_capacity(decrypted_secrets.len());
+        for (id, plaintext) in &decrypted_secrets {
+            let re_encrypted_value = self.encrypt_with_key(new_key.as_slice(), plaintext)?;
+            rotated_secrets.push((id.clone(), re_encrypted_value));
+        }
+
+        Self::persist_rotated_secrets(conn, &rotated_secrets)?;
+        self.save_master_key_to_disk(new_key.as_slice())?;
+        self.replace_master_key(new_key)?;
+
+        Ok(())
     }
 
     /// Derive a key from a password (for future use with OS keychain)
@@ -339,17 +309,176 @@ impl SecretService {
         key.copy_from_slice(&hasher.finalize());
         key
     }
+
+    fn encrypt_with_key(&self, key: &[u8], plaintext: &str) -> Result<String> {
+        let cipher = Aes256Gcm::new_from_slice(key).map_err(|e| {
+            TestForgeError::SecretEncryption(format!("Failed to create cipher: {}", e))
+        })?;
+
+        let mut nonce_bytes = [0u8; NONCE_SIZE];
+        OsRng.fill_bytes(&mut nonce_bytes);
+        let nonce = Nonce::from_slice(&nonce_bytes);
+
+        let ciphertext = cipher
+            .encrypt(nonce, plaintext.as_bytes())
+            .map_err(|e| TestForgeError::SecretEncryption(format!("Encryption failed: {}", e)))?;
+
+        let mut combined = Vec::with_capacity(NONCE_SIZE + ciphertext.len());
+        combined.extend_from_slice(&nonce_bytes);
+        combined.extend_from_slice(&ciphertext);
+
+        Ok(BASE64.encode(&combined))
+    }
+
+    fn decrypt_with_key(&self, key: &[u8], encrypted: &str) -> Result<String> {
+        let combined = BASE64
+            .decode(encrypted)
+            .map_err(|e| TestForgeError::Base64Decode(format!("Failed to decode base64: {}", e)))?;
+
+        if combined.len() < NONCE_SIZE + 1 {
+            return Err(TestForgeError::SecretDecryption(
+                "Encrypted data too short".to_string(),
+            ));
+        }
+
+        let nonce = Nonce::from_slice(&combined[..NONCE_SIZE]);
+        let ciphertext = &combined[NONCE_SIZE..];
+
+        let cipher = Aes256Gcm::new_from_slice(key).map_err(|e| {
+            TestForgeError::SecretDecryption(format!("Failed to create cipher: {}", e))
+        })?;
+
+        let plaintext = cipher
+            .decrypt(nonce, ciphertext)
+            .map_err(|e| TestForgeError::SecretDecryption(format!("Decryption failed: {}", e)))?;
+
+        String::from_utf8(plaintext).map_err(|e| {
+            TestForgeError::SecretDecryption(format!("Invalid UTF-8 in decrypted data: {}", e))
+        })
+    }
+
+    fn current_master_key(&self) -> Result<Zeroizing<[u8; KEY_SIZE]>> {
+        let master_key = self
+            .master_key
+            .read()
+            .map_err(|_| TestForgeError::MasterKey("Failed to acquire read lock".to_string()))?;
+
+        let key = master_key
+            .as_ref()
+            .ok_or_else(|| TestForgeError::MasterKey("Master key not initialized".to_string()))?;
+
+        let mut owned_key = Zeroizing::new([0u8; KEY_SIZE]);
+        owned_key.copy_from_slice(key.as_slice());
+        Ok(owned_key)
+    }
+
+    fn generate_master_key() -> Zeroizing<[u8; KEY_SIZE]> {
+        let mut key = Zeroizing::new([0u8; KEY_SIZE]);
+        OsRng.fill_bytes(&mut *key);
+        key
+    }
+
+    fn save_master_key_to_disk(&self, key: &[u8]) -> Result<()> {
+        if let Some(parent) = self.key_file_path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::write(&self.key_file_path, key)?;
+            std::fs::set_permissions(&self.key_file_path, std::fs::Permissions::from_mode(0o600))?;
+        }
+
+        #[cfg(not(unix))]
+        {
+            std::fs::write(&self.key_file_path, key)?;
+        }
+
+        Ok(())
+    }
+
+    fn replace_master_key(&self, key: Zeroizing<[u8; KEY_SIZE]>) -> Result<()> {
+        let mut master_key = self
+            .master_key
+            .write()
+            .map_err(|_| TestForgeError::MasterKey("Failed to acquire write lock".to_string()))?;
+        *master_key = Some(key);
+        self.state.store(true, Ordering::SeqCst);
+        Ok(())
+    }
+
+    fn load_persisted_secrets(conn: &rusqlite::Connection) -> Result<Vec<PersistedSecretRecord>> {
+        let mut statement = conn.prepare(
+            "SELECT id, value FROM environment_variables WHERE var_type = ?1 ORDER BY id ASC",
+        )?;
+
+        let rows = statement.query_map([VariableType::Secret.as_str()], |row| {
+            Ok(PersistedSecretRecord {
+                id: row.get(0)?,
+                encrypted_value: row.get(1)?,
+            })
+        })?;
+
+        rows.collect::<std::result::Result<Vec<_>, _>>()
+            .map_err(TestForgeError::from)
+    }
+
+    fn persist_rotated_secrets(
+        conn: &rusqlite::Connection,
+        rotated_secrets: &[(String, String)],
+    ) -> Result<()> {
+        for (id, encrypted_value) in rotated_secrets {
+            let rows_affected = conn.execute(
+                "UPDATE environment_variables SET value = ?1 WHERE id = ?2 AND var_type = ?3",
+                rusqlite::params![encrypted_value, id, VariableType::Secret.as_str()],
+            )?;
+
+            if rows_affected != 1 {
+                return Err(TestForgeError::EnvironmentVariableNotFound { id: id.clone() });
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::db::Database;
+    use crate::models::{Environment, EnvironmentVariable};
+    use crate::repositories::EnvironmentRepository;
     use tempfile::TempDir;
 
     fn create_test_service() -> (SecretService, TempDir) {
         let temp_dir = TempDir::new().unwrap();
         let service = SecretService::new(temp_dir.path().to_path_buf());
         (service, temp_dir)
+    }
+
+    fn create_test_database(temp_dir: &TempDir) -> Database {
+        let db_path = temp_dir.path().join("test.db");
+        Database::new(db_path).unwrap()
+    }
+
+    fn create_secret_variable(
+        repo: &EnvironmentRepository<'_>,
+        service: &SecretService,
+        environment_id: &str,
+        key: &str,
+        plaintext: &str,
+    ) -> EnvironmentVariable {
+        let encrypted_value = service.encrypt(plaintext).unwrap();
+        let variable = EnvironmentVariable::new_secret(
+            environment_id.to_string(),
+            key.to_string(),
+            encrypted_value,
+            service.generate_masked_preview(plaintext),
+        );
+
+        repo.create_variable(&variable).unwrap();
+        variable
     }
 
     #[test]
@@ -525,5 +654,82 @@ mod tests {
 
         service.initialize().unwrap();
         assert_eq!(service.state(), SecretServiceState::Healthy);
+    }
+
+    #[test]
+    fn test_rotate_key_reencrypts_persisted_secrets_without_losing_access() {
+        let temp_dir = TempDir::new().unwrap();
+        let service = SecretService::new(temp_dir.path().to_path_buf());
+        service.initialize().unwrap();
+
+        let database = create_test_database(&temp_dir);
+        let repo = EnvironmentRepository::new(database.connection());
+        let environment = Environment::new("Rotation Test".to_string());
+        repo.create(&environment).unwrap();
+
+        let variable = create_secret_variable(
+            &repo,
+            &service,
+            &environment.id,
+            "API_KEY",
+            "rotate-me-secret",
+        );
+
+        let ciphertext_before = repo.find_variable_by_id(&variable.id).unwrap().value;
+
+        service.rotate_key(database.connection()).unwrap();
+
+        let ciphertext_after = repo.find_variable_by_id(&variable.id).unwrap().value;
+        assert_ne!(ciphertext_before, ciphertext_after);
+        assert_eq!(
+            service.decrypt(&ciphertext_after).unwrap(),
+            "rotate-me-secret"
+        );
+
+        let restarted_service = SecretService::new(temp_dir.path().to_path_buf());
+        restarted_service.initialize().unwrap();
+        assert_eq!(
+            restarted_service.decrypt(&ciphertext_after).unwrap(),
+            "rotate-me-secret"
+        );
+    }
+
+    #[test]
+    fn test_rotate_key_fails_on_corrupt_persisted_secret_without_plaintext_fallback() {
+        let temp_dir = TempDir::new().unwrap();
+        let service = SecretService::new(temp_dir.path().to_path_buf());
+        service.initialize().unwrap();
+
+        let database = create_test_database(&temp_dir);
+        let repo = EnvironmentRepository::new(database.connection());
+        let environment = Environment::new("Rotation Failure".to_string());
+        repo.create(&environment).unwrap();
+
+        let encrypted_value = service.encrypt("still-secret").unwrap();
+        let mut decoded = BASE64.decode(encrypted_value).unwrap();
+        let last_index = decoded.len() - 1;
+        decoded[last_index] ^= 0xFF;
+        let corrupted_encrypted_value = BASE64.encode(decoded);
+
+        let variable = EnvironmentVariable::new_secret(
+            environment.id.clone(),
+            "BROKEN_API_KEY".to_string(),
+            corrupted_encrypted_value,
+            service.generate_masked_preview("still-secret"),
+        );
+        repo.create_variable(&variable).unwrap();
+
+        let ciphertext_before = repo.find_variable_by_id(&variable.id).unwrap().value;
+
+        let error = service.rotate_key(database.connection()).unwrap_err();
+        assert!(matches!(error, TestForgeError::SecretDecryption(_)));
+        assert!(!service.is_degraded());
+
+        let ciphertext_after = repo.find_variable_by_id(&variable.id).unwrap().value;
+        assert_eq!(ciphertext_after, ciphertext_before);
+        assert!(matches!(
+            service.decrypt(&ciphertext_after),
+            Err(TestForgeError::SecretDecryption(_))
+        ));
     }
 }

@@ -522,7 +522,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `chore(release): verify packaged first-run and runtime guidance`
 
-- [ ] P2-T5. Secret rotation + security hardening follow-up
+- [x] P2-T5. Secret rotation + security hardening follow-up
 
   **What to do**:
   - Complete the secret-management follow-up left open after Phase 1, especially key rotation and stronger handling around exports, scheduled runs, and collaboration-safe packages.

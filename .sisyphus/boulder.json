@@ -25,7 +25,11 @@
     "ses_2aec08f32ffeItrSDd0nm36Dpg",
     "ses_2aeba17faffeb7bLljjoJyFaf6",
     "ses_2aeba3ceeffeXh1dDk3MmPlv67",
-    "ses_2aeba290dffewPEKXGpQUTX9Bb"
+    "ses_2aeba290dffewPEKXGpQUTX9Bb",
+    "ses_2ae95197fffe5bTrWTSd2UNOhB",
+    "ses_2ae95196fffeNgTGq88ee6uvrI",
+    "ses_2ae6e2870ffesfvkoojIKVk9ND",
+    "ses_2ae6e2859ffeiaki6K1EQuq8oZ"
   ],
   "plan_name": "testforge-phase-2-implementation",
   "worktree_path": null,
@@ -40,6 +44,10 @@
     "P2-T4-analysis-seams": "ses_2aec08f32ffeItrSDd0nm36Dpg",
     "P2-T4-impl-frontend": "ses_2aeba17faffeb7bLljjoJyFaf6",
     "P2-T4-impl-tests": "ses_2aeba3ceeffeXh1dDk3MmPlv67",
-    "P2-T4-impl-backend": "ses_2aeba290dffewPEKXGpQUTX9Bb"
+    "P2-T4-impl-backend": "ses_2aeba290dffewPEKXGpQUTX9Bb",
+    "P2-T5-analysis-scope": "ses_2ae95197fffe5bTrWTSd2UNOhB",
+    "P2-T5-analysis-seams": "ses_2ae95196fffeNgTGq88ee6uvrI",
+    "P2-T5-impl-redaction": "ses_2ae6e2870ffesfvkoojIKVk9ND",
+    "P2-T5-impl-backend": "ses_2ae6e2859ffeiaki6K1EQuq8oZ"
   }
 }

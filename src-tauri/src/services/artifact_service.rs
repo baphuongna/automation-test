@@ -99,10 +99,14 @@ impl ArtifactService {
 
         let safe_name = sanitize_path_segment(artifact_name);
         let file_name = format!("{safe_name}.{extension}");
-        let file_path = self.resolve_artifact_path(ArtifactKind::Report, artifact_name, &file_name)?;
+        let file_path =
+            self.resolve_artifact_path(ArtifactKind::Report, artifact_name, &file_name)?;
         let preview_safe = self.preview_safe_json_value(payload);
-        let preview_json = serde_json::to_string_pretty(&preview_safe)
-            .map_err(|error| AppError::storage_write(format!("Không thể serialize report preview-safe JSON: {error}")))?;
+        let preview_json = serde_json::to_string_pretty(&preview_safe).map_err(|error| {
+            AppError::storage_write(format!(
+                "Không thể serialize report preview-safe JSON: {error}"
+            ))
+        })?;
 
         let content = if extension == "json" {
             preview_json.clone()
@@ -111,7 +115,10 @@ impl ArtifactService {
         };
 
         fs::write(&file_path, content).map_err(|error| {
-            AppError::storage_write(format!("Không thể ghi report export {:?}: {error}", file_path))
+            AppError::storage_write(format!(
+                "Không thể ghi report export {:?}: {error}",
+                file_path
+            ))
         })?;
 
         let manifest = ArtifactManifestDto {
@@ -119,7 +126,12 @@ impl ArtifactService {
             artifact_type: ArtifactKind::Report.as_str().to_string(),
             logical_name: safe_name.clone(),
             file_path: file_path.to_string_lossy().into_owned(),
-            relative_path: format!("{}{}{}", ArtifactKind::Report.relative_prefix(), sanitize_path_segment(artifact_name), format!("/{file_name}")),
+            relative_path: format!(
+                "{}{}{}",
+                ArtifactKind::Report.relative_prefix(),
+                sanitize_path_segment(artifact_name),
+                format!("/{file_name}")
+            ),
             preview_json,
             created_at: Utc::now().to_rfc3339(),
         };
@@ -220,7 +232,9 @@ fn preview_safe_json_value(value: &Value) -> Value {
             Value::Object(sanitized)
         }
         Value::Array(items) => Value::Array(items.iter().map(preview_safe_json_value).collect()),
-        Value::String(text) if looks_like_sensitive_value(text) => Value::String(REDACTED.to_string()),
+        Value::String(text) if looks_like_sensitive_value(text) => {
+            Value::String(REDACTED.to_string())
+        }
         _ => value.clone(),
     }
 }
@@ -244,9 +258,20 @@ fn looks_like_sensitive_value(value: &str) -> bool {
     let normalized = value.trim().to_lowercase();
     normalized.starts_with("bearer ")
         || normalized.starts_with("basic ")
-        || normalized.contains("ciphertext")
-        || normalized.contains("api_key")
+        || contains_secret_like_fragment(&normalized)
         || normalized == REDACTED.to_lowercase()
+}
+
+fn contains_secret_like_fragment(normalized: &str) -> bool {
+    normalized.contains("ciphertext")
+        || normalized.contains("api_key")
+        || normalized.contains("token=")
+        || normalized.contains("authorization:")
+        || normalized.contains("encrypted:")
+        || normalized.contains("masked preview")
+        || normalized.contains("masked_preview")
+        || normalized.contains("password=")
+        || normalized.contains("secret=")
 }
 
 #[allow(dead_code)]
