@@ -4,7 +4,9 @@ import { environmentClient } from "../services/environment-client";
 import { runnerClient } from "../services/runner-client";
 import { useEnvStore } from "../store/env-store";
 import { subscribeRunnerEvents, useRunStore } from "../store/run-store";
-import type { RunCaseResultDto, RunDetailDto, RunHistoryEntryDto, SuiteDto } from "../types";
+import type { RunCaseResultDto, RunDetailDto, RunHistoryEntryDto, RunHistoryGroupSummaryDto, SuiteDto } from "../types";
+
+type ReportingRunStatusFilter = Exclude<RunHistoryEntryDto["status"], "idle">;
 
 async function hydrateSelectedRun(options: {
   historyItems: RunHistoryEntryDto[];
@@ -85,6 +87,80 @@ function buildProgressPercent(completed: number, total: number): number {
   return Math.min(100, Math.round((completed / total) * 100));
 }
 
+function normalizeDateInput(value: string): string | undefined {
+  return value.trim().length > 0 ? value : undefined;
+}
+
+function toRfc3339Filter(value: string): string | undefined {
+  const normalized = normalizeDateInput(value);
+  if (!normalized) {
+    return undefined;
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return undefined;
+  }
+
+  return parsed.toISOString();
+}
+
+function resolveReportingDateFilters(startedAfter: string, startedBefore: string): {
+  startedAfter?: string;
+  startedBefore?: string;
+} {
+  const normalizedStartedAfter = normalizeDateInput(startedAfter);
+  const normalizedStartedBefore = normalizeDateInput(startedBefore);
+
+  const startedAfterFilter = toRfc3339Filter(startedAfter);
+  if (normalizedStartedAfter && !startedAfterFilter) {
+    throw new Error("Started after filter must be a valid date/time.");
+  }
+
+  const startedBeforeFilter = toRfc3339Filter(startedBefore);
+  if (normalizedStartedBefore && !startedBeforeFilter) {
+    throw new Error("Started before filter must be a valid date/time.");
+  }
+
+  return {
+    ...(startedAfterFilter ? { startedAfter: startedAfterFilter } : {}),
+    ...(startedBeforeFilter ? { startedBefore: startedBeforeFilter } : {})
+  };
+}
+
+function formatPassRate(passedRuns: number, totalRuns: number): string {
+  if (totalRuns <= 0) {
+    return "0%";
+  }
+
+  return `${Math.round((passedRuns / totalRuns) * 100)}%`;
+}
+
+function formatDurationAverage(historyItems: RunHistoryEntryDto[]): string {
+  const durations = historyItems
+    .map((entry) => {
+      const startedAt = new Date(entry.startedAt).getTime();
+      const finishedAt = entry.finishedAt ? new Date(entry.finishedAt).getTime() : Number.NaN;
+      if (Number.isNaN(startedAt) || Number.isNaN(finishedAt) || finishedAt < startedAt) {
+        return null;
+      }
+
+      return finishedAt - startedAt;
+    })
+    .filter((value): value is number => value !== null);
+
+  if (durations.length === 0) {
+    return "No completed durations yet.";
+  }
+
+  const averageMs = Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length);
+  return `${averageMs} ms`;
+}
+
+function isCompletedRun(entry: RunHistoryEntryDto): boolean {
+  return Boolean(entry.finishedAt) && (entry.status === "passed" || entry.status === "failed" || entry.status === "cancelled");
+}
+
 function getEnvironmentLabel(activeEnvironmentId: string | null, suiteFilterId: string | null): string {
   if (!activeEnvironmentId) {
     return suiteFilterId ? "Select environment to run filtered suite" : "Select environment to run suite";
@@ -97,8 +173,19 @@ export default function TestRunner(): ReactElement {
   const [suites, setSuites] = useState<SuiteDto[]>([]);
   const [history, setHistory] = useState<RunHistoryEntryDto[]>([]);
   const [selectedSuiteId, setSelectedSuiteId] = useState<string | null>(null);
+  const [reportSuiteFilterId, setReportSuiteFilterId] = useState<string | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [runDetail, setRunDetail] = useState<RunDetailDto | null>(null);
+  const [historyGroupSummary, setHistoryGroupSummary] = useState<RunHistoryGroupSummaryDto>({
+    totalRuns: 0,
+    passedRuns: 0,
+    failedRuns: 0,
+    cancelledRuns: 0,
+    failureCategoryCounts: []
+  });
+  const [reportStatusFilter, setReportStatusFilter] = useState<ReportingRunStatusFilter | "">("");
+  const [reportStartedAfter, setReportStartedAfter] = useState("");
+  const [reportStartedBefore, setReportStartedBefore] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -131,16 +218,61 @@ export default function TestRunner(): ReactElement {
     [activeEnvironmentId, environments]
   );
 
+  const groupedFailedResults = useMemo(() => {
+    const failureGroups = new Map<string, RunCaseResultDto[]>();
+    (runDetail?.results ?? [])
+      .filter((result) => result.status === "failed")
+      .forEach((result) => {
+        const group = failureGroups.get(result.failureCategory) ?? [];
+        group.push(result);
+        failureGroups.set(result.failureCategory, group);
+      });
+
+    return Array.from(failureGroups.entries()).map(([failureCategory, results]) => ({
+      failureCategory,
+      results
+    }));
+  }, [runDetail]);
+
+  const trendReadyAggregates = useMemo(() => {
+    const completedRuns = history.filter(isCompletedRun);
+    const latestCompletedRun = completedRuns[0] ?? null;
+    const completedRunCount = historyGroupSummary.passedRuns + historyGroupSummary.failedRuns + historyGroupSummary.cancelledRuns;
+    return {
+      latestRunFinishedAt: latestCompletedRun?.finishedAt
+        ? formatTimestamp(latestCompletedRun.finishedAt)
+        : "No completed runs in the selected reporting window.",
+      passRate: formatPassRate(historyGroupSummary.passedRuns, completedRunCount),
+      averageDuration: formatDurationAverage(history)
+    };
+  }, [historyGroupSummary.cancelledRuns, historyGroupSummary.failedRuns, historyGroupSummary.passedRuns, history]);
+
   async function loadRunnerScreen(options: { preserveSelectedRun?: boolean; requestedRunId?: string | null } = {}): Promise<void> {
     const preserveSelectedRun = options.preserveSelectedRun ?? false;
 
     setErrorMessage(null);
 
-    const [suiteItems, environmentItems, historyItems] = await Promise.all([
+    const historyFilters: Parameters<typeof runnerClient.listRunHistory>[0] = {};
+    if (reportSuiteFilterId) {
+      historyFilters.suiteId = reportSuiteFilterId;
+    }
+    if (reportStatusFilter) {
+      historyFilters.status = reportStatusFilter;
+    }
+    const dateFilters = resolveReportingDateFilters(reportStartedAfter, reportStartedBefore);
+    if (dateFilters.startedAfter) {
+      historyFilters.startedAfter = dateFilters.startedAfter;
+    }
+    if (dateFilters.startedBefore) {
+      historyFilters.startedBefore = dateFilters.startedBefore;
+    }
+
+    const [suiteItems, environmentItems, historyReport] = await Promise.all([
       runnerClient.listSuites(),
       environmentClient.list(),
-      runnerClient.listRunHistory(selectedSuiteId ? { suiteId: selectedSuiteId } : {})
+      runnerClient.listRunHistoryReport(historyFilters)
     ]);
+    const historyItems = historyReport.entries;
 
     setSuites(suiteItems);
     setEnvironments(
@@ -152,6 +284,7 @@ export default function TestRunner(): ReactElement {
       }))
     );
     setHistory(historyItems);
+    setHistoryGroupSummary(historyReport.groupSummary);
 
     const selection = await hydrateSelectedRun({
       historyItems,
@@ -193,7 +326,15 @@ export default function TestRunner(): ReactElement {
     }
 
     void handleRefresh();
-  }, [selectedSuiteId]);
+  }, [reportStartedAfter, reportStartedBefore, reportStatusFilter, reportSuiteFilterId]);
+
+  function handleResetFilters(): void {
+    setReportSuiteFilterId(null);
+    setReportStatusFilter("");
+    setReportStartedAfter("");
+    setReportStartedBefore("");
+    setFeedbackMessage("Reporting filters reset. Showing the latest operational window again.");
+  }
 
   useEffect(() => {
     const unsubscribe = subscribeRunnerEvents({
@@ -511,6 +652,134 @@ export default function TestRunner(): ReactElement {
             <span>{history.length} runs</span>
           </div>
 
+          <article className="test-runner__summary-card">
+            <div className="test-runner__subsection-header">
+              <div>
+                <span className="test-runner__eyebrow">Reporting filters</span>
+                <h3>Operational reporting window</h3>
+              </div>
+              <button type="button" className="test-runner__ghost-action" onClick={handleResetFilters}>
+                Reset filters
+              </button>
+            </div>
+
+            <div className="test-runner__preview-grid">
+              <label className="test-runner__field">
+                <span>Suite scope</span>
+                <select value={reportSuiteFilterId ?? ""} onChange={(event) => setReportSuiteFilterId(event.target.value || null)}>
+                  <option value="">All suites</option>
+                  {suites.map((suite) => (
+                    <option key={suite.id} value={suite.id}>
+                      {suite.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="test-runner__field">
+                <span>Run status</span>
+                <select value={reportStatusFilter} onChange={(event) => setReportStatusFilter(event.target.value as ReportingRunStatusFilter | "") }>
+                  <option value="">All statuses</option>
+                  <option value="passed">Passed</option>
+                  <option value="failed">Failed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="running">Running</option>
+                  <option value="queued">Queued</option>
+                  <option value="skipped">Skipped</option>
+                </select>
+              </label>
+            </div>
+
+            <div className="test-runner__preview-grid">
+              <label className="test-runner__field">
+                <span>Started after</span>
+                <input
+                  type="datetime-local"
+                  value={reportStartedAfter}
+                  onChange={(event) => setReportStartedAfter(normalizeDateInput(event.target.value) ?? "")}
+                />
+              </label>
+
+              <label className="test-runner__field">
+                <span>Started before</span>
+                <input
+                  type="datetime-local"
+                  value={reportStartedBefore}
+                  onChange={(event) => setReportStartedBefore(normalizeDateInput(event.target.value) ?? "")}
+                />
+              </label>
+            </div>
+          </article>
+
+          <article className="test-runner__summary-card">
+            <div className="test-runner__subsection-header">
+              <div>
+                <span className="test-runner__eyebrow">Filtered run summary</span>
+                <h3>Grouped summary for the active reporting window</h3>
+              </div>
+              <span>{historyGroupSummary.totalRuns} total runs</span>
+            </div>
+            <dl className="test-runner__metric-grid test-runner__metric-grid--four">
+              <div>
+                <dt>total runs</dt>
+                <dd>{historyGroupSummary.totalRuns}</dd>
+              </div>
+              <div>
+                <dt>passed runs</dt>
+                <dd>{historyGroupSummary.passedRuns}</dd>
+              </div>
+              <div>
+                <dt>failed runs</dt>
+                <dd>{historyGroupSummary.failedRuns}</dd>
+              </div>
+              <div>
+                <dt>cancelled runs</dt>
+                <dd>{historyGroupSummary.cancelledRuns}</dd>
+              </div>
+            </dl>
+            <div className="test-runner__subsection-header">
+              <strong>Failure groups</strong>
+              <span>{historyGroupSummary.failureCategoryCounts.length} categories</span>
+            </div>
+            {historyGroupSummary.failureCategoryCounts.length === 0 ? (
+              <p className="test-runner__muted">No failed results match the active reporting filters.</p>
+            ) : (
+              <div className="test-runner__artifact-list">
+                {historyGroupSummary.failureCategoryCounts.map((group) => (
+                  <span key={group.category} className="test-runner__artifact-link">
+                    <strong>{group.category}</strong>
+                    <span>{group.count} failed result(s)</span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </article>
+
+          <article className="test-runner__summary-card">
+            <div className="test-runner__subsection-header">
+              <div>
+                <span className="test-runner__eyebrow">Trend-ready aggregates</span>
+                <h3>Lightweight aggregate presentation</h3>
+              </div>
+              <span>Operational view only</span>
+            </div>
+            {history.length === 0 ? <p className="test-runner__muted">No persisted runs in the selected reporting window.</p> : null}
+            <dl className="test-runner__metric-grid test-runner__metric-grid--three">
+              <div>
+                <dt>Latest run finished</dt>
+                <dd>{trendReadyAggregates.latestRunFinishedAt}</dd>
+              </div>
+              <div>
+                <dt>Pass rate</dt>
+                <dd>{trendReadyAggregates.passRate}</dd>
+              </div>
+              <div>
+                <dt>Average duration</dt>
+                <dd>{trendReadyAggregates.averageDuration}</dd>
+              </div>
+            </dl>
+          </article>
+
           {isLoading ? <div className="test-runner__empty-panel">Loading state · Fetching persisted runs…</div> : null}
 
           {!isLoading && history.length === 0 ? (
@@ -607,6 +876,42 @@ export default function TestRunner(): ReactElement {
                       <strong>{artifact.logicalName}</strong>
                       <span>{artifact.relativePath}</span>
                     </a>
+                  ))}
+                </div>
+              </article>
+
+              <article className="test-runner__artifact-card">
+                <div className="test-runner__subsection-header">
+                  <div>
+                    <span className="test-runner__eyebrow">Failed-case drilldown</span>
+                    <h3>Group failed results by failure category</h3>
+                  </div>
+                  <span>{groupedFailedResults.length} groups</span>
+                </div>
+                {groupedFailedResults.length === 0 ? <p className="test-runner__muted">No failed results match the active reporting filters.</p> : null}
+                <div className="test-runner__detail-stack">
+                  {groupedFailedResults.map((group) => (
+                    <article key={group.failureCategory} className="test-runner__result-card test-runner__result-card--failed">
+                      <div className="test-runner__status-row">
+                        <strong>{group.failureCategory}</strong>
+                        <span>{group.results.length} failed result(s)</span>
+                      </div>
+                      <div className="test-runner__artifact-list">
+                        {group.results.map((result) => {
+                          const firstArtifact = result.artifacts[0] ?? null;
+                          return firstArtifact ? (
+                            <a key={result.id} className="test-runner__artifact-link" href={firstArtifact.filePath} target="_blank" rel="noreferrer">
+                              <strong>{result.caseName}</strong>
+                              <span>{firstArtifact.relativePath}</span>
+                            </a>
+                          ) : (
+                            <span key={result.id} className="test-runner__muted">
+                              {result.caseName} · Missing artifact for this failed result.
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </article>
                   ))}
                 </div>
               </article>

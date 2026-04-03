@@ -263,6 +263,39 @@ pub struct RunHistoryEntryDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
+pub struct RunHistoryFilterDto {
+    pub suite_id: Option<EntityId>,
+    pub status: Option<RunStatus>,
+    pub started_after: Option<IsoDateTime>,
+    pub started_before: Option<IsoDateTime>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct FailureCategoryCountDto {
+    pub category: String,
+    pub count: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RunHistoryGroupSummaryDto {
+    pub total_runs: u32,
+    pub passed_runs: u32,
+    pub failed_runs: u32,
+    pub cancelled_runs: u32,
+    pub failure_category_counts: Vec<FailureCategoryCountDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct RunHistoryDto {
+    pub entries: Vec<RunHistoryEntryDto>,
+    pub group_summary: RunHistoryGroupSummaryDto,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
 pub struct RunCaseResultDto {
     pub id: EntityId,
     pub case_id: EntityId,

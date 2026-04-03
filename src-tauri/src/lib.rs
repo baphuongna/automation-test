@@ -81,7 +81,7 @@ use contracts::dto::{
     ApiExecutionResultDto, BrowserHealthDto,
     DataTableAssociationMetadataDto, DataTableColumnDto, DataTableDto, DataTableExportDto,
     DataTableImportResultDto, DataTableRowDto, EnvironmentDto, EnvironmentVariableDto,
-    RunDetailDto, RunHistoryEntryDto, UiReplayResultDto, UiTestCaseDto,
+    RunDetailDto, RunHistoryDto, RunHistoryFilterDto, UiReplayResultDto, UiTestCaseDto,
 };
 use models::{ColumnDefinition, DataTable, DataTableRow, Environment, EnvironmentType as ModelEnvironmentType, VariableType};
 use repositories::{ApiRepository, DataTableRepository, EnvironmentRepository, RunnerRepository, UiScriptRepository};
@@ -898,14 +898,20 @@ fn runner_suite_list(
 fn runner_run_history(
     payload: RunnerRunHistoryCommand,
     state: State<'_, std::sync::Arc<AppState>>,
-) -> std::result::Result<Vec<RunHistoryEntryDto>, AppError> {
+) -> std::result::Result<RunHistoryDto, AppError> {
     let db_handle = state.db();
     let db = db_handle
         .lock()
         .map_err(|_| AppError::internal("Database lock poisoned"))?;
     let repository = RunnerRepository::new(db.connection());
+    let filter = RunHistoryFilterDto {
+        suite_id: payload.suite_id,
+        status: payload.status,
+        started_after: payload.started_after,
+        started_before: payload.started_before,
+    };
     repository
-        .list_run_history(payload.suite_id.as_deref())
+        .list_run_history(filter)
         .map_err(map_command_error)
 }
 

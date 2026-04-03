@@ -584,7 +584,7 @@ Wave FINAL (parallel verification)
   **Commit**: YES
   - Message: `fix(security): add secret rotation and output hardening`
 
-- [ ] P2-T6. Advanced reporting baseline + run analytics surfaces
+- [x] P2-T6. Advanced reporting baseline + run analytics surfaces
 
   **What to do**:
   - Expand Phase 1 basic reporting into a usable operational reporting surface for QA leads.
@@ -616,9 +616,9 @@ Wave FINAL (parallel verification)
   - Create: `tests/frontend/reporting-route-p2.test.ts`
 
   **Acceptance Criteria**:
-  - [ ] Users can filter runs by suite/status/date range.
-  - [ ] Reporting surface shows grouped summaries and artifact-backed failure drilldown.
-  - [ ] Trend-ready aggregates exist without exposing raw secrets in previews or exports.
+  - [x] Users can filter runs by suite/status/date range.
+  - [x] Reporting surface shows grouped summaries and artifact-backed failure drilldown.
+  - [x] Trend-ready aggregates exist without exposing raw secrets in previews or exports.
 
   **QA Scenarios**:
   ```

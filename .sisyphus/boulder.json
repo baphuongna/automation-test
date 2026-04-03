@@ -29,7 +29,31 @@
     "ses_2ae95197fffe5bTrWTSd2UNOhB",
     "ses_2ae95196fffeNgTGq88ee6uvrI",
     "ses_2ae6e2870ffesfvkoojIKVk9ND",
-    "ses_2ae6e2859ffeiaki6K1EQuq8oZ"
+    "ses_2ae6e2859ffeiaki6K1EQuq8oZ",
+    "ses_2ae26cf30ffezpgFJUgaSBDecV",
+    "ses_2ae24f5ceffeTuYuhEJv4Eo1kq",
+    "ses_2ae26db65ffeAUiDDLp34UOPAx",
+    "ses_2ae24bf58ffe7OwFioSMddr2eh",
+    "ses_2adf5548fffeibmCN0nq2jd6g2",
+    "ses_2adf64cb1ffeWj46ECgXomksEt",
+    "ses_2adecfa74ffe7pdjgZfvQKlnNa",
+    "ses_2aded03d6ffeUk9oOJnAXKBCI9",
+    "ses_2add987b2ffehqXC7GAKsAFGwl",
+    "ses_2add0a4cbffe0TY2aoO3xlfdP9",
+    "ses_2add0a48affe9y8MqMTV460S7t",
+    "ses_2adc9ce89ffewnUCrgqoGTvkA2",
+    "ses_2adc9ce6dffeCRsFSMB8KHQUWB",
+    "ses_2adc560acffeqPksWJCkiPl7if",
+    "ses_2adbdc0c9ffeaX5X9noRiAY7uV",
+    "ses_2adbdc156ffemb3kjLVo2Pe9SG",
+    "ses_2adb6c313ffeDIeqkLf2xK4lWz",
+    "ses_2adb6c298ffeQahCwXkGN2xBQO",
+    "ses_2adaefe4bffeJV1UNxyV2QNXBU",
+    "ses_2adaefe7bffeGr0k6Fo1poOkRx"
+    ,"ses_2add987b2ffehqXC7GAKsAFGwl"
+    ,"ses_2adc560acffeqPksWJCkiPl7if"
+    ,"ses_2adecfa74ffe7pdjgZfvQKlnNa"
+    ,"ses_2aded03d6ffeUk9oOJnAXKBCI9"
   ],
   "plan_name": "testforge-phase-2-implementation",
   "worktree_path": null,
@@ -48,6 +72,10 @@
     "P2-T5-analysis-scope": "ses_2ae95197fffe5bTrWTSd2UNOhB",
     "P2-T5-analysis-seams": "ses_2ae95196fffeNgTGq88ee6uvrI",
     "P2-T5-impl-redaction": "ses_2ae6e2870ffesfvkoojIKVk9ND",
-    "P2-T5-impl-backend": "ses_2ae6e2859ffeiaki6K1EQuq8oZ"
+    "P2-T5-impl-backend": "ses_2ae6e2859ffeiaki6K1EQuq8oZ",
+    "P2-T6-spec-review": "ses_2add987b2ffehqXC7GAKsAFGwl",
+    "P2-T6-code-review": "ses_2adc560acffeqPksWJCkiPl7if",
+    "P2-T6-impl-frontend": "ses_2adecfa74ffe7pdjgZfvQKlnNa",
+    "P2-T6-impl-backend": "ses_2aded03d6ffeUk9oOJnAXKBCI9"
   }
 }

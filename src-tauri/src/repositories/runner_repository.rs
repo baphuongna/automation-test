@@ -1,13 +1,15 @@
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
+use std::collections::BTreeMap;
 use uuid::Uuid;
 
 use crate::contracts::domain::{RunStatus, TestCaseType};
 use serde_json::Value;
 
 use crate::contracts::dto::{
-    ArtifactManifestDto, RunCaseResultDto, RunDetailDto, RunHistoryEntryDto, RunResultDto,
-    SuiteDto, SuiteItemDto,
+    ArtifactManifestDto, FailureCategoryCountDto, RunCaseResultDto, RunDetailDto, RunHistoryDto,
+    RunHistoryEntryDto, RunHistoryFilterDto, RunHistoryGroupSummaryDto, RunResultDto, SuiteDto,
+    SuiteItemDto,
 };
 use crate::error::{Result, TestForgeError};
 use crate::models::DataTableRow;
@@ -223,12 +225,23 @@ impl<'a> RunnerRepository<'a> {
         Ok(suites)
     }
 
-    pub fn list_run_history(&self, suite_id: Option<&str>) -> Result<Vec<RunHistoryEntryDto>> {
+    pub fn list_run_history(&self, filter: RunHistoryFilterDto) -> Result<RunHistoryDto> {
+        validate_run_history_filter(&filter)?;
+
+        let status_filter = filter
+            .status
+            .map(status_to_db_value)
+            .transpose()?
+            .map(str::to_string);
         let base_query =
             "SELECT tr.id, tr.suite_id, ts.name, tr.environment_id, env.name, tr.status, tr.started_at, tr.completed_at, tr.total_cases, tr.passed, tr.failed, tr.skipped
              FROM test_runs tr
              LEFT JOIN test_suites ts ON ts.id = tr.suite_id
-             JOIN environments env ON env.id = tr.environment_id";
+             JOIN environments env ON env.id = tr.environment_id
+             WHERE (?1 IS NULL OR tr.suite_id = ?1)
+               AND (?2 IS NULL OR tr.status = ?2)
+               AND (?3 IS NULL OR julianday(COALESCE(tr.started_at, tr.created_at)) >= julianday(?3))
+               AND (?4 IS NULL OR julianday(COALESCE(tr.started_at, tr.created_at)) <= julianday(?4))";
         let order_clause = " ORDER BY COALESCE(tr.completed_at, tr.started_at, tr.created_at) DESC, tr.created_at DESC";
 
         let map_row = |row: &rusqlite::Row<'_>| -> rusqlite::Result<PersistedRunSummary> {
@@ -260,19 +273,29 @@ impl<'a> RunnerRepository<'a> {
             })
         };
 
-        let items = if let Some(suite_id) = suite_id {
-            let query = format!("{base_query} WHERE tr.suite_id = ?1{order_clause}");
-            let mut stmt = self.conn.prepare(&query)?;
-            let mapped = stmt.query_map(params![suite_id], map_row)?;
-            mapped.collect::<std::result::Result<Vec<_>, _>>()?
-        } else {
-            let query = format!("{base_query}{order_clause}");
-            let mut stmt = self.conn.prepare(&query)?;
-            let mapped = stmt.query_map([], map_row)?;
-            mapped.collect::<std::result::Result<Vec<_>, _>>()?
-        };
+        let query = format!("{base_query}{order_clause}");
+        let mut stmt = self.conn.prepare(&query)?;
+        let mapped = stmt.query_map(
+            params![
+                filter.suite_id,
+                status_filter,
+                filter.started_after,
+                filter.started_before
+            ],
+            map_row,
+        )?;
+        let items = mapped.collect::<std::result::Result<Vec<_>, _>>()?;
+        let entries = items
+            .clone()
+            .into_iter()
+            .map(Self::to_run_history_entry)
+            .collect::<Vec<_>>();
+        let group_summary = self.build_group_summary(&items, &filter)?;
 
-        Ok(items.into_iter().map(Self::to_run_history_entry).collect())
+        Ok(RunHistoryDto {
+            entries,
+            group_summary,
+        })
     }
 
     pub fn create_suite_run(
@@ -690,6 +713,115 @@ impl<'a> RunnerRepository<'a> {
 
         Ok(items)
     }
+
+    fn build_group_summary(
+        &self,
+        items: &[PersistedRunSummary],
+        filter: &RunHistoryFilterDto,
+    ) -> Result<RunHistoryGroupSummaryDto> {
+        let mut failure_category_counts: BTreeMap<String, u32> = BTreeMap::new();
+        let status_filter = filter
+            .status
+            .map(status_to_db_value)
+            .transpose()?
+            .map(str::to_string);
+        let mut stmt = self.conn.prepare(
+            "SELECT trr.error_code, trr.error_message
+             FROM test_run_results trr
+             JOIN test_runs tr ON tr.id = trr.run_id
+             WHERE (?1 IS NULL OR tr.suite_id = ?1)
+               AND (?2 IS NULL OR tr.status = ?2)
+               AND (?3 IS NULL OR julianday(COALESCE(tr.started_at, tr.created_at)) >= julianday(?3))
+               AND (?4 IS NULL OR julianday(COALESCE(tr.started_at, tr.created_at)) <= julianday(?4))
+               AND trr.status = 'failed'",
+        )?;
+
+        let failure_rows = stmt.query_map(
+            params![
+                filter.suite_id.clone(),
+                status_filter,
+                filter.started_after.clone(),
+                filter.started_before.clone()
+            ],
+            |row| {
+                Ok((
+                    row.get::<_, Option<String>>(0)?,
+                    row.get::<_, Option<String>>(1)?,
+                ))
+            },
+        )?;
+
+        for failure_row in failure_rows {
+            let (error_code, error_message) = failure_row?;
+            let category = classify_failure_category(&error_code, &error_message);
+            *failure_category_counts.entry(category).or_insert(0) += 1;
+        }
+
+        Ok(RunHistoryGroupSummaryDto {
+            total_runs: items.len() as u32,
+            passed_runs: items
+                .iter()
+                .filter(|item| item.status == RunStatus::Passed)
+                .count() as u32,
+            failed_runs: items
+                .iter()
+                .filter(|item| item.status == RunStatus::Failed)
+                .count() as u32,
+            cancelled_runs: items
+                .iter()
+                .filter(|item| item.status == RunStatus::Cancelled)
+                .count() as u32,
+            failure_category_counts: failure_category_counts
+                .into_iter()
+                .map(|(category, count)| FailureCategoryCountDto { category, count })
+                .collect(),
+        })
+    }
+}
+
+fn validate_run_history_filter(filter: &RunHistoryFilterDto) -> Result<()> {
+    if let (Some(started_after), Some(started_before)) = (
+        filter.started_after.as_deref(),
+        filter.started_before.as_deref(),
+    ) {
+        let started_after = parse_iso_filter_timestamp(started_after)?;
+        let started_before = parse_iso_filter_timestamp(started_before)?;
+        if started_after > started_before {
+            return Err(TestForgeError::Validation(
+                "startedAfter must be earlier than or equal to startedBefore".to_string(),
+            ));
+        }
+    }
+
+    if let Some(status) = filter.status {
+        let _ = status_to_db_value(status)?;
+    }
+
+    Ok(())
+}
+
+fn parse_iso_filter_timestamp(value: &str) -> Result<DateTime<Utc>> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|timestamp| timestamp.with_timezone(&Utc))
+        .map_err(|error| {
+            TestForgeError::Validation(format!(
+                "Run history filter timestamp must be RFC3339: {error}"
+            ))
+        })
+}
+
+fn status_to_db_value(status: RunStatus) -> Result<&'static str> {
+    match status {
+        RunStatus::Queued => Ok("queued"),
+        RunStatus::Running => Ok("running"),
+        RunStatus::Skipped => Ok("skipped"),
+        RunStatus::Passed => Ok("passed"),
+        RunStatus::Failed => Ok("failed"),
+        RunStatus::Cancelled => Ok("cancelled"),
+        RunStatus::Idle => Err(TestForgeError::Validation(
+            "Unsupported run history status filter".to_string(),
+        )),
+    }
 }
 
 fn parse_string_array(json_text: &str) -> Vec<String> {
@@ -771,11 +903,15 @@ fn should_redact_key(key: &str) -> bool {
     let normalized = key.to_ascii_lowercase();
     [
         "authorization",
+        "bearer",
+        "basic",
         "token",
         "password",
         "secret",
         "api_key",
         "apikey",
+        "ciphertext",
+        "masked_preview",
         "cookie",
         "set-cookie",
     ]
@@ -785,5 +921,16 @@ fn should_redact_key(key: &str) -> bool {
 
 fn should_redact_value(value: &str) -> bool {
     let normalized = value.to_ascii_lowercase();
-    normalized.contains("bearer ") || normalized.contains("basic ") || normalized.contains("token")
+    normalized.contains("bearer ")
+        || normalized.contains("basic ")
+        || normalized.contains("token")
+        || normalized.contains("ciphertext")
+        || normalized.contains("api_key")
+        || normalized.contains("token=")
+        || normalized.contains("authorization:")
+        || normalized.contains("encrypted:")
+        || normalized.contains("masked preview")
+        || normalized.contains("masked_preview")
+        || normalized.contains("password=")
+        || normalized.contains("secret=")
 }

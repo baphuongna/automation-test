@@ -1,0 +1,25 @@
+P2-T6 Reporting Redaction Evidence
+Date: 2026-04-03
+
+Scope
+- Verified that the new reporting surface did not weaken existing artifact/report redaction guardrails.
+- Hardened repository preview sanitization to align with artifact/report export sensitivity patterns without over-redacting generic non-secret payload fields.
+
+Commands Run
+- node --import tsx tests/frontend/export-artifact-t10.test.ts
+- node --import tsx tests/frontend/security-export-redaction-p2.test.ts
+- npm run build
+
+Observed Results
+- `export-artifact-t10.test.ts` passed.
+- `security-export-redaction-p2.test.ts` passed.
+- `npm run build` passed.
+
+Verified Behaviors
+- Reporting/export-related preview seams remain secret-safe.
+- Ciphertext, masked-preview, token, authorization, encrypted, password, and secret-like fragments remain redacted in preview/export paths.
+- The P2-T6 reporting route continues to use sanitized previews and does not introduce raw secret fields into typed DTOs.
+- The reporting changes did not regress existing export artifact safety guarantees.
+
+Conclusion
+- P2-T6 preserves redaction and secret-safe reporting/export behavior while extending the reporting surface.

@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-use super::domain::{EntityId, EnvironmentType};
+use super::domain::{EntityId, EnvironmentType, IsoDateTime, RunStatus};
 use super::dto::{
     ApiAssertionDto, ApiExecutionResultDto, ApiRequestDto, ApiTestCaseDto, DataTableColumnDto,
     DataTableExportDto, DataTableImportResultDto, DataTableRowDto, EnvironmentVariableDto,
-    RunDetailDto, RunHistoryEntryDto, SuiteDto, UiTestCaseDto,
+    RunDetailDto, RunHistoryDto, RunHistoryEntryDto, SuiteDto, UiTestCaseDto,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -172,6 +172,9 @@ pub struct RunnerSuiteCancelCommand {
 #[serde(rename_all = "camelCase")]
 pub struct RunnerRunHistoryCommand {
     pub suite_id: Option<EntityId>,
+    pub status: Option<RunStatus>,
+    pub started_after: Option<IsoDateTime>,
+    pub started_before: Option<IsoDateTime>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

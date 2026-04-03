@@ -206,6 +206,29 @@ export interface RunHistoryEntryDto extends RunResultDto {
   environmentName: string;
 }
 
+export interface RunHistoryFilterDto {
+  suiteId?: EntityId;
+  status?: Exclude<RunStatus, "idle">;
+  startedAfter?: IsoDateTime;
+  startedBefore?: IsoDateTime;
+}
+
+export interface RunHistoryGroupSummaryDto {
+  totalRuns: number;
+  passedRuns: number;
+  failedRuns: number;
+  cancelledRuns: number;
+  failureCategoryCounts: Array<{
+    category: string;
+    count: number;
+  }>;
+}
+
+export interface RunHistoryDto {
+  entries: RunHistoryEntryDto[];
+  groupSummary: RunHistoryGroupSummaryDto;
+}
+
 export interface RunCaseResultDto {
   id: EntityId;
   caseId: EntityId;

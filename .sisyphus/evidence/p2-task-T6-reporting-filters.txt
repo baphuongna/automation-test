@@ -1,0 +1,27 @@
+P2-T6 Reporting Filters Evidence
+Date: 2026-04-03
+
+Scope
+- Extended the existing `src/routes/test-runner.tsx` into the reporting surface for P2-T6.
+- Added suite/status/date reporting filters, grouped summary, failed-case drilldown, and trend-ready aggregates.
+- Kept the reporting surface lightweight and within the existing runner/history/detail seams.
+
+Commands Run
+- node --import tsx tests/frontend/test-runner-t16.test.ts
+- node --import tsx tests/frontend/reporting-route-p2.test.ts
+- npm run build
+
+Observed Results
+- `test-runner-t16.test.ts` passed.
+- `reporting-route-p2.test.ts` passed.
+- `npm run build` passed.
+
+Verified Behaviors
+- Historical runs can be filtered by suite, status, and date range via the typed `runner.run.history` seam.
+- The route uses backend-provided grouped summary data for the active reporting window.
+- Failed results are grouped by failure category with artifact-backed drilldown.
+- Trend-ready aggregates are shown without creating a heavyweight analytics dashboard.
+- Invalid date filter input fails clearly instead of silently degrading.
+
+Conclusion
+- P2-T6 reporting filters, grouped summaries, and drilldown baseline are implemented and verified.

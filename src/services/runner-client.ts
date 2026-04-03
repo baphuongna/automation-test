@@ -1,4 +1,7 @@
 import { invokeCommand } from "./tauri-client";
+import type { RunHistoryDto, RunHistoryEntryDto } from "../types";
+
+type RunHistoryStatusFilter = Exclude<RunHistoryEntryDto["status"], "idle">;
 
 export const runnerClient = {
   async listSuites() {
@@ -10,8 +13,38 @@ export const runnerClient = {
     return result.data;
   },
 
-  async listRunHistory(input: { suiteId?: string } = {}) {
-    const payload = input.suiteId ? { suiteId: input.suiteId } : {};
+  async listRunHistory(input: {
+    suiteId?: string;
+    status?: RunHistoryStatusFilter;
+    startedAfter?: string;
+    startedBefore?: string;
+  } = {}) {
+    const payload = {
+      ...(input.suiteId ? { suiteId: input.suiteId } : {}),
+      ...(input.status ? { status: input.status } : {}),
+      ...(input.startedAfter ? { startedAfter: input.startedAfter } : {}),
+      ...(input.startedBefore ? { startedBefore: input.startedBefore } : {})
+    };
+    const result = await invokeCommand("runner.run.history", payload);
+    if (!result.success || result.data === null) {
+      throw result.error ?? new Error("Missing command result for runner.run.history");
+    }
+
+    return result.data.entries;
+  },
+
+  async listRunHistoryReport(input: {
+    suiteId?: string;
+    status?: RunHistoryStatusFilter;
+    startedAfter?: string;
+    startedBefore?: string;
+  } = {}): Promise<RunHistoryDto> {
+    const payload = {
+      ...(input.suiteId ? { suiteId: input.suiteId } : {}),
+      ...(input.status ? { status: input.status } : {}),
+      ...(input.startedAfter ? { startedAfter: input.startedAfter } : {}),
+      ...(input.startedBefore ? { startedBefore: input.startedBefore } : {})
+    };
     const result = await invokeCommand("runner.run.history", payload);
     if (!result.success || result.data === null) {
       throw result.error ?? new Error("Missing command result for runner.run.history");

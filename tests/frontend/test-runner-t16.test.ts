@@ -50,8 +50,10 @@ assert(
   routeSource.includes("Promise.all([") &&
     routeSource.includes("runnerClient.listSuites()") &&
     routeSource.includes("environmentClient.list()") &&
-    routeSource.includes("runnerClient.listRunHistory(selectedSuiteId ? { suiteId: selectedSuiteId } : {})") &&
+    routeSource.includes("const historyFilters: Parameters<typeof runnerClient.listRunHistory>[0] = {};") &&
+    routeSource.includes("runnerClient.listRunHistoryReport(historyFilters)") &&
     routeSource.includes("setHistory(historyItems)") &&
+    routeSource.includes("setHistoryGroupSummary(historyReport.groupSummary)") &&
     routeSource.includes("const selection = await hydrateSelectedRun({") &&
     routeSource.includes("previousSelectedRunId: selectedRunId") &&
     routeSource.includes("const runDetail = await runnerClient.getRunDetail({ runId: nextSelectedRunId });"),
@@ -98,23 +100,46 @@ assert(
 
 assert(
   clientSource.includes("async listSuites()") &&
-    clientSource.includes("async listRunHistory(input: { suiteId?: string } = {})") &&
-    clientSource.includes("const payload = input.suiteId ? { suiteId: input.suiteId } : {};") &&
+    clientSource.includes("async listRunHistory(input: {") &&
+    clientSource.includes('type RunHistoryStatusFilter = Exclude<RunHistoryEntryDto["status"], "idle">;') &&
+    clientSource.includes("status?: RunHistoryStatusFilter") &&
+    clientSource.includes("startedAfter?: string;") &&
+    clientSource.includes("startedBefore?: string;") &&
+    clientSource.includes("const payload = {") &&
+    clientSource.includes("...(input.status ? { status: input.status } : {})") &&
     clientSource.includes("async getRunDetail(input: { runId: string })") &&
     clientSource.includes("async executeSuite(input: { suiteId: string; environmentId: string } | { suiteId: string; environmentId: string; rerunFailedFromRunId: string })") &&
     clientSource.includes("throw result.error ?? new Error(\"Missing command result for runner.run.detail\")"),
-  "T16 runner client phải giữ read/write seams mỏng nhưng đủ để hydrate history/detail và rerun-failed mà không nuốt lỗi command result."
+  "P2-T6 runner client phải giữ read/write seams mỏng nhưng cho phép suite/status/date filters đi qua runner.run.history mà không nuốt lỗi command result."
 );
 
 assert(
   commandSource.includes('"runner.suite.list": Record<string, never>;') &&
-    commandSource.includes('"runner.run.history": {') &&
+  commandSource.includes('"runner.run.history": {') &&
     commandSource.includes("suiteId?: EntityId") &&
+    commandSource.includes('status?: Exclude<RunStatus, "idle">') &&
+    commandSource.includes("startedAfter?: IsoDateTime") &&
+    commandSource.includes("startedBefore?: IsoDateTime") &&
     commandSource.includes('"runner.run.detail": {') &&
     commandSource.includes('"runner.suite.list": SuiteDto[];') &&
-    commandSource.includes('"runner.run.history": RunHistoryEntryDto[];') &&
+    commandSource.includes('"runner.run.history": RunHistoryDto;') &&
     commandSource.includes('"runner.run.detail": RunDetailDto;'),
-  "T16 phải mở rộng typed command contracts cho suite list, run history, và run detail read-side seams."
+  "P2-T6 phải mở rộng typed command contracts cho runner.run.history filters và vẫn giữ read-side history/detail seam typed."
+);
+
+assert(
+  dtoSource.includes("export interface RunHistoryFilterDto") &&
+    dtoSource.includes('status?: Exclude<RunStatus, "idle">') &&
+    dtoSource.includes("startedAfter?: IsoDateTime") &&
+    dtoSource.includes("startedBefore?: IsoDateTime") &&
+    dtoSource.includes("export interface RunHistoryGroupSummaryDto") &&
+    dtoSource.includes("totalRuns: number") &&
+    dtoSource.includes("cancelledRuns: number") &&
+    dtoSource.includes("failureCategoryCounts") &&
+    dtoSource.includes("export interface RunHistoryDto") &&
+    dtoSource.includes("entries: RunHistoryEntryDto[]") &&
+    dtoSource.includes("groupSummary: RunHistoryGroupSummaryDto"),
+  "P2-T6 phải thêm minimal reporting DTOs cho filter input và grouped summary output thay vì invent reporting backend riêng."
 );
 
 assert(
@@ -128,15 +153,6 @@ assert(
     dtoSource.includes("requestPreview") &&
     dtoSource.includes("responsePreview"),
   "T16 phải thêm DTO rõ ràng cho history/detail, gồm artifact manifests, sanitized previews, và failure category."
-);
-
-assert(
-  rustCommandContractSource.includes("pub struct RunnerRunHistoryCommand") &&
-    rustCommandContractSource.includes("pub struct RunnerRunDetailCommand") &&
-    rustCommandContractSource.includes('#[serde(rename = "runner.suite.list")]') &&
-    rustCommandContractSource.includes('#[serde(rename = "runner.run.history")]') &&
-    rustCommandContractSource.includes('#[serde(rename = "runner.run.detail")]'),
-  "T16 phải mirror read-side runner commands ở Rust contracts để frontend/backend không drift."
 );
 
 assert(

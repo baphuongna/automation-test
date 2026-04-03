@@ -11,13 +11,14 @@ import type {
   EnvironmentDto,
   EnvironmentVariableDto,
   RunDetailDto,
+  RunHistoryDto,
   RunHistoryEntryDto,
   ShellMetadataDto,
   SuiteDto,
   UiReplayResultDto,
   UiTestCaseDto
 } from "./dto";
-import type { EntityId, EnvironmentType } from "./domain";
+import type { EntityId, EnvironmentType, IsoDateTime, RunStatus } from "./domain";
 
 export interface CommandPayloadMap {
   "environment.list": Record<string, never>;
@@ -119,6 +120,9 @@ export interface CommandPayloadMap {
   "runner.suite.list": Record<string, never>;
   "runner.run.history": {
     suiteId?: EntityId;
+    status?: Exclude<RunStatus, "idle">;
+    startedAfter?: IsoDateTime;
+    startedBefore?: IsoDateTime;
   };
   "runner.run.detail": {
     runId: EntityId;
@@ -161,7 +165,7 @@ export interface CommandResponseMap {
     suite: SuiteDto;
   };
   "runner.suite.list": SuiteDto[];
-  "runner.run.history": RunHistoryEntryDto[];
+  "runner.run.history": RunHistoryDto;
   "runner.run.detail": RunDetailDto;
   "runner.suite.cancel": { cancelled: true };
 }
